@@ -74,9 +74,14 @@ jobs:
       - name: Install tooling/commitlint/, locked
         run: npm --prefix tooling/commitlint ci
 
+      # commitlint resolves a config's `extends` relative to that config file's own directory
+      # (the repo root), not to the installed package's location, so a bare extends specifier
+      # is otherwise unresolvable against a non-root, non-global install; NODE_PATH widens
+      # Node's module resolution to the pinned install under tooling/commitlint/node_modules.
       - name: PR title is a Conventional Commit (the squash-merge commit on main)
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
+          NODE_PATH: ${{ github.workspace }}/tooling/commitlint/node_modules
         run: |
           printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pr-title"
           COMMITLINT_TITLE_FILE="$RUNNER_TEMP/pr-title" tooling/commitlint/node_modules/.bin/commitlint --config .commitlintrc-pr-title.json --env COMMITLINT_TITLE_FILE
