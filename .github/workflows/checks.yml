@@ -2,7 +2,7 @@ name: checks
 
 # Repo-wide invariant gates that need no application code. They encode what must
 # always be true of the repo and hold through any rewrite. CI holds no custom
-# credential — the only token is the GitHub-provided read-only GITHUB_TOKEN.
+# credential (SECURITY.md § Threat model).
 on:
   push:
     branches: [main]

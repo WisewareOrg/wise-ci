@@ -340,13 +340,10 @@ def parse_checklist(contributing_path):
 def select_groups(changed, git_dir):
     """Map changed paths to CONTRIBUTING.md Review checklist **Group** names (union).
 
-    The "Checks" trigger is structural rather than a naming heuristic: ADR 0001
-    rev 1 puts each check in its own top-level folder holding that check's own
-    `action.yml` (`<check>/action.yml`), so a path under a top-level directory
-    that holds one is that check's own material. The marker is looked for both
-    on disk and in `changed` itself, since a check's first migration commit adds
-    its `action.yml` and its other files together — a working-tree-only check
-    would miss a check introduced in the very commit under review.
+    The "Checks" trigger looks for a top-level `<dir>/action.yml` (ADR 0001 rev 1) —
+    checked both on disk and in `changed`, since a check's first migration commit
+    adds its `action.yml` and other files together, which a working-tree-only
+    check would miss.
     """
     changed_set = {path.replace(os.sep, "/") for path in changed}
     needed = set()

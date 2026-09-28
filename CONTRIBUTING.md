@@ -9,10 +9,7 @@ wise-ci is** is the [README](README.md); working rules for an AI agent are in
 **Design-first: nothing is implemented that has not been written down first.** A change with a real
 rejected alternative gets an [ADR](docs/decisions/README.md). Anything observable a decision does not
 state — an interface name, a payload shape, a config key, a failure behaviour, a threshold — becomes
-an ADR before it is built. A new check follows [ADR 0001 rev 1](docs/decisions/0001-shape-of-wise-ci.md):
-one top-level folder named after the check, its own `action.yml`, a `tests/` directory that is the
-check's verification record, and a README carrying the check's own owner rulings and gap
-explanations.
+an ADR before it is built. A new check follows [ADR 0001 rev 1](docs/decisions/0001-shape-of-wise-ci.md).
 
 **Do not build generality against a case that does not exist** — no abstraction without a second
 consumer. A check's first consumer is the repository it migrated from; a second repository consuming
