@@ -39,10 +39,11 @@ This mechanises the security review a solo project has no second reader to perfo
 The workflows are themselves a supply chain and themselves privileged. Both are audited from the
 files by two maintained tools, in the `workflow-audit` job
 ([`../.github/workflows/checks.yml`](../.github/workflows/checks.yml)), each run from a digest-pinned
-official image over the `.github/workflows` input set: `zizmor` at the `pedantic` persona for what a
-workflow may do — action pinning, permission grants, credential persistence and template injection
-among its audit set — and `actionlint` for whether a workflow is well-formed at all: schema,
-expression and reference errors, with `shellcheck` and `pyflakes` over `run:` scripts.
+official image over the `.github/workflows` input set: `zizmor` at the `pedantic` persona, with
+`--strict-collection`, for what a workflow may do — action pinning, permission grants, credential
+persistence and template injection among its audit set — and `actionlint` for whether a workflow is
+well-formed at all: schema, expression and reference errors, with `shellcheck` and `pyflakes` over
+`run:` scripts.
 
 - **Every action is pinned to an immutable reference** — a commit SHA, or an image digest where the
   step is a container. A tag is a pointer its owner can move after anyone reviewed it; neither of
@@ -55,8 +56,11 @@ expression and reference errors, with `shellcheck` and `pyflakes` over `run:` sc
   refused as excessive; every grant other than a bare `contents: read` — read grants included —
   carries an explanatory comment beside it; every checkout sets `persist-credentials: false`; every
   job carries a `name:`, and every workflow a `concurrency:` group.
-- **An unreadable workflow fails rather than being skipped.** Both tools parse real YAML, so a layout
-  that cannot be read is a syntax error, not a skip.
+- **An unreadable workflow fails rather than being skipped.** actionlint parses real YAML and fails on
+  what it cannot read. zizmor's own default is to warn on a file it cannot parse and audit whatever
+  remains, reporting clean over a narrowed set that dropped the unreadable file — `--strict-collection`
+  is what turns that warning into a failure instead, so a workflow neither tool could read fails the
+  step rather than being silently absent from zizmor's own audited set.
 
 **What the gate deliberately lets through.** The `workflow-audit` job's zizmor step runs with no
 `GITHUB_TOKEN`, so the audits needing the GitHub API — `known-vulnerable-actions` and

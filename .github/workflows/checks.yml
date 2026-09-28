@@ -34,7 +34,7 @@ jobs:
       - name: Workflow supply-chain and privilege audit (zizmor, pedantic persona, offline audit set)
         uses: docker://ghcr.io/zizmorcore/zizmor@sha256:863026d54f91271b10b60b67ad8054cb37120167e162482597db102b3026a284 # 1.29.0
         with:
-          args: --persona=pedantic .github/workflows
+          args: --strict-collection --persona=pedantic .github/workflows
 
       - name: Workflow schema and expression lint (actionlint)
         uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # 1.7.12
