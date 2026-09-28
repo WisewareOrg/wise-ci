@@ -40,8 +40,7 @@ commitlint fits beside an authored check.
    an `action.yml` is a check (point 1). How the tests are tiered, and what each tier guarantees,
    is the test architecture document's, which arrives with the first migrated check.
 5. **Migrate-to-enable bootstrap** (owner, 2026-09-27): wise-ci gates itself with each check as it
-   migrates, via `uses: ./<check>`. Consequence recorded: the branch/ticket rules are unenforced here
-   until `check-branch` migrates.
+   migrates, via `uses: ./<check>`.
 6. **Maintained tools are shared as config presets, not wrapped** (owner, 2026-09-27).
 
 ## Alternatives considered

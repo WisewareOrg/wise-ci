@@ -12,20 +12,18 @@ edit here and a change to the check, not a specification change.
 default code-scanning suite over the project's own source, on every pull request against `main`,
 every push to `main`, and weekly (so a dormant branch is still covered).
 
-**Scoped to the one leg wise-ci has a subject for.** The matrix carries a single leg, CodeQL's
-`actions` language at `build-mode: none`, because a workflow file is the only first-party source this
-repository has.
+The CodeQL matrix carries one leg per language of first-party source in the tree; a change that adds
+a language adds its leg, and that leg's own required context.
 
 No `queries:` input: the action's own default is the code-scanning suite, so widening to a named
 suite later is a visible diff rather than a silent one.
 
-**The branch protection ruleset's required contexts are the `checks.yml` job ids plus the codeql
-matrix's own display name**, observed on its own first run rather than assumed: `workflow-audit`,
-`secret-scan`, `pr-title`, and `codeql (actions, none)`. The codeql leg fails only on an execution
-error — it is not where a CodeQL finding fails a merge. A finding gates through the ruleset's own
-`code_scanning` rule instead, configured for CodeQL at every alert severity. That rule, and the
-required-contexts list above, are ruleset configuration rather than tracked files, so no check here
-can assert either; this line is what records them.
+**The branch protection ruleset's required contexts are every `checks.yml` job id, plus every
+CodeQL matrix leg's own display name** — `gh api repos/tjwise99/wise-ci/rulesets` reads the live set
+rather than this line enumerating it. The codeql leg fails only on an execution error — it is not
+where a CodeQL finding fails a merge. A finding gates through the ruleset's own `code_scanning` rule
+instead, configured for CodeQL at every alert severity. That rule is ruleset configuration rather
+than a tracked file, so no check here can assert it.
 
 This mechanises the security review a solo project has no second reader to perform.
 
