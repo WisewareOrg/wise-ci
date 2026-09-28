@@ -67,5 +67,8 @@ in the `pr-title` job by commitlint against `.commitlintrc-pr-title.json`, which
 title, since the squash discards it rather than carrying it to `main`. commitlint and
 `@commitlint/config-conventional` are pinned in a manifest under `tooling/commitlint/`
 (`package.json` and a committed lockfile), installed with `npm ci` rather than as a repository-root
-dependency. The PR title is attacker-controlled, so it enters the run step only via env mapping,
+dependency. commitlint resolves a configuration's `extends` from that configuration's own directory,
+the repository root, which is not an ancestor of the pinned install, so the step sets `NODE_PATH` to
+`tooling/commitlint/node_modules`. Without it, resolution falls back to whatever npx cache or global
+install the machine holds: a local run can pass on a copy the runner does not have. The PR title is attacker-controlled, so it enters the run step only via env mapping,
 never inline into `run:`. The job runs on `pull_request` only — no PR title exists on a push.

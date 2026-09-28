@@ -74,10 +74,7 @@ jobs:
       - name: Install tooling/commitlint/, locked
         run: npm --prefix tooling/commitlint ci
 
-      # commitlint resolves a config's `extends` relative to that config file's own directory
-      # (the repo root), not to the installed package's location, so a bare extends specifier
-      # is otherwise unresolvable against a non-root, non-global install; NODE_PATH widens
-      # Node's module resolution to the pinned install under tooling/commitlint/node_modules.
+      # NODE_PATH resolves the configs' `extends` from the pinned install (docs/CI.md § PR title).
       - name: PR title is a Conventional Commit (the squash-merge commit on main)
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
