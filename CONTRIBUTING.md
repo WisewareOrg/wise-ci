@@ -18,14 +18,14 @@ from.
 
 ## Tickets, branches, and titles
 
-Open an issue from a template first: the branch name is derived from it.
+Open an issue first: the branch name is derived from it.
 
 ```
 design_1-founding_adr
 └──┬──┘ └┬┘ └────┬────┘
    │     │       └─ lowercase snake_case
    │     └─ the issue's own number
-   └─ task | bug | design — the issue's template, and its label
+   └─ task | bug | design — the issue's type label
 ```
 
 `main` and Renovate branches (`renovate/*`) are exempt. Every other branch must also satisfy all
