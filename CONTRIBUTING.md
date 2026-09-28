@@ -1,8 +1,7 @@
 # Contributing to wise-ci
 
-The human contributor entry point: how to run the checks and how a change gets merged. **What
-wise-ci is** is the [README](README.md); working rules for an AI agent are in
-[`CLAUDE.md`](CLAUDE.md).
+The human contributor entry point: how a change gets merged. **What wise-ci is** is the
+[README](README.md); working rules for an AI agent are in [`CLAUDE.md`](CLAUDE.md).
 
 ## Before you build anything
 

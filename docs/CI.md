@@ -13,17 +13,18 @@ default code-scanning suite over the project's own source, on every pull request
 every push to `main`, and weekly (so a dormant branch is still covered).
 
 The CodeQL matrix carries one leg per language of first-party source in the tree; a change that adds
-a language adds its leg, and that leg's own required context.
+a language adds its leg to the matrix, and its display name to the branch protection ruleset's
+required contexts.
 
 No `queries:` input: the action's own default is the code-scanning suite, so widening to a named
 suite later is a visible diff rather than a silent one.
 
 **The branch protection ruleset's required contexts are every `checks.yml` job id, plus every
-CodeQL matrix leg's own display name** — `gh api repos/tjwise99/wise-ci/rulesets` reads the live set
-rather than this line enumerating it. The codeql leg fails only on an execution error — it is not
-where a CodeQL finding fails a merge. A finding gates through the ruleset's own `code_scanning` rule
-instead, configured for CodeQL at every alert severity. That rule is ruleset configuration rather
-than a tracked file, so no check here can assert it.
+CodeQL matrix leg's own display name** — `gh api repos/tjwise99/wise-ci/rules/branches/main` reads
+the live set rather than this line enumerating it. The codeql leg fails only on an execution
+error — it is not where a CodeQL finding fails a merge. A finding gates through the ruleset's own
+`code_scanning` rule instead, configured for CodeQL at every alert severity. That rule is ruleset
+configuration rather than a tracked file, so no check here can assert it.
 
 This mechanises the security review a solo project has no second reader to perform.
 
