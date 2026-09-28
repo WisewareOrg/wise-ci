@@ -19,8 +19,7 @@ from.
 
 ## Running the checks
 
-There is no local runner yet — `just verify` arrives with the first migrated check. Until then,
-verify via CI.
+There is no local runner yet ([`docs/CI.md`](docs/CI.md)). Until then, verify via CI.
 
 ## Tickets, branches, and titles
 
