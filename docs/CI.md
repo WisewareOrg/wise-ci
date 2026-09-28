@@ -10,6 +10,31 @@ edit here and a change to the check, not a specification change.
 ([ADR 0001 rev 1](decisions/0001-shape-of-wise-ci.md)); until then, every gate below is a CI-only
 step, run only from its workflow.
 
+## First-party source scanning
+
+[`../.github/workflows/codeql.yml`](../.github/workflows/codeql.yml)'s `codeql` job runs CodeQL's
+default code-scanning suite over the project's own source, on every pull request against `main`,
+every push to `main`, and weekly (so a dormant branch is still covered).
+
+**Scoped to the one leg wise-ci has a subject for.** The matrix carries a single leg, CodeQL's
+`actions` language at `build-mode: none`, because a workflow file is the only first-party source this
+repository has at stand-up — this section exists and is scoped that way rather than dropped or left
+silent (orchestrator, 2026-09-27, derived from `docs/README.md`'s `CI.md` guarantee and WiseKiosk
+precedent). A leg joins the matrix, and this section, as each migrated check brings first-party
+source in a language CodeQL covers.
+
+No `queries:` input: the action's own default is the code-scanning suite, so widening to a named
+suite later is a visible diff rather than a silent one.
+
+**Failing on any finding at any severity is two repository settings, not a file this gate can
+assert.** The `codeql` job's leg fails only on an execution error; the check that fails on a finding
+is GitHub's own `CodeQL` check (`GitHub Advanced Security`), and its severity threshold is a
+repository setting defaulting to high rather than every severity. Both settings — the threshold, and
+the check names required on the branch's protection — are repository configuration rather than
+tracked files, and are not asserted here.
+
+This mechanises the security review a solo project has no second reader to perform.
+
 ## Workflow supply-chain and privilege audit
 
 The workflows are themselves a supply chain and themselves privileged. Both are audited from the
