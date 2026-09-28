@@ -1,0 +1,3 @@
+{
+  "extends": ["github>tjwise99/wise-renovate#v1.1.0"]
+}

@@ -1,0 +1,30 @@
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Node (tooling/commitlint/)
+node_modules/
+
+# Secrets and env
+.env
+.env.*
+*.local
+secrets/
+
+# Coverage / logs
+coverage/
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# Agent worktrees
+.claude/worktrees/
+
+# Agent notes (`*.local` does not match `.local.md`)
+CLAUDE.local.md
+
+# Claude Code per-machine permissions (`*.local` does not match `.local.json`)
+.claude/settings.local.json
