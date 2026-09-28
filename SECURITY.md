@@ -9,7 +9,8 @@ manager, running in the consumer, moves that pin
 ([ADR 0001 rev 1](docs/decisions/0001-shape-of-wise-ci.md)).
 
 - **CI holds no custom credential.** The only token any workflow in this repository uses is
-  GitHub's own read-only `GITHUB_TOKEN`.
+  GitHub's own `GITHUB_TOKEN`, scoped per job — read-only for every job in `checks.yml`, and
+  `security-events: write` for `codeql.yml`'s job, which needs it to upload results to code scanning.
 - **A check's own tests are its verification record**, beside it under `<check>/tests/`
   ([ADR 0001 rev 1](docs/decisions/0001-shape-of-wise-ci.md)) — a check that migrates in without them
   has not migrated.

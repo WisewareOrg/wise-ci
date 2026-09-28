@@ -17,8 +17,9 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Every job's `name:` equals its id, and the matrix exception applies here too: the displayed
-  # name carries the matrix's `language` value, read back into CI.md once observed.
+  # Every job's `name:` equals its id, except this one: its matrix leg's displayed name carries
+  # the matrix's `language` and `build-mode` values instead (docs/CI.md § First-party source
+  # scanning).
   codeql:
     name: codeql
     runs-on: ubuntu-latest

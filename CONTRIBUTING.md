@@ -9,11 +9,13 @@ wise-ci is** is the [README](README.md); working rules for an AI agent are in
 **Design-first: nothing is implemented that has not been written down first.** A change with a real
 rejected alternative gets an [ADR](docs/decisions/README.md). Anything observable a decision does not
 state — an interface name, a payload shape, a config key, a failure behaviour, a threshold — becomes
-an ADR before it is built. A new check follows [ADR 0001 rev 1](docs/decisions/0001-shape-of-wise-ci.md).
+a stated behaviour in the check's README, pinned by a test, before it is built
+(ADR 0001 rev 1 point 4). A new check follows [ADR 0001 rev 1](docs/decisions/0001-shape-of-wise-ci.md).
 
 **Do not build generality against a case that does not exist** — no abstraction without a second
-consumer. A check's first consumer is the repository it migrated from; a second repository consuming
-it is what earns a shared config preset or a reusable workflow its place.
+consumer, no comment-enforced invariants, no denylist secret handling, no non-tunable config keys, no
+controls that do not function where deployed. A check's first consumer is the repository it migrated
+from.
 
 ## Running the checks
 
@@ -34,7 +36,7 @@ design_1-founding_adr
    └─ task | bug | design — the issue's template, and its label
 ```
 
-`main` and Renovate branches (`renovate/*`) are exempt. Every other branch should also satisfy all
+`main` and Renovate branches (`renovate/*`) are exempt. Every other branch must also satisfy all
 of:
 
 - the issue is **open**, **milestoned**, and carries **exactly one** type label — a second one makes

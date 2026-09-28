@@ -343,15 +343,21 @@ def select_groups(changed, git_dir):
     The "Checks" trigger looks for a top-level `<dir>/action.yml` (ADR 0001 rev 1) —
     checked both on disk and in `changed`, since a check's first migration commit
     adds its `action.yml` and other files together, which a working-tree-only
-    check would miss.
+    check would miss. `changed`'s paths are toplevel-relative (`git diff
+    --cached --name-only`), so the on-disk check is resolved against the repo
+    toplevel rather than `git_dir` itself — `git_dir` can be a subdirectory of
+    the repo, in which case joining it to a toplevel-relative marker would miss
+    it silently.
     """
+    toplevel = run_git(git_dir, ["rev-parse", "--show-toplevel"])
+    root = toplevel.strip() if toplevel else git_dir
     changed_set = {path.replace(os.sep, "/") for path in changed}
     needed = set()
     for path in changed:
         norm = path.replace(os.sep, "/")
         top = norm.split("/", 1)[0]
         marker = f"{top}/action.yml"
-        if marker in changed_set or os.path.isfile(os.path.join(git_dir, marker)):
+        if marker in changed_set or os.path.isfile(os.path.join(root, marker)):
             needed.add("Checks")
         if norm.endswith(".md"):
             needed.add("Documentation")

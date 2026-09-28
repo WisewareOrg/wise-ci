@@ -18,20 +18,19 @@ every push to `main`, and weekly (so a dormant branch is still covered).
 
 **Scoped to the one leg wise-ci has a subject for.** The matrix carries a single leg, CodeQL's
 `actions` language at `build-mode: none`, because a workflow file is the only first-party source this
-repository has at stand-up — this section exists and is scoped that way rather than dropped or left
-silent (orchestrator, 2026-09-27, derived from `docs/README.md`'s `CI.md` guarantee and WiseKiosk
-precedent). A leg joins the matrix, and this section, as each migrated check brings first-party
-source in a language CodeQL covers.
+repository has at stand-up. A leg joins the matrix, and this section, as each migrated check brings
+first-party source in a language CodeQL covers.
 
 No `queries:` input: the action's own default is the code-scanning suite, so widening to a named
 suite later is a visible diff rather than a silent one.
 
-**Failing on any finding at any severity is two repository settings, not a file this gate can
-assert.** The `codeql` job's leg fails only on an execution error; the check that fails on a finding
-is GitHub's own `CodeQL` check (`GitHub Advanced Security`), and its severity threshold is a
-repository setting defaulting to high rather than every severity. Both settings — the threshold, and
-the check names required on the branch's protection — are repository configuration rather than
-tracked files, and are not asserted here.
+**The branch protection ruleset's required contexts are the `checks.yml` job ids plus the codeql
+matrix's own display name**, observed on its own first run rather than assumed: `workflow-audit`,
+`secret-scan`, `pr-title`, and `codeql (actions, none)`. Every one of those legs, the codeql one
+included, fails only on an execution error — none of them is where a CodeQL finding fails a merge. A
+finding gates through the ruleset's own `code_scanning` rule instead, configured for CodeQL at every
+alert severity. That rule, and the required-contexts list above, are ruleset configuration rather than
+tracked files, so no check here can assert either; this line is what records them.
 
 This mechanises the security review a solo project has no second reader to perform.
 
@@ -92,8 +91,10 @@ in the `pr-title` job by commitlint against `.commitlintrc-pr-title.json`, which
 title, since the squash discards it rather than carrying it to `main`. commitlint and
 `@commitlint/config-conventional` are pinned in a manifest under `tooling/commitlint/`
 (`package.json` and a committed lockfile), installed with `npm ci` rather than as a repository-root
-dependency. commitlint resolves a configuration's `extends` from that configuration's own directory,
-the repository root, which is not an ancestor of the pinned install, so the step sets `NODE_PATH` to
-`tooling/commitlint/node_modules`. Without it, resolution falls back to whatever npx cache or global
-install the machine holds: a local run can pass on a copy the runner does not have. The PR title is attacker-controlled, so it enters the run step only via env mapping,
-never inline into `run:`. The job runs on `pull_request` only — no PR title exists on a push.
+dependency. commitlint resolves a configuration's `extends` by walking `node_modules` upward from
+that configuration's own directory, the repository root — never downward into a descendant — so the
+pinned install under `tooling/commitlint/node_modules` is unreachable that way; the step sets
+`NODE_PATH` to it instead. Without `NODE_PATH`, resolution falls back to whatever npx cache or global
+install the machine holds, so a local run can pass on a copy the runner does not have. The PR title
+is attacker-controlled, so it enters the run step only via env mapping, never inline into `run:`. The
+job runs on `pull_request` only — no PR title exists on a push.
