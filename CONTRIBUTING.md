@@ -19,7 +19,7 @@ from.
 
 ## Running the checks
 
-There is no local runner yet ([`docs/CI.md`](docs/CI.md)). Until then, verify via CI.
+There is no local runner yet ([`docs/CI.md`](docs/CI.md)). Verify via CI.
 
 ## Tickets, branches, and titles
 

@@ -26,11 +26,11 @@ suite later is a visible diff rather than a silent one.
 
 **The branch protection ruleset's required contexts are the `checks.yml` job ids plus the codeql
 matrix's own display name**, observed on its own first run rather than assumed: `workflow-audit`,
-`secret-scan`, `pr-title`, and `codeql (actions, none)`. Every one of those legs, the codeql one
-included, fails only on an execution error — none of them is where a CodeQL finding fails a merge. A
-finding gates through the ruleset's own `code_scanning` rule instead, configured for CodeQL at every
-alert severity. That rule, and the required-contexts list above, are ruleset configuration rather than
-tracked files, so no check here can assert either; this line is what records them.
+`secret-scan`, `pr-title`, and `codeql (actions, none)`. The codeql leg fails only on an execution
+error — it is not where a CodeQL finding fails a merge. A finding gates through the ruleset's own
+`code_scanning` rule instead, configured for CodeQL at every alert severity. That rule, and the
+required-contexts list above, are ruleset configuration rather than tracked files, so no check here
+can assert either; this line is what records them.
 
 This mechanises the security review a solo project has no second reader to perform.
 

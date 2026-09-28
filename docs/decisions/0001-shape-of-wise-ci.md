@@ -15,10 +15,10 @@ checks of their own: `meta-wisekiosk`'s `tools/doc-links.py` beside WiseKiosk's 
 `meta-wisekiosk`'s `tools/scrub-identity.py` beside WiseOS's `scripts/check-privacy.sh`. The owner
 decided to host the authored checks once, for all of their repositories (owner, 2026-09-27). wise-ci
 stands the checks up as a repository of their own, homing checks migrated from WiseKiosk one ticket at
-a time. Before any check migrates, the shape the repository takes has to
-be decided: how a check is packaged, how a consumer pins it, how many release streams it costs, where
-its tests live, how bootstrap avoids gating on gates that do not exist yet, and how a maintained tool
-like zizmor or commitlint fits beside an authored check.
+a time. Before any check migrates, the shape the repository takes has to be decided: how a check is
+packaged, how a consumer pins it, how many release streams it costs, where its tests live, how
+bootstrap avoids gating on gates that do not exist yet, and how a maintained tool like zizmor or
+commitlint fits beside an authored check.
 
 ## Decision
 
@@ -39,9 +39,9 @@ like zizmor or commitlint fits beside an authored check.
    `tooling/`, not in a check's folder or a top-level folder of its own; a top-level folder holding
    an `action.yml` is a check (point 1). How the tests are tiered, and what each tier guarantees,
    is the test architecture document's, which arrives with the first migrated check.
-5. **Migrate-to-enable bootstrap**: wise-ci gates itself with each check as it migrates, via
-   `uses: ./<check>`. Consequence recorded: the branch/ticket rules are unenforced here until
-   `check-branch` migrates (owner, 2026-09-27).
+5. **Migrate-to-enable bootstrap** (owner, 2026-09-27): wise-ci gates itself with each check as it
+   migrates, via `uses: ./<check>`. Consequence recorded: the branch/ticket rules are unenforced here
+   until `check-branch` migrates.
 6. **Maintained tools are shared as config presets, not wrapped** (owner, 2026-09-27).
 
 ## Alternatives considered
