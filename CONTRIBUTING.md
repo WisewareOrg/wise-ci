@@ -56,8 +56,7 @@ on `main`; without the bodies beneath it, the reasoning recorded per commit is u
 ## Review checklist
 
 Each question is an obligation on the author that leaves no artifact, so no check decides it — the
-reviewer is the mechanism. The [pull-request template](.github/pull_request_template.md) points here
-rather than repeating them.
+reviewer is the mechanism.
 
 **Cite a question by number *and* name** — `question 6, *Generality*`. A bare number resolves silently
 to whatever occupies it after a renumber, in documents no sweep reliably reaches. New questions are
