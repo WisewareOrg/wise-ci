@@ -27,5 +27,5 @@ migrated yet, so there is nothing to pin.
   it lets through.
 - [`docs/decisions/`](docs/decisions/README.md) — the decisions that carried a rejected alternative.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — tickets, branches, titles, and getting a change merged.
-- [`SECURITY.md`](SECURITY.md) — the threat model and how to report a vulnerability.
+- [`SECURITY.md`](SECURITY.md) — the threat model.
 - [`CLAUDE.md`](CLAUDE.md) — working rules for an AI agent in this repo.
