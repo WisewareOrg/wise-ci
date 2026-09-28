@@ -17,15 +17,9 @@ consumer, no comment-enforced invariants, no denylist secret handling, no non-tu
 controls that do not function where deployed. A check's first consumer is the repository it migrated
 from.
 
-## Running the checks
-
-There is no local runner yet ([`docs/CI.md`](docs/CI.md)). Verify via CI.
-
 ## Tickets, branches, and titles
 
-Open an issue from a template first: the branch name is derived from it. **These rules are followed
-by hand** — the branch and ticket-linkage check migrates in from WiseKiosk under its own ticket, and
-until then nothing here enforces them mechanically.
+Open an issue from a template first: the branch name is derived from it.
 
 ```
 design_1-founding_adr

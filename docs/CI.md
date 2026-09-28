@@ -6,10 +6,6 @@ What CI does for this repository, and what it refuses to let through.
 this repository's own workflows and hygiene, never a running system. Adding or retiring a gate is an
 edit here and a change to the check, not a specification change.
 
-**No gate here has a local form yet.** `just verify` arrives with the first migrated check
-([ADR 0001 rev 1](decisions/0001-shape-of-wise-ci.md)); until then, every gate below is a CI-only
-step, run only from its workflow.
-
 ## First-party source scanning
 
 [`../.github/workflows/codeql.yml`](../.github/workflows/codeql.yml)'s `codeql` job runs CodeQL's
@@ -18,8 +14,7 @@ every push to `main`, and weekly (so a dormant branch is still covered).
 
 **Scoped to the one leg wise-ci has a subject for.** The matrix carries a single leg, CodeQL's
 `actions` language at `build-mode: none`, because a workflow file is the only first-party source this
-repository has at stand-up. A leg joins the matrix, and this section, as each migrated check brings
-first-party source in a language CodeQL covers.
+repository has.
 
 No `queries:` input: the action's own default is the code-scanning suite, so widening to a named
 suite later is a visible diff rather than a silent one.

@@ -16,8 +16,7 @@ presets, never re-wrapped in a new action. The shape, and the rejected alternati
 - uses: tjwise99/wise-ci/<check>@<sha> # vX.Y.Z
 ```
 
-Renovate's `github-actions` manager bumps the pin and its version comment together. No check has
-migrated yet, so there is nothing to pin.
+Renovate's `github-actions` manager bumps the pin and its version comment together.
 
 ## Documentation
 
