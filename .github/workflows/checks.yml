@@ -1,0 +1,84 @@
+name: checks
+
+# Repo-wide invariant gates that need no application code. They encode what must
+# always be true of the repo and hold through any rewrite. CI holds no custom
+# credential (SECURITY.md § Threat model).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    # edited: the pr-title gate validates the PR title, so title fixes must re-run it
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+# A superseded pull-request head cancels its own run. A push run gets a group of its own, keyed on
+# the sha: in a shared group a newly queued run replaces the pending one even with cancel-in-progress
+# false, and a replaced push run is a push whose commits the secret scan never walks.
+concurrency:
+  group: checks-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Every job's `name:` equals its id: required status checks key on the displayed name.
+  workflow-audit:
+    name: workflow-audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Workflow supply-chain and privilege audit (zizmor, pedantic persona, offline audit set)
+        uses: docker://ghcr.io/zizmorcore/zizmor@sha256:863026d54f91271b10b60b67ad8054cb37120167e162482597db102b3026a284 # 1.29.0
+        with:
+          args: --strict-collection --persona=pedantic .github/workflows
+
+      - name: Workflow schema and expression lint (actionlint)
+        uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # 1.7.12
+
+  secret-scan:
+    name: secret-scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # the scan walks a commit range, which a shallow clone does not carry
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  pr-title:
+    name: pr-title
+    # The PR title is what becomes the commit on `main` under squash-merge.
+    # It is attacker-controlled, so it enters the run step only via env mapping, never inline.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26
+
+      - name: Install tooling/commitlint/, locked
+        run: npm --prefix tooling/commitlint ci
+
+      # NODE_PATH resolves the configs' `extends` from the pinned install (docs/CI.md § PR title).
+      - name: PR title is a Conventional Commit (the squash-merge commit on main)
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          NODE_PATH: ${{ github.workspace }}/tooling/commitlint/node_modules
+        run: |
+          printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pr-title"
+          COMMITLINT_TITLE_FILE="$RUNNER_TEMP/pr-title" tooling/commitlint/node_modules/.bin/commitlint --config .commitlintrc-pr-title.json --env COMMITLINT_TITLE_FILE
