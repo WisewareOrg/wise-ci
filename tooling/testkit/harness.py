@@ -50,26 +50,33 @@ def skipped_or_xfailed_ids(items) -> list[str]:
     return [item.nodeid for item in items if _is_skipped_or_xfailed(item)]
 
 
-def direction_ids(items) -> tuple[set[str], set[str]]:
-    ids = {
-        item.callspec.id
-        for item in items
-        if hasattr(item, "callspec") and _DIRECTION_ID.match(item.callspec.id)
-    }
-    gap_ids = {test_id for test_id in ids if test_id.startswith("gap-")}
-    return ids, gap_ids
+def collected_ids_by_check(check_dirs: list[Path], items) -> dict[Path, tuple[set[str], set[str]]]:
+    result = {}
+    for check_dir in check_dirs:
+        ids = {
+            item.callspec.id
+            for item in items
+            if hasattr(item, "callspec")
+            and _DIRECTION_ID.match(item.callspec.id)
+            and item.path.is_relative_to(check_dir)
+        }
+        gap_ids = {test_id for test_id in ids if test_id.startswith("gap-")}
+        result[check_dir] = (ids, gap_ids)
+    return result
 
 
 def guard_problems(root: Path, items) -> list[str]:
     collected_paths = {item.path.resolve() for item in items}
-    ids, gap_ids = direction_ids(items)
     dirs = check_dirs(root)
+    ids_by_check = collected_ids_by_check(dirs, items)
     workflow = yaml.safe_load((root / ".github" / "workflows" / "checks.yml").read_text())
     problems = []
     problems += empty_run.check(len(items))
     problems += population.check(root, collected_paths)
     problems += file_collection.check(tracked_test_files(root), collected_paths)
-    problems += citation.check(dirs, ids, gap_ids)
+    for check_dir in dirs:
+        ids, gap_ids = ids_by_check[check_dir]
+        problems += citation.check([check_dir], ids, gap_ids)
     problems += skip_ban.check(skipped_or_xfailed_ids(items))
     problems += workflow_wiring.check(workflow, {d.name for d in dirs})
     return problems
