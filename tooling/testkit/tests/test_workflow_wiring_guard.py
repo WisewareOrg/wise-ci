@@ -73,6 +73,21 @@ def test_aggregate_missing_if_always_is_a_problem():
     assert check(workflow, {"check-eol"}) != []
 
 
+def test_two_unrelated_uses_steps_is_a_problem():
+    # review-tests: the count must be steps whose uses: is specifically ./.wise-ci/<check>, not
+    # any step carrying a uses: key (e.g. an unrelated actions/checkout). Isolated from the other
+    # requirements: this job still has a continue-on-error+id step and an outcome-reading step, so
+    # zero real check invocations is the only defect present.
+    workflow = _valid_workflow()
+    workflow["jobs"]["action-tests-check-eol"]["steps"] = [
+        {"uses": "actions/checkout@v4"},
+        {"uses": "actions/setup-node@v4"},
+        {"id": "seed", "continue-on-error": True, "run": "false"},
+        {"if": "steps.seed.outcome == 'failure'", "run": "exit 0"},
+    ]
+    assert check(workflow, {"check-eol"}) != []
+
+
 def test_valid_wiring_is_clean():
     workflow = _valid_workflow()
     assert check(workflow, {"check-eol"}) == []
