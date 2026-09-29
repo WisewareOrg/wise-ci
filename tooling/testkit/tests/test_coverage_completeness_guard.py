@@ -1,7 +1,7 @@
 """Specifies testkit.guards.coverage_completeness as a CLI module (settled with builder: invoked
 as `python -m testkit.guards.coverage_completeness` after `coverage combine`, not as a
 pytest-collected test). Exits non-zero on an unmeasured in-scope tracked *.py file, or on an empty
-or missing coverage data file (D10: "not 0 of 0").
+or missing coverage data file (TESTING.md D10: "not 0 of 0").
 """
 
 import os

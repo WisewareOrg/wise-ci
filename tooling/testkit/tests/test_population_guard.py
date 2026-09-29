@@ -1,5 +1,6 @@
-"""Specifies testkit.guards.population. §4 point 2: every top-level dir with action.yml/action.yaml
-is a check; zero checks, a check with 0 collected tests, or a check with no README fails.
+"""Specifies testkit.guards.population. TESTING.md §4 point 2: every top-level dir with
+action.yml/action.yaml is a check; zero checks, a check with 0 collected tests, or a check with no
+README fails.
 """
 
 from pathlib import Path

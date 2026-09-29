@@ -1,4 +1,4 @@
-"""Specifies testkit.guards.skip_ban. D8: no skip, no xfail, anywhere."""
+"""Specifies testkit.guards.skip_ban. TESTING.md D8: no skip, no xfail, anywhere."""
 
 from testkit.guards.skip_ban import check
 

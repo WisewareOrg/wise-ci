@@ -1,6 +1,6 @@
-"""Specifies testkit.guards.file_collection. §4 point 3: every tracked test_*.py or *_test.py
-contributes at least one collected item. Module renamed from test_file_collection.py so its own
-filename stops matching the heuristic it checks for.
+"""Specifies testkit.guards.file_collection. TESTING.md §4 point 3: every tracked test_*.py or
+*_test.py contributes at least one collected item. Module renamed from test_file_collection.py so
+its own filename stops matching the heuristic it checks for.
 """
 
 from testkit.guards.file_collection import check

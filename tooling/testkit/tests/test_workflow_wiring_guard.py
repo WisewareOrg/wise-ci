@@ -1,7 +1,7 @@
-"""Specifies testkit.guards.workflow_wiring. §4 point 6: every check has an action-tests-<check>
-job with >=2 `uses: ./.wise-ci/<check>` steps, exactly one continue-on-error step carrying an id,
-and a later step reading that id's outcome; action-tests needs every such job and carries
-if: always().
+"""Specifies testkit.guards.workflow_wiring. TESTING.md §4 point 6: every check has an
+action-tests-<check> job with >=2 `uses: ./.wise-ci/<check>` steps, exactly one continue-on-error
+step carrying an id, and a later step reading that id's outcome; action-tests needs every such job
+and carries if: always().
 """
 
 from testkit.guards.workflow_wiring import check

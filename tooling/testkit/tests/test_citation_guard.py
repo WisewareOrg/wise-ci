@@ -1,5 +1,5 @@
-"""Specifies testkit.guards.citation. §4 point 4: every README citation is a collected test id,
-and every direction=gap test id is cited by its README, both directions.
+"""Specifies testkit.guards.citation. TESTING.md §4 point 4: every README citation is a collected
+test id, and every direction=gap test id is cited by its README, both directions.
 """
 
 from pathlib import Path

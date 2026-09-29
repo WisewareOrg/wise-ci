@@ -1,7 +1,7 @@
 """Specifies check-eol/check-eol.py against every row of WiseKiosk's scripts/cases/check-eol-py.md,
 plus two claims stated in the case file's own prose rather than its table -- the forced-CRLF-blob
 claim and the binary-attribute gap -- and the added GITHUB_ACTIONS pair. Runs the real script from
-its real path via testkit.run.run_script; never imports it (D3).
+its real path via testkit.run.run_script; never imports it (TESTING.md D3).
 """
 
 import os
@@ -24,7 +24,7 @@ CRLF_PLAIN = "CRLF found in the files above; the repo is LF-only (.gitattributes
 CRLF_ANNOTATED = "::error::CRLF line endings found in the files above; the repo is LF-only (.gitattributes)."
 CLEAN_MSG = "No CRLF line endings in the tracked tree; no untracked file left unsearched."
 
-# Isolated the same way as make_repo/run_script (D5): shared GIT_CONFIG_GLOBAL/NOSYSTEM, plus
+# Isolated the same way as make_repo/run_script (TESTING.md D5): shared GIT_CONFIG_GLOBAL/NOSYSTEM, plus
 # this file's own fixed identity.
 _IDENTITY = {
     "GIT_AUTHOR_NAME": "check-eol tests",
@@ -74,7 +74,7 @@ class _Scenario:
 
 
 def _assert_committed_verbatim(repo: Path, files: dict[str, bytes]) -> None:
-    # independent confirmation (D5): the committed blob's own bytes, not the guard under test.
+    # independent confirmation (TESTING.md D5): the committed blob's own bytes, not the guard under test.
     for relpath, content in files.items():
         assert _committed_bytes(repo, relpath) == content
 
@@ -94,7 +94,7 @@ def _untracked_repo(tracked: dict[str, bytes], untracked: dict[str, bytes]) -> C
         if tracked:
             _assert_committed_verbatim(repo, tracked)
         _write_untracked(repo, untracked)
-        # independent confirmation (D5): untracked-ness via git status, not the guard under test.
+        # independent confirmation (TESTING.md D5): untracked-ness via git status, not the guard under test.
         status = _git(repo, "status", "--porcelain").stdout
         for relpath in untracked:
             assert f"?? {relpath}" in status
@@ -127,7 +127,7 @@ def _grep_itself_fails() -> tuple[Callable[[Path], Path], Callable[[Result], Non
     def build(tmp_path: Path) -> Path:
         repo = make_repo(tmp_path / "repo", {"a.txt": b"hello\n"})
         _git(repo, "config", "grep.patternType", "bogus")
-        # independent confirmation (D5): run directly, not through the check under test.
+        # independent confirmation (TESTING.md D5): run directly, not through the check under test.
         ls_files = _git(repo, "ls-files", "--others", "--exclude-standard", "--", ".")
         assert ls_files.returncode == 0
         grep = subprocess.run(
@@ -166,7 +166,7 @@ def _forced_crlf_blob() -> Callable[[Path], Path]:
         subprocess.run(
             ["git", "clone", "-q", str(source), str(clone)], env=_env(), capture_output=True, text=True, check=True
         )
-        # independent confirmation (D5): the clone's bytes, not the guard under test.
+        # independent confirmation (TESTING.md D5): the clone's bytes, not the guard under test.
         assert (clone / "forced.txt").read_bytes() == payload.encode()
         return clone
 
@@ -177,7 +177,7 @@ def _binary_attribute_gap() -> Callable[[Path], Path]:
     def build(tmp_path: Path) -> Path:
         payload = b"line one\r\nline two\r\n"
         repo = make_repo(tmp_path / "repo", {"secret.txt": payload}, attributes="secret.txt binary\n")
-        # independent confirmation (D5): the tracked bytes, not the guard under test.
+        # independent confirmation (TESTING.md D5): the tracked bytes, not the guard under test.
         assert (repo / "secret.txt").read_bytes() == payload
         return repo
 
