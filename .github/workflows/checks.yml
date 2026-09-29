@@ -128,7 +128,7 @@ jobs:
 
       - name: Build a clean fixture (a tracked all-LF file)
         run: |
-          printf 'hello\n' > clean.txt
+          printf 'hello\r\n' > clean.txt
           git add clean.txt
           git -c user.email=fixture@wise-ci.invalid -c user.name=wise-ci-fixture commit -q -m fixture
 
