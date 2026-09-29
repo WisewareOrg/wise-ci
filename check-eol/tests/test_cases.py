@@ -13,6 +13,7 @@ from typing import Callable
 import pytest
 
 from testkit.cases import Case, case_id
+from testkit.git_isolation import GIT_ISOLATION
 from testkit.repo import make_repo
 from testkit.run import Result, run_script
 
@@ -24,14 +25,11 @@ CRLF_ANNOTATED = "::error::CRLF line endings found in the files above; the repo 
 CLEAN_MSG = "No CRLF line endings in the tracked tree; no untracked file left unsearched."
 
 # Every git call this file makes directly (not through testkit.repo.make_repo) is isolated the
-# same way (D5): no ambient host config -- GIT_CONFIG_GLOBAL/NOSYSTEM -- and a fixed identity for
-# any commit. A host with e.g. core.autocrlf=true silently rewrites a fixture's own CRLF bytes on
-# commit, which no assertion here catches by accident; this closes that off at the source rather
-# than per fixture (builder found the identity half of this on the real CI runner; the config half
-# is the same class of gap).
-_GIT_ISOLATION = {
-    "GIT_CONFIG_GLOBAL": "/dev/null",
-    "GIT_CONFIG_NOSYSTEM": "1",
+# same way (D5): the shared GIT_CONFIG_GLOBAL/NOSYSTEM pair (also used by make_repo and
+# run_script), plus a fixed identity for any commit -- this file's own. A host with e.g.
+# core.autocrlf=true silently rewrites a fixture's own CRLF bytes on commit, which no assertion
+# here catches by accident; this closes that off at the source rather than per fixture.
+_IDENTITY = {
     "GIT_AUTHOR_NAME": "check-eol tests",
     "GIT_AUTHOR_EMAIL": "check-eol-tests@wise-ci.invalid",
     "GIT_COMMITTER_NAME": "check-eol tests",
@@ -40,7 +38,7 @@ _GIT_ISOLATION = {
 
 
 def _env() -> dict[str, str]:
-    return {**os.environ, **_GIT_ISOLATION}
+    return {**os.environ, **GIT_ISOLATION, **_IDENTITY}
 
 
 def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess:
