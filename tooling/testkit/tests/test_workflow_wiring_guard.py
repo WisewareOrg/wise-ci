@@ -88,6 +88,20 @@ def test_two_unrelated_uses_steps_is_a_problem():
     assert check(workflow, {"check-eol"}) != []
 
 
+def test_uses_prefix_collision_with_a_different_check_is_a_problem():
+    # review-tests: startswith(f"./.wise-ci/{check_name}") matches "./.wise-ci/check-eol-other"
+    # too -- a different check that merely shares the name as a prefix. Isolated from the other
+    # requirements: continue-on-error+id and outcome-read are both present, referencing one of the
+    # colliding steps, so zero *exact* check-eol invocations is the only defect seeded.
+    workflow = _valid_workflow()
+    workflow["jobs"]["action-tests-check-eol"]["steps"] = [
+        {"uses": "./.wise-ci/check-eol-other"},
+        {"id": "seed", "continue-on-error": True, "uses": "./.wise-ci/check-eol-other"},
+        {"if": "steps.seed.outcome == 'failure'", "run": "exit 0"},
+    ]
+    assert check(workflow, {"check-eol"}) != []
+
+
 def test_valid_wiring_is_clean():
     workflow = _valid_workflow()
     assert check(workflow, {"check-eol"}) == []
