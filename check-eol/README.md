@@ -13,10 +13,12 @@ still caught after a fresh clone — the check is not made redundant by git's ow
 (`must-fail-forced-crlf-blob`).
 
 **Run outside a repository, or where the search itself fails, and the check fails with the
-underlying git exit status** rather than reporting a clean scan (`must-fail-outside-a-repository`).
+underlying git exit status** rather than reporting a clean scan (`must-fail-outside-a-repository`,
+`must-fail-search-itself-fails`).
 **A repository with no tracked file reports success** — an empty scan is not a search failure, and
 this check draws no distinction: "an empty population reports success — authored checks included,
-so all three of this wave's readings collapse to one" (owner, 2026-08-16;
+so all three of this wave's readings collapse to one. […] a failed or unreadable population
+enumeration is not an empty population and must fail" (owner, 2026-08-16;
 `must-pass-empty-tracked-tree`).
 
 **What this does not catch: a file whose `.gitattributes` sets the `binary` attribute.** That
