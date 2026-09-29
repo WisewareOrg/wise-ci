@@ -9,8 +9,9 @@ def _job_problems(check_name: str, job: dict | None) -> list[str]:
         return [f"no {job_id} job"]
     steps = job.get("steps", [])
     problems = []
-    if len([step for step in steps if "uses" in step]) < 2:
-        problems.append(f"{job_id}: fewer than 2 steps using ./.wise-ci/{check_name}")
+    invocation = f"./.wise-ci/{check_name}"
+    if len([step for step in steps if step.get("uses", "").startswith(invocation)]) < 2:
+        problems.append(f"{job_id}: fewer than 2 steps using {invocation}")
     seeded = [step for step in steps if step.get("continue-on-error") and "id" in step]
     if len(seeded) != 1:
         problems.append(f"{job_id}: expected exactly one continue-on-error step carrying an id")
