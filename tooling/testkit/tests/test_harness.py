@@ -175,3 +175,19 @@ def test_guard_problems_surfaces_a_real_guard_defect(tmp_path):
     item = _FakeGuardProblemsItem(root / "check-x" / "tests" / "test_cases.py", "must-pass-thing")
     problems = guard_problems(root, [item])
     assert any("test_stray.py" in problem for problem in problems)
+
+
+def test_guard_problems_reports_a_missing_readme_without_crashing(tmp_path):
+    # A check dir with no README.md must surface population.check's own clean "no README.md"
+    # problem string -- the clean-diagnostic contract guard_problems promises -- not raise.
+    root = make_repo(
+        tmp_path / "repo",
+        {
+            "check-x/action.yml": b"runs: {}\n",
+            "check-x/tests/test_cases.py": b"def test_thing():\n    assert True\n",
+            ".github/workflows/checks.yml": _wired_checks_yaml("check-x"),
+        },
+    )
+    item = _FakeGuardProblemsItem(root / "check-x" / "tests" / "test_cases.py", "must-pass-thing")
+    problems = guard_problems(root, [item])
+    assert "check-x: no README.md" in problems
