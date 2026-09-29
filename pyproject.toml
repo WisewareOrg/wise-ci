@@ -19,7 +19,8 @@ test = [
 
 [tool.pytest.ini_options]
 pythonpath = ["tooling"]
-addopts = ["--import-mode=importlib"]
+addopts = ["-p", "no:cacheprovider", "--strict-markers", "--strict-config", "--import-mode=importlib"]
+xfail_strict = true
 
 [tool.coverage.run]
 branch = true
