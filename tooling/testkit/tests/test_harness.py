@@ -5,10 +5,13 @@ decision logic — each guard is specified by its own test file.
 
 from pathlib import Path
 
+import yaml
+
 from testkit.harness import (
     apply_guard_verdict,
     collected_ids_by_check,
     format_problems,
+    guard_problems,
     skipped_or_xfailed_ids,
     tracked_test_files,
 )
@@ -33,6 +36,38 @@ class _FakeCollectedItem:
     def __init__(self, path: Path, test_id: str):
         self.path = path
         self.callspec = _FakeCallspec(test_id)
+
+
+class _FakeGuardProblemsItem:
+    def __init__(self, path: Path, test_id: str):
+        self.path = path
+        self.callspec = _FakeCallspec(test_id)
+
+    def get_closest_marker(self, name: str):
+        return None
+
+
+def _wired_checks_yaml(check_name: str) -> bytes:
+    job_id = f"action-tests-{check_name}"
+    workflow = {
+        "jobs": {
+            job_id: {
+                "name": job_id,
+                "steps": [
+                    {"uses": f"./.wise-ci/{check_name}"},
+                    {"id": "seed", "continue-on-error": True, "uses": f"./.wise-ci/{check_name}"},
+                    {"if": "steps.seed.outcome == 'failure'", "run": "exit 0"},
+                ],
+            },
+            "action-tests": {
+                "name": "action-tests",
+                "needs": [job_id],
+                "if": "always()",
+                "steps": [{"run": "true"}],
+            },
+        }
+    }
+    return yaml.safe_dump(workflow).encode()
 
 
 def test_apply_guard_verdict_forces_failure_when_problems_exist():
@@ -119,3 +154,24 @@ def test_tracked_test_files_excludes_non_test_and_untracked_files(tmp_path):
     (repo / "check-x/tests/test_untracked.py").write_text("def test_z():\n    assert True\n")
     result = tracked_test_files(repo)
     assert result == {(repo / "check-x/tests/test_a.py").resolve()}
+
+
+def test_guard_problems_surfaces_a_real_guard_defect(tmp_path):
+    # review-tests: guard_problems (the aggregator wiring all seven guards together) had no direct
+    # test at all -- only exercised incidentally by self-hosted `just test` against the
+    # always-clean wise-ci tree, which by construction never has a problem to surface. Everything
+    # here is otherwise correctly wired except a stray tracked test file outside any collected
+    # item -- the file-collection guard's own defect, surfaced end to end through the aggregator.
+    root = make_repo(
+        tmp_path / "repo",
+        {
+            "check-x/action.yml": b"runs: {}\n",
+            "check-x/README.md": b"# check-x\n",
+            "check-x/tests/test_cases.py": b"def test_thing():\n    assert True\n",
+            "check-x/tests/test_stray.py": b"def test_never_collected():\n    assert True\n",
+            ".github/workflows/checks.yml": _wired_checks_yaml("check-x"),
+        },
+    )
+    item = _FakeGuardProblemsItem(root / "check-x" / "tests" / "test_cases.py", "must-pass-thing")
+    problems = guard_problems(root, [item])
+    assert any("test_stray.py" in problem for problem in problems)
