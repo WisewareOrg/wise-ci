@@ -1,0 +1,16 @@
+"""Wires tooling/testkit/guards/ into every pytest session run against this repository
+(plan #4 W2, decision 10; ADR 0001 rev 1 point 4).
+"""
+
+from pathlib import Path
+
+from testkit.harness import apply_guard_verdict, guard_problems
+
+ROOT = Path(__file__).resolve().parent
+
+
+def pytest_sessionfinish(session, exitstatus):
+    problems = guard_problems(ROOT, session.items)
+    for problem in problems:
+        print(f"harness guard: {problem}")
+    session.exitstatus = apply_guard_verdict(exitstatus, problems)

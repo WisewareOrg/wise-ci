@@ -24,6 +24,8 @@ pythonpath = ["tooling"]
 branch = true
 parallel = true
 patch = ["subprocess"]
+source = ["."]
+omit = [".venv/*"]
 
 [tool.coverage.report]
 fail_under = 100
