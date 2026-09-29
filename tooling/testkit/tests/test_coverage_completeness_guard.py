@@ -36,7 +36,10 @@ def _init_repo(root: Path, py_files: dict[str, str]) -> Path:
 
 
 def _measure(repo: Path, *measured: str) -> None:
-    cov = coverage.Coverage(data_file=str(repo / ".coverage"), branch=True)
+    # config_file=False: without it, Coverage() auto-discovers this repo's own pyproject.toml
+    # ([tool.coverage.run] parallel = true), and .save() writes a pid-suffixed filename instead of
+    # the literal repo/.coverage the guard reads (builder, found running against implementation).
+    cov = coverage.Coverage(data_file=str(repo / ".coverage"), branch=True, config_file=False)
     cov.start()
     for rel in measured:
         runpy.run_path(str(repo / rel))
