@@ -1,6 +1,7 @@
-# Python bytecode
+# Python bytecode and virtual environment
 __pycache__/
 *.pyc
+.venv/
 
 # Node (tooling/commitlint/)
 node_modules/
@@ -13,6 +14,7 @@ secrets/
 
 # Coverage / logs
 coverage/
+.coverage*
 *.log
 
 # OS / editor

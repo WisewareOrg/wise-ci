@@ -1,0 +1,29 @@
+[project]
+name = "wise-ci"
+version = "0"
+requires-python = ">=3.12"
+
+[tool.uv]
+package = false
+default-groups = ["test"]
+python-downloads = "never"
+python-preference = "only-system"
+
+[dependency-groups]
+test = [
+  "pytest",
+  "coverage>=7.10",
+  "PyYAML",
+  "rust-just",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["tooling"]
+
+[tool.coverage.run]
+branch = true
+parallel = true
+patch = ["subprocess"]
+
+[tool.coverage.report]
+fail_under = 100
