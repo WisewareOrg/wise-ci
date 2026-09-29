@@ -24,11 +24,8 @@ CRLF_PLAIN = "CRLF found in the files above; the repo is LF-only (.gitattributes
 CRLF_ANNOTATED = "::error::CRLF line endings found in the files above; the repo is LF-only (.gitattributes)."
 CLEAN_MSG = "No CRLF line endings in the tracked tree; no untracked file left unsearched."
 
-# Every git call this file makes directly (not through testkit.repo.make_repo) is isolated the
-# same way (D5): the shared GIT_CONFIG_GLOBAL/NOSYSTEM pair (also used by make_repo and
-# run_script), plus a fixed identity for any commit -- this file's own. A host with e.g.
-# core.autocrlf=true silently rewrites a fixture's own CRLF bytes on commit, which no assertion
-# here catches by accident; this closes that off at the source rather than per fixture.
+# Isolated the same way as make_repo/run_script (D5): shared GIT_CONFIG_GLOBAL/NOSYSTEM, plus
+# this file's own fixed identity.
 _IDENTITY = {
     "GIT_AUTHOR_NAME": "check-eol tests",
     "GIT_AUTHOR_EMAIL": "check-eol-tests@wise-ci.invalid",
@@ -77,10 +74,7 @@ class _Scenario:
 
 
 def _assert_committed_verbatim(repo: Path, files: dict[str, bytes]) -> None:
-    # independent confirmation (D5): the committed blob's own bytes, not the guard under test. A
-    # host with core.autocrlf=true (or similar) silently rewrites what actually got committed;
-    # this is what would catch that, rather than an assertion that happens to pass anyway because
-    # git grep reads the working tree, not the index.
+    # independent confirmation (D5): the committed blob's own bytes, not the guard under test.
     for relpath, content in files.items():
         assert _committed_bytes(repo, relpath) == content
 
@@ -126,17 +120,14 @@ def _empty_tracked_repo() -> Callable[[Path], Path]:
 
 
 def _grep_itself_fails() -> tuple[Callable[[Path], Path], Callable[[Result], None]]:
-    # Distinct from outside-a-repository: the untracked check (git ls-files) succeeds here, so the
-    # script reaches the search step at all, and it's the search's own subprocess -- not the
-    # untracked one -- whose non-0/1 status is what's propagated (check-eol.py:61-63). A bad local
-    # grep.patternType makes `git grep` itself fatal while leaving `git ls-files` unaffected.
+    # Distinct from outside-a-repository (check-eol.py:61-63): a bad local grep.patternType makes
+    # `git grep` fatal without affecting `git ls-files`.
     observed: dict[str, int] = {}
 
     def build(tmp_path: Path) -> Path:
         repo = make_repo(tmp_path / "repo", {"a.txt": b"hello\n"})
         _git(repo, "config", "grep.patternType", "bogus")
-        # independent confirmation (D5): both git calls run directly, not through the check under
-        # test, before trusting the fixture -- ls-files still succeeds; grep alone goes fatal.
+        # independent confirmation (D5): run directly, not through the check under test.
         ls_files = _git(repo, "ls-files", "--others", "--exclude-standard", "--", ".")
         assert ls_files.returncode == 0
         grep = subprocess.run(
