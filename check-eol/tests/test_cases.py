@@ -4,6 +4,7 @@ forced-CRLF-blob claim and the binary-attribute gap -- and the added GITHUB_ACTI
 real script from its real path via testkit.run.run_script; never imports it (decision 3).
 """
 
+import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,14 +23,44 @@ CRLF_PLAIN = "CRLF found in the files above; the repo is LF-only (.gitattributes
 CRLF_ANNOTATED = "::error::CRLF line endings found in the files above; the repo is LF-only (.gitattributes)."
 CLEAN_MSG = "No CRLF line endings in the tracked tree; no untracked file left unsearched."
 
+# Every git call this file makes directly (not through testkit.repo.make_repo) is isolated the
+# same way (D5): no ambient host config -- GIT_CONFIG_GLOBAL/NOSYSTEM -- and a fixed identity for
+# any commit. A host with e.g. core.autocrlf=true silently rewrites a fixture's own CRLF bytes on
+# commit, which no assertion here catches by accident; this closes that off at the source rather
+# than per fixture (builder found the identity half of this on the real CI runner; the config half
+# is the same class of gap).
+_GIT_ISOLATION = {
+    "GIT_CONFIG_GLOBAL": "/dev/null",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_AUTHOR_NAME": "check-eol tests",
+    "GIT_AUTHOR_EMAIL": "check-eol-tests@wise-ci.invalid",
+    "GIT_COMMITTER_NAME": "check-eol tests",
+    "GIT_COMMITTER_EMAIL": "check-eol-tests@wise-ci.invalid",
+}
+
+
+def _env() -> dict[str, str]:
+    return {**os.environ, **_GIT_ISOLATION}
+
 
 def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
         ["git", "-C", str(cwd), *args],
+        env=_env(),
         capture_output=True,
         text=True,
         check=True,
     )
+
+
+def _committed_bytes(repo: Path, relpath: str) -> bytes:
+    result = subprocess.run(
+        ["git", "-C", str(repo), "show", f"HEAD:{relpath}"],
+        env=_env(),
+        capture_output=True,
+        check=True,
+    )
+    return result.stdout
 
 
 def _write_untracked(repo: Path, files: dict[str, bytes]) -> None:
@@ -47,9 +78,20 @@ class _Scenario:
     env: dict[str, str] | None = None
 
 
+def _assert_committed_verbatim(repo: Path, files: dict[str, bytes]) -> None:
+    # independent confirmation (D5): the committed blob's own bytes, not the guard under test. A
+    # host with core.autocrlf=true (or similar) silently rewrites what actually got committed;
+    # this is what would catch that, rather than an assertion that happens to pass anyway because
+    # git grep reads the working tree, not the index.
+    for relpath, content in files.items():
+        assert _committed_bytes(repo, relpath) == content
+
+
 def _tracked_repo(files: dict[str, bytes], *, attributes: str | None = None) -> Callable[[Path], Path]:
     def build(tmp_path: Path) -> Path:
-        return make_repo(tmp_path / "repo", files, attributes=attributes)
+        repo = make_repo(tmp_path / "repo", files, attributes=attributes)
+        _assert_committed_verbatim(repo, files)
+        return repo
 
     return build
 
@@ -57,6 +99,8 @@ def _tracked_repo(files: dict[str, bytes], *, attributes: str | None = None) -> 
 def _untracked_repo(tracked: dict[str, bytes], untracked: dict[str, bytes]) -> Callable[[Path], Path]:
     def build(tmp_path: Path) -> Path:
         repo = make_repo(tmp_path / "repo", tracked, commit=bool(tracked))
+        if tracked:
+            _assert_committed_verbatim(repo, tracked)
         _write_untracked(repo, untracked)
         # independent confirmation (D5): untracked-ness via git status, not the guard under test.
         status = _git(repo, "status", "--porcelain").stdout
@@ -99,6 +143,7 @@ def _grep_itself_fails() -> tuple[Callable[[Path], Path], Callable[[Result], Non
         assert ls_files.returncode == 0
         grep = subprocess.run(
             ["git", "-C", str(repo), "grep", "-lIP", r"\r$", "--", "."],
+            env=_env(),
             capture_output=True,
             text=True,
         )
@@ -121,29 +166,16 @@ def _forced_crlf_blob() -> Callable[[Path], Path]:
         blob = subprocess.run(
             ["git", "-C", str(source), "hash-object", "-w", "--stdin"],
             input=payload,
+            env=_env(),
             capture_output=True,
             text=True,
             check=True,
         ).stdout.strip()
         _git(source, "update-index", "--add", "--cacheinfo", f"100644,{blob},forced.txt")
-        # a stock runner has no global user.name/user.email at all (unlike a dev machine's own
-        # gitconfig, which silently made this commit succeed without them) -- must be explicit.
-        _git(
-            source,
-            "-c",
-            "user.email=t@example.com",
-            "-c",
-            "user.name=t",
-            "-c",
-            "commit.gpgsign=false",
-            "commit",
-            "-q",
-            "-m",
-            "force",
-        )
+        _git(source, "-c", "commit.gpgsign=false", "commit", "-q", "-m", "force")
         clone = tmp_path / "clone"
         subprocess.run(
-            ["git", "clone", "-q", str(source), str(clone)], capture_output=True, text=True, check=True
+            ["git", "clone", "-q", str(source), str(clone)], env=_env(), capture_output=True, text=True, check=True
         )
         # independent confirmation (D5): the clone's bytes, not the guard under test.
         assert (clone / "forced.txt").read_bytes() == payload.encode()
