@@ -83,6 +83,37 @@ def _empty_tracked_repo() -> Callable[[Path], Path]:
     return build
 
 
+def _grep_itself_fails() -> tuple[Callable[[Path], Path], Callable[[Result], None]]:
+    # Distinct from outside-a-repository: the untracked check (git ls-files) succeeds here, so the
+    # script reaches the search step at all, and it's the search's own subprocess -- not the
+    # untracked one -- whose non-0/1 status is what's propagated (check-eol.py:61-63). A bad local
+    # grep.patternType makes `git grep` itself fatal while leaving `git ls-files` unaffected.
+    observed: dict[str, int] = {}
+
+    def build(tmp_path: Path) -> Path:
+        repo = make_repo(tmp_path / "repo", {"a.txt": b"hello\n"})
+        _git(repo, "config", "grep.patternType", "bogus")
+        # independent confirmation (D5): both git calls run directly, not through the check under
+        # test, before trusting the fixture -- ls-files still succeeds; grep alone goes fatal.
+        ls_files = _git(repo, "ls-files", "--others", "--exclude-standard", "--", ".")
+        assert ls_files.returncode == 0
+        grep = subprocess.run(
+            ["git", "-C", str(repo), "grep", "-lIP", r"\r$", "--", "."],
+            capture_output=True,
+            text=True,
+        )
+        assert grep.returncode not in (0, 1)
+        observed["status"] = grep.returncode
+        return repo
+
+    def check(result: Result) -> None:
+        assert result.status == observed["status"]
+        assert UNTRACKED_MSG not in result.stderr
+        _no_traceback(result)
+
+    return build, check
+
+
 def _forced_crlf_blob() -> Callable[[Path], Path]:
     def build(tmp_path: Path) -> Path:
         payload = "line one\r\nline two\r\n"
@@ -123,13 +154,12 @@ def _no_traceback(result: Result) -> None:
     assert "Traceback" not in result.stdout
 
 
-def _must_fail(*, stdout_has: str = "", stderr_has: str = "") -> Callable[[Result], None]:
+def _must_fail(*, stderr_has: str, stdout_has: str = "") -> Callable[[Result], None]:
     def check(result: Result) -> None:
         assert result.status == 1
         if stdout_has:
             assert stdout_has in result.stdout
-        if stderr_has:
-            assert stderr_has in result.stderr
+        assert stderr_has in result.stderr
         assert CLEAN_MSG not in result.stdout
         _no_traceback(result)
 
@@ -167,6 +197,8 @@ def _forced_crlf_blob_check(result: Result) -> None:
     assert CRLF_PLAIN in result.stderr
     _no_traceback(result)
 
+
+_SEARCH_FAILS_BUILD, _SEARCH_FAILS_CHECK = _grep_itself_fails()
 
 SCENARIOS: list[_Scenario] = [
     _Scenario(
@@ -209,6 +241,18 @@ SCENARIOS: list[_Scenario] = [
         ),
         _outside_a_repository(),
         _outside_a_repository_check,
+    ),
+    _Scenario(
+        Case(
+            "search-itself-fails",
+            "the search subprocess itself failing after the untracked check already succeeded — a "
+            "local grep.patternType misconfiguration makes git grep fatal without git ls-files "
+            "being affected, distinct from running outside a repository (where the untracked check "
+            "fails first and the search step is never reached)",
+            "must-fail",
+        ),
+        _SEARCH_FAILS_BUILD,
+        _SEARCH_FAILS_CHECK,
     ),
     _Scenario(
         Case(
