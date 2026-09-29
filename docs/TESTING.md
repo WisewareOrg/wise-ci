@@ -160,10 +160,10 @@ clutter but a throwaway repo also sucks."* The target is that nothing is open an
 in wise-ci's default issue and PR views outside a run. Four things changed:
 
 - The standing **open** fixtures (15 issues, 6 draft PRs, some permanently red) are gone.
-- Fixtures now **rest closed**: 7 issues and 4 PRs that never merge and never run CI. The issues
-  are reopened only for the length of a live run.
+- Fixtures **rest closed**: 7 issues and 4 PRs that never merge and never run CI. The issues are
+  reopened only for the length of a live run.
 - T2 left the PR merge gate. It runs on every push to `main` and weekly.
-- `just verify` no longer includes `contract`.
+- `just verify` does not include `contract`.
 
 The separate fixtures repository stays rejected (D17). Facts checked on 2026-09-27 before
 redesigning:
