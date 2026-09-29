@@ -5,12 +5,11 @@ file, or on an empty or missing coverage data file (D10: "not 0 of 0").
 """
 
 import os
-import runpy
 import subprocess
 import sys
 from pathlib import Path
 
-import coverage
+from coverage.data import CoverageData
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -36,15 +35,13 @@ def _init_repo(root: Path, py_files: dict[str, str]) -> Path:
 
 
 def _measure(repo: Path, *measured: str) -> None:
-    # config_file=False: without it, Coverage() auto-discovers this repo's own pyproject.toml
-    # ([tool.coverage.run] parallel = true), and .save() writes a pid-suffixed filename instead of
-    # the literal repo/.coverage the guard reads (builder, found running against implementation).
-    cov = coverage.Coverage(data_file=str(repo / ".coverage"), branch=True, config_file=False)
-    cov.start()
-    for rel in measured:
-        runpy.run_path(str(repo / rel))
-    cov.stop()
-    cov.save()
+    # A nested coverage.Coverage() would install a second sys.settrace tracer, displacing the
+    # outer `just test` run's own tracer for as long as it's active — making the lines in between
+    # unmeasurable from the outside (builder, found running this file under `just test`).
+    # CoverageData writes measurement records directly, with no tracer involved.
+    data = CoverageData(basename=str(repo / ".coverage"))
+    data.add_lines({str(repo / rel): {1} for rel in measured})
+    data.write()
 
 
 def _run_guard(cwd: Path) -> subprocess.CompletedProcess:
