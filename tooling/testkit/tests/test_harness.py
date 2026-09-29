@@ -3,7 +3,7 @@ a straight-line sequence of calls (see harness.py's module docstring). Not testi
 decision logic — each guard is specified by its own test file.
 """
 
-from testkit.harness import apply_guard_verdict, skipped_or_xfailed_ids
+from testkit.harness import apply_guard_verdict, format_problems, skipped_or_xfailed_ids
 
 
 class _FakeItem:
@@ -31,3 +31,11 @@ def test_skipped_or_xfailed_ids_includes_a_marked_item():
 def test_skipped_or_xfailed_ids_excludes_an_unmarked_item():
     item = _FakeItem("test_x.py::test_thing", set())
     assert skipped_or_xfailed_ids([item]) == []
+
+
+def test_format_problems_empty_writes_nothing():
+    assert format_problems([]) == ""
+
+
+def test_format_problems_prefixes_each_problem():
+    assert format_problems(["x", "y"]) == "harness guard: x\nharness guard: y\n"
