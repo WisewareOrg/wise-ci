@@ -54,6 +54,13 @@ def test_job_with_no_continue_on_error_id_step_is_a_problem():
     assert check(workflow, {"check-eol"}) != []
 
 
+def test_continue_on_error_step_with_no_outcome_read_is_a_problem():
+    workflow = _valid_workflow()
+    steps = workflow["jobs"]["action-tests-check-eol"]["steps"]
+    workflow["jobs"]["action-tests-check-eol"]["steps"] = steps[:2]
+    assert check(workflow, {"check-eol"}) != []
+
+
 def test_aggregate_missing_a_needed_job_is_a_problem():
     workflow = _valid_workflow()
     workflow["jobs"]["action-tests"]["needs"] = []
