@@ -1,8 +1,9 @@
-"""Specifies testkit.guards.test_file_collection (plan #4 W2, decision 10; strategy §4 point 3:
-every tracked test_*.py or *_test.py contributes at least one collected item.
+"""Specifies testkit.guards.file_collection (plan #4 W2, decision 10; strategy §4 point 3: every
+tracked test_*.py or *_test.py contributes at least one collected item. Module renamed from
+test_file_collection.py so its own filename stops matching the heuristic it checks for.
 """
 
-from testkit.guards.test_file_collection import check
+from testkit.guards.file_collection import check
 
 
 def test_uncollected_tracked_test_file_is_a_problem(tmp_path):
