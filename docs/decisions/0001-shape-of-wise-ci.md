@@ -2,12 +2,10 @@
 
 **Status:** accepted
 **Decided:** 2026-09-27 (stand-up conversation)
-**Rev:** 2
+**Rev:** 1
 
 ## Revisions
 
-- **rev 2** — 2026-09-29 — point 4 links the test architecture document, landed with check-eol
-  (#4 migrate check-eol to wise-ci).
 - **rev 1** — 2026-09-27 — first written (stand-up).
 
 ## Context

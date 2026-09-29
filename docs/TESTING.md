@@ -415,7 +415,7 @@ URL. After that, the T3 pair re-proves itself on every run.
 ## 5. ADR 0001 point 4
 
 Point 4's text and the "central `tests/` tree" alternative shipped with the stand-up. ADR 0001
-rev 2 links point 4 to this document.
+rev 1 point 4 links to this document.
 
 ## 6. Test-approach paragraphs for the tickets
 

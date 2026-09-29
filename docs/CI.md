@@ -130,7 +130,7 @@ This gate has no local form. Nothing offline stands in for a consumer's own `use
 ## Self-gating
 
 Once a check migrates, the `check-eol` job runs it over wise-ci's own tree (`uses: ./check-eol`),
-per ADR 0001 rev 2 point 5 — the Self-gating tier row in `TESTING.md`. It is not a required check.
+per ADR 0001 rev 1 point 5 — the Self-gating tier row in `TESTING.md`. It is not a required check.
 
 This gate has no local form of its own, though the script it runs can be invoked directly
 (`python3 check-eol/check-eol.py`, from the repository root) the same way any consumer's tree
