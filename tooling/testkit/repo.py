@@ -6,6 +6,8 @@ import os
 import subprocess
 from pathlib import Path
 
+from testkit.git_isolation import GIT_ISOLATION
+
 _IDENTITY = {
     "GIT_AUTHOR_NAME": "wise-ci testkit",
     "GIT_AUTHOR_EMAIL": "testkit@wise-ci.invalid",
@@ -19,7 +21,7 @@ _IDENTITY = {
 def _git(repo: Path, *args: str) -> None:
     subprocess.run(
         ["git", "-C", str(repo), *args],
-        env={**os.environ, **_IDENTITY},
+        env={**os.environ, **GIT_ISOLATION, **_IDENTITY},
         check=True,
         capture_output=True,
         text=True,

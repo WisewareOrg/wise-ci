@@ -1,5 +1,5 @@
 """testkit.run.run_script: invoke a check script as a subprocess under a minimal, explicit
-environment (plan #4 W2, decision 10).
+environment (plan #4 W2, decision 10; strategy D5).
 """
 
 import os
@@ -8,7 +8,9 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-ENV_ALLOW = ("PATH", "LANG", "LC_ALL")
+from testkit.git_isolation import GIT_ISOLATION
+
+ENV_ALLOW = ("PATH",)
 
 
 @dataclass(frozen=True)
@@ -21,7 +23,10 @@ class Result:
 def run_script(script: Path, cwd: Path, *, env: dict[str, str] | None = None) -> Result:
     run_env = {name: os.environ[name] for name in ENV_ALLOW if name in os.environ}
     run_env.update((key, value) for key, value in os.environ.items() if key.startswith("COVERAGE_"))
+    run_env.update(GIT_ISOLATION)
+    run_env["LC_ALL"] = "C.UTF-8"
     run_env["HOME"] = tempfile.mkdtemp()
+    run_env["GIT_CEILING_DIRECTORIES"] = str(cwd)
     if env:
         run_env.update(env)
     result = subprocess.run(
