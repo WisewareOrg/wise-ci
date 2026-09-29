@@ -1,5 +1,5 @@
-"""testkit.discovery.check_dirs: the top-level directories that are checks (plan #4 W2, decision 10;
-ADR 0001 rev 1 point 1: a top-level folder holding an action.yml/action.yaml is a check).
+"""testkit.discovery.check_dirs: the top-level directories that are checks (ADR 0001 rev 1 point 1:
+a top-level folder holding an action.yml/action.yaml is a check).
 """
 
 from pathlib import Path

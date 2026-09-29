@@ -1,5 +1,5 @@
 """testkit.run.run_script: invoke a check script as a subprocess under a minimal, explicit
-environment (plan #4 W2, decision 10; strategy D5).
+environment (TESTING.md D5).
 """
 
 import os

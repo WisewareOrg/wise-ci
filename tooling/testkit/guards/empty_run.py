@@ -1,5 +1,5 @@
 """testkit.guards.empty_run: pytest's own exit 5 (no tests collected) must fail the session
-explicitly (plan #4 W2, decision 10; strategy §4 point 1).
+explicitly (TESTING.md §4 point 1).
 """
 
 

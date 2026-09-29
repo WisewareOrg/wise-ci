@@ -1,5 +1,5 @@
 """Wires tooling/testkit/guards/ into every pytest session run against this repository
-(plan #4 W2, decision 10; ADR 0001 rev 1 point 4).
+(ADR 0001 rev 1 point 4).
 """
 
 import sys

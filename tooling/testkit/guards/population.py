@@ -1,5 +1,4 @@
-"""testkit.guards.population: every top-level check directory is populated (plan #4 W2, decision
-10; strategy §4 point 2).
+"""testkit.guards.population: every top-level check directory is populated (TESTING.md §4 point 2).
 """
 
 from pathlib import Path

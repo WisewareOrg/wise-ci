@@ -1,5 +1,5 @@
 """testkit.guards.citation: every README citation is a collected test id, and every gap-direction
-test id is cited by its README (plan #4 W2, decision 10; strategy §4 point 4).
+test id is cited by its README (TESTING.md §4 point 4).
 """
 
 import re

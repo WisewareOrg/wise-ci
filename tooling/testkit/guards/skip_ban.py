@@ -1,5 +1,4 @@
-"""testkit.guards.skip_ban: no test may skip or xfail, anywhere (plan #4 W2, decision 10; strategy
-D8).
+"""testkit.guards.skip_ban: no test may skip or xfail, anywhere (TESTING.md D8).
 """
 
 

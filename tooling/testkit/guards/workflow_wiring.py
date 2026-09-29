@@ -1,5 +1,5 @@
-"""testkit.guards.workflow_wiring: every check has an action-tests-<check> job with the strategy
-§4 step shape, and action-tests aggregates every one (plan #4 W2, decision 10; strategy §4 point 6).
+"""testkit.guards.workflow_wiring: every check has an action-tests-<check> job with TESTING.md's
+§4 step shape, and action-tests aggregates every one (TESTING.md §4 point 6).
 """
 
 

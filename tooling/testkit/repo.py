@@ -1,5 +1,4 @@
-"""testkit.repo.make_repo: a hermetic git repository for guard and check tests (plan #4 W2,
-decision 10).
+"""testkit.repo.make_repo: a hermetic git repository for guard and check tests (TESTING.md D5).
 """
 
 import os

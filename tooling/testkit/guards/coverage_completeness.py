@@ -1,6 +1,6 @@
 """testkit.guards.coverage_completeness: every tracked Python file outside a top-level dot-directory
-must be measured by the combined coverage data file in the current working directory (plan #4 W2,
-decision 10; strategy D10: an empty or missing data file is an error, not a vacuous pass).
+must be measured by the combined coverage data file in the current working directory (TESTING.md
+D10: an empty or missing data file is an error, not a vacuous pass).
 
 Run as `python -m testkit.guards.coverage_completeness` after `coverage combine`, from the repo
 root (justfile).

@@ -1,5 +1,5 @@
-"""testkit.guards.test_file_collection: every tracked test_*.py/*_test.py file must contribute at
-least one collected item (plan #4 W2, decision 10; strategy §4 point 3).
+"""testkit.guards.file_collection: every tracked test_*.py/*_test.py file must contribute at
+least one collected item (TESTING.md §4 point 3).
 """
 
 from pathlib import Path

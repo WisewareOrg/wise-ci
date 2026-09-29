@@ -2,7 +2,7 @@
 Root conftest.py's own hook body stays a straight-line sequence of calls into this module, so the
 guard-detected-problems path (which forces the session to fail, foreclosing that same run from ever
 reaching `coverage report`) is exercised by direct unit tests here rather than by self-hosted
-operation (plan #4 W2, decision 10; ADR 0001 rev 1 point 4).
+operation (ADR 0001 rev 1 point 4).
 """
 
 import re
