@@ -126,7 +126,21 @@ def _forced_crlf_blob() -> Callable[[Path], Path]:
             check=True,
         ).stdout.strip()
         _git(source, "update-index", "--add", "--cacheinfo", f"100644,{blob},forced.txt")
-        _git(source, "-c", "commit.gpgsign=false", "commit", "-q", "-m", "force")
+        # a stock runner has no global user.name/user.email at all (unlike a dev machine's own
+        # gitconfig, which silently made this commit succeed without them) -- must be explicit.
+        _git(
+            source,
+            "-c",
+            "user.email=t@example.com",
+            "-c",
+            "user.name=t",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "-q",
+            "-m",
+            "force",
+        )
         clone = tmp_path / "clone"
         subprocess.run(
             ["git", "clone", "-q", str(source), str(clone)], capture_output=True, text=True, check=True
