@@ -39,7 +39,7 @@ from a session's proposal, so the marker is what a later reader relies on.
 
 | # | Rev | Decided | Decision |
 |---|---|---|---|
-| [0001](0001-shape-of-wise-ci.md) | 1 | 2026-09-27 | wise-ci is one repo of composite actions, one per check in its own top-level folder, one version tag for the whole repo, consumed by commit-SHA pin bumped by Renovate; a check's tests live beside it and replace the prose case record; wise-ci gates itself as each check migrates in; maintained tools are shared as config presets, not wrapped |
+| [0001](0001-shape-of-wise-ci.md) | 2 | 2026-09-27 | wise-ci is one repo of composite actions, one per check in its own top-level folder, one version tag for the whole repo, consumed by commit-SHA pin bumped by Renovate; a check's tests live beside it and replace the prose case record; wise-ci gates itself as each check migrates in; maintained tools are shared as config presets, not wrapped |
 
 ## Revisions
 

@@ -2,10 +2,12 @@
 
 **Status:** accepted
 **Decided:** 2026-09-27 (stand-up conversation)
-**Rev:** 1
+**Rev:** 2
 
 ## Revisions
 
+- **rev 2** — 2026-09-29 — point 4 links the test architecture document, landed with check-eol
+  (#4 migrate check-eol to wise-ci).
 - **rev 1** — 2026-09-27 — first written (stand-up).
 
 ## Context
@@ -38,7 +40,7 @@ commitlint fits beside an authored check.
    owner rulings and gap explanations also move. Test machinery shared across checks lives under
    `tooling/`, not in a check's folder or a top-level folder of its own; a top-level folder holding
    an `action.yml` is a check (point 1). How the tests are tiered, and what each tier guarantees,
-   is the test architecture document's, which arrives with the first migrated check.
+   is [`../TESTING.md`](../TESTING.md)'s.
 5. **Migrate-to-enable bootstrap** (owner, 2026-09-27): wise-ci gates itself with each check as it
    migrates, via `uses: ./<check>`.
 6. **Maintained tools are shared as config presets, not wrapped** (owner, 2026-09-27).

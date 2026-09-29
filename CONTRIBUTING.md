@@ -53,6 +53,12 @@ whatever its size. Keep the diff to intended files. Verify via CI, not a local r
 on `main`; without the bodies beneath it, the reasoning recorded per commit is unreachable by
 `git log -S` on the line it explains.
 
+## Running the checks
+
+`just verify` runs the offline test tier locally — the same `just test` recipe CI's `tests` job
+invokes — for iterating on a change before it is ready. [`TESTING.md`](TESTING.md) says what each
+tier guarantees.
+
 ## Review checklist
 
 Each question is an obligation on the author that leaves no artifact, so no check decides it — the

@@ -28,6 +28,9 @@ configuration rather than a tracked file, so no check here can assert it.
 
 This mechanises the security review a solo project has no second reader to perform.
 
+This gate has no local form: CodeQL's analysis needs a built database via the CodeQL CLI, which no
+`just` recipe wraps.
+
 ## Workflow supply-chain and privilege audit
 
 The workflows are themselves a supply chain and themselves privileged. Both are audited from the
@@ -66,6 +69,9 @@ deterministically, so a verdict moves only when a workflow or a pinned image doe
 sits behind an admin-only API. It is read-only; the top-level blocks are what a check can see, and
 they are what the rule above constrains.
 
+This gate has no local form either: no `just` recipe wraps zizmor or actionlint, though both run
+from the same digest-pinned images this file names.
+
 ## Secret scanning
 
 A pull request, and every push to the default branch, is scanned for committed credentials, and a
@@ -80,6 +86,9 @@ second parent, because the walk follows first parents and skips merges; and the 
 than the event's own commit list. The scan is pattern-based besides, so it catches the credential
 shapes it holds rules for and nothing reports what it missed. It raises the cost of committing a
 credential; it is not an assertion that the repository holds none.
+
+This gate has no local form: gitleaks runs only in CI, walking the event's own commit list, which a
+local run has no equivalent for.
 
 ## PR title
 
@@ -96,3 +105,35 @@ pinned install under `tooling/commitlint/node_modules` is unreachable that way; 
 install the machine holds, so a local run can pass on a copy the runner does not have. The PR title
 is attacker-controlled, so it enters the run step only via env mapping, never inline into `run:`. The
 job runs on `pull_request` only — no PR title exists on a push.
+
+This gate has no local form: the PR title it checks does not exist until a pull request does.
+
+## Python test tier
+
+The `tests` job ([`../.github/workflows/checks.yml`](../.github/workflows/checks.yml)) runs
+`just test`: the project's whole Python test suite, under coverage, gated at 100% branch coverage.
+[`TESTING.md`](TESTING.md) says what each test tier guarantees and why the bar is 100%.
+
+This gate has a local form: `just verify` runs the same recipe offline, for iterating before a
+change is ready ([`../CONTRIBUTING.md`](../CONTRIBUTING.md)). CI is still the merge-time authority —
+a local run and the runner's own environment are not guaranteed identical.
+
+## Action-level proof
+
+Each migrated check gets an `action-tests-<check>` job, proving the *action* a consumer's workflow
+calls — the composite step, not this repository's own tree — against an archived, standalone copy
+(`TESTING.md`'s F1). `action-tests` is the required aggregate: it `needs` every `action-tests-<check>`
+job and fails unless each one's result is `success`, closing the gap where a skipped required job
+reads as passing.
+
+This gate has no local form. Nothing offline stands in for a consumer's own `uses:` step.
+
+## Self-gating
+
+Once a check migrates, the `check-eol` job runs it over wise-ci's own tree (`uses: ./check-eol`),
+per ADR 0001 rev 2 point 5. This is product use, not verification: it proves nothing
+`action-tests-check-eol` does not already prove, and it is not a required check.
+
+This gate has no local form of its own, though the script it runs can be invoked directly
+(`python3 check-eol/check-eol.py`, from the repository root) the same way any consumer's tree
+would run it.
