@@ -1,6 +1,6 @@
 """Confirms check-eol/check-eol.py is safely importable as a plain module -- the `if __name__ ==
-"__main__":` guard's other arm, which test_cases.py can never exercise (decision 3: the script is
-run as a subprocess from its real path, never imported).
+"__main__":` guard's other arm, which test_cases.py can never exercise (D3: the script is run as a
+subprocess from its real path, never imported).
 """
 
 import importlib.util

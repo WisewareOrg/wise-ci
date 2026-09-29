@@ -1,6 +1,4 @@
-"""Specifies testkit.cases.Case / case_id (plan #4 W2, decision 10; owner, 2026-09-28: no origin
-field on Case).
-"""
+"""Specifies testkit.cases.Case / case_id (owner, 2026-09-28: no origin field on Case)."""
 
 import pytest
 

@@ -1,4 +1,4 @@
-"""Specifies testkit.run.run_script / Result / ENV_ALLOW (plan #4 W2, decision 10)."""
+"""Specifies testkit.run.run_script / Result / ENV_ALLOW."""
 
 import os
 from pathlib import Path

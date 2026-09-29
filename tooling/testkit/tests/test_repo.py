@@ -1,4 +1,4 @@
-"""Specifies testkit.repo.make_repo (plan #4 W2, decision 10)."""
+"""Specifies testkit.repo.make_repo."""
 
 import subprocess
 from pathlib import Path

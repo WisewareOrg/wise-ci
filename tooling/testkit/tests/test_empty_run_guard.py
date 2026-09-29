@@ -1,6 +1,4 @@
-"""Specifies testkit.guards.empty_run (plan #4 W2, decision 10: "empty-run guard (pytest exit 5 →
-non-zero)"; strategy §4 point 1).
-"""
+"""Specifies testkit.guards.empty_run: pytest's own exit 5 must stay non-zero (§4 point 1)."""
 
 from testkit.guards.empty_run import check
 
