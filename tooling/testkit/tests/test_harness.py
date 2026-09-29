@@ -10,7 +10,9 @@ from testkit.harness import (
     collected_ids_by_check,
     format_problems,
     skipped_or_xfailed_ids,
+    tracked_test_files,
 )
+from testkit.repo import make_repo
 
 
 class _FakeItem:
@@ -87,3 +89,33 @@ def test_collected_ids_by_check_does_not_pool_collected_ids_across_checks(tmp_pa
     ids_b, _ = result[dir_b]
     assert ids_a == {"must-pass-only-in-a"}
     assert ids_b == {"must-pass-only-in-b"}
+
+
+def test_tracked_test_files_includes_both_tracked_spellings(tmp_path):
+    # review-tests: no direct test existed at all -- only exercised incidentally by self-hosted
+    # `just test` against the always-clean wise-ci tree.
+    repo = make_repo(
+        tmp_path / "repo",
+        {
+            "check-x/tests/test_a.py": b"def test_a():\n    assert True\n",
+            "check-x/tests/b_test.py": b"def test_b():\n    assert True\n",
+        },
+    )
+    result = tracked_test_files(repo)
+    assert result == {
+        (repo / "check-x/tests/test_a.py").resolve(),
+        (repo / "check-x/tests/b_test.py").resolve(),
+    }
+
+
+def test_tracked_test_files_excludes_non_test_and_untracked_files(tmp_path):
+    repo = make_repo(
+        tmp_path / "repo",
+        {
+            "check-x/tests/test_a.py": b"def test_a():\n    assert True\n",
+            "check-x/action.yml": b"runs: {}\n",
+        },
+    )
+    (repo / "check-x/tests/test_untracked.py").write_text("def test_z():\n    assert True\n")
+    result = tracked_test_files(repo)
+    assert result == {(repo / "check-x/tests/test_a.py").resolve()}
