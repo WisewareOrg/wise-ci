@@ -1,6 +1,6 @@
 """Specifies check-eol/check-eol.py against every row of WiseKiosk's scripts/cases/check-eol-py.md
-(plan #4 W3), plus the case file's own prose claims -- the forced-CRLF-blob claim and the
-binary-attribute gap (D6: origin "case-file prose") -- and the added GITHUB_ACTIONS pair. Runs the
+(plan #4 W3), plus two claims stated in the case file's own prose rather than its table -- the
+forced-CRLF-blob claim and the binary-attribute gap -- and the added GITHUB_ACTIONS pair. Runs the
 real script from its real path via testkit.run.run_script; never imports it (decision 3).
 """
 
