@@ -15,9 +15,9 @@ from testkit.discovery import check_dirs
 from testkit.guards import (
     citation,
     empty_run,
+    file_collection,
     population,
     skip_ban,
-    test_file_collection,
     workflow_wiring,
 )
 
@@ -68,7 +68,7 @@ def guard_problems(root: Path, items) -> list[str]:
     problems = []
     problems += empty_run.check(len(items))
     problems += population.check(root, collected_paths)
-    problems += test_file_collection.check(tracked_test_files(root), collected_paths)
+    problems += file_collection.check(tracked_test_files(root), collected_paths)
     problems += citation.check(dirs, ids, gap_ids)
     problems += skip_ban.check(skipped_or_xfailed_ids(items))
     problems += workflow_wiring.check(workflow, {d.name for d in dirs})

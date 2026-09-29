@@ -26,8 +26,6 @@ def check(workflow: dict, check_names: set[str]) -> list[str]:
     problems = []
     for check_name in sorted(check_names):
         problems.extend(_job_problems(check_name, jobs.get(f"action-tests-{check_name}")))
-    if not check_names:
-        return problems
     required = {f"action-tests-{name}" for name in check_names}
     aggregate = jobs.get("action-tests")
     if aggregate is None:
