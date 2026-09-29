@@ -10,7 +10,7 @@ def _job_problems(check_name: str, job: dict | None) -> list[str]:
     steps = job.get("steps", [])
     problems = []
     invocation = f"./.wise-ci/{check_name}"
-    if len([step for step in steps if step.get("uses", "").startswith(invocation)]) < 2:
+    if len([step for step in steps if step.get("uses") == invocation]) < 2:
         problems.append(f"{job_id}: fewer than 2 steps using {invocation}")
     seeded = [step for step in steps if step.get("continue-on-error") and "id" in step]
     if len(seeded) != 1:

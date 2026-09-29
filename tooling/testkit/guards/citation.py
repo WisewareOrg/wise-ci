@@ -11,7 +11,9 @@ _CITATION = re.compile(r"`((?:must-fail|must-pass|gap)-[a-z0-9-]+)`")
 def _cited_ids(check_dirs: list[Path]) -> set[str]:
     ids = set()
     for check_dir in check_dirs:
-        ids.update(_CITATION.findall((check_dir / "README.md").read_text()))
+        readme = check_dir / "README.md"
+        if readme.exists():
+            ids.update(_CITATION.findall(readme.read_text()))
     return ids
 
 
