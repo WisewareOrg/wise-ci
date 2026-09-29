@@ -123,16 +123,14 @@ a local run and the runner's own environment are not guaranteed identical.
 Each migrated check gets an `action-tests-<check>` job, proving the *action* a consumer's workflow
 calls — the composite step, not this repository's own tree — against an archived, standalone copy
 (`TESTING.md`'s F1). `action-tests` is the required aggregate: it `needs` every `action-tests-<check>`
-job and fails unless each one's result is `success`, closing the gap where a skipped required job
-reads as passing.
+job and fails unless each one's result is `success` (closing F2; `TESTING.md`).
 
 This gate has no local form. Nothing offline stands in for a consumer's own `uses:` step.
 
 ## Self-gating
 
 Once a check migrates, the `check-eol` job runs it over wise-ci's own tree (`uses: ./check-eol`),
-per ADR 0001 rev 2 point 5. This is product use, not verification: it proves nothing
-`action-tests-check-eol` does not already prove, and it is not a required check.
+per ADR 0001 rev 2 point 5 — the Self-gating tier row in `TESTING.md`. It is not a required check.
 
 This gate has no local form of its own, though the script it runs can be invoked directly
 (`python3 check-eol/check-eol.py`, from the repository root) the same way any consumer's tree
