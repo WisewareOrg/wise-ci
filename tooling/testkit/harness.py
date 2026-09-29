@@ -77,3 +77,7 @@ def guard_problems(root: Path, items) -> list[str]:
 
 def apply_guard_verdict(exitstatus: int, problems: list[str]) -> int:
     return 1 if problems else exitstatus
+
+
+def format_problems(problems: list[str]) -> str:
+    return "".join(f"harness guard: {problem}\n" for problem in problems)

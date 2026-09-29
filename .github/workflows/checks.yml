@@ -82,3 +82,98 @@ jobs:
         run: |
           printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pr-title"
           COMMITLINT_TITLE_FILE="$RUNNER_TEMP/pr-title" tooling/commitlint/node_modules/.bin/commitlint --config .commitlintrc-pr-title.json --env COMMITLINT_TITLE_FILE
+
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+
+      - name: just test
+        run: uv run just test
+
+  action-tests-check-eol:
+    name: action-tests-check-eol
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out wise-ci to a scratch path
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: scratch
+          persist-credentials: false
+
+      # Same export semantics as the tarball a runner downloads for a remote `uses:` (strategy §4,
+      # action-tests-<check> step 1); the scratch checkout is then deleted.
+      - name: Extract git archive HEAD into .wise-ci/
+        run: |
+          mkdir -p .wise-ci
+          git -C scratch archive HEAD | tar -x -C .wise-ci
+          rm -rf scratch
+
+      # The workspace becomes the fixture tree check-eol judges, kept separate from the action's
+      # own files under .wise-ci/ (strategy F1: a script that finds its tree from its own path must
+      # not be able to land on itself).
+      - name: Initialize the workspace as the fixture repo, excluding .wise-ci/
+        run: |
+          git init -q -b main
+          echo '.wise-ci/' >> .git/info/exclude
+
+      - name: Build a clean fixture (a tracked all-LF file)
+        run: |
+          printf 'hello\n' > clean.txt
+          git add clean.txt
+          git -c user.email=fixture@wise-ci.invalid -c user.name=wise-ci-fixture commit -q -m fixture
+
+      - name: "check-eol: clean fixture (must pass)"
+        uses: ./.wise-ci/check-eol
+
+      # Independent confirmation (strategy D5): the seeded file's bytes, not the check under test.
+      - name: "check-eol: seed a tracked CRLF file (must fail)"
+        run: |
+          printf 'line one\r\nline two\r\n' > defect.txt
+          git add defect.txt
+          git -c user.email=fixture@wise-ci.invalid -c user.name=wise-ci-fixture commit -q -m defect
+          python3 -c "import sys; sys.exit(0 if b'\r' in open('defect.txt', 'rb').read() else 1)"
+
+      - name: "check-eol: seed (must fail)"
+        id: seed
+        continue-on-error: true
+        uses: ./.wise-ci/check-eol
+
+      - name: Confirm the seed made check-eol fail
+        if: steps.seed.outcome != 'failure'
+        run: exit 1
+
+  action-tests:
+    name: action-tests
+    needs: [action-tests-check-eol]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      # Closes F2: a skipped required check reads green, so this asserts success explicitly rather
+      # than relying on the job's own default (which would report success on skip).
+      - name: Require every action-tests-* job to succeed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1
+
+  check-eol:
+    name: check-eol
+    # Self-gating (ADR 0001 rev 1 point 5): product use, not verification. Not a required check.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./check-eol
