@@ -110,7 +110,7 @@ jobs:
           path: scratch
           persist-credentials: false
 
-      # Same export semantics as the tarball a runner downloads for a remote `uses:` (strategy §4,
+      # Same export semantics as the tarball a runner downloads for a remote `uses:` (TESTING.md §4,
       # action-tests-<check> step 1); the scratch checkout is then deleted.
       - name: Extract git archive HEAD into .wise-ci/
         run: |
@@ -119,7 +119,7 @@ jobs:
           rm -rf scratch
 
       # The workspace becomes the fixture tree check-eol judges, kept separate from the action's
-      # own files under .wise-ci/ (strategy F1: a script that finds its tree from its own path must
+      # own files under .wise-ci/ (TESTING.md F1: a script that finds its tree from its own path must
       # not be able to land on itself).
       - name: Initialize the workspace as the fixture repo, excluding .wise-ci/
         run: |
@@ -135,7 +135,7 @@ jobs:
       - name: "check-eol: clean fixture (must pass)"
         uses: ./.wise-ci/check-eol
 
-      # Independent confirmation (strategy D5): the seeded file's bytes, not the check under test.
+      # Independent confirmation (TESTING.md D5): the seeded file's bytes, not the check under test.
       - name: "check-eol: seed a tracked CRLF file (must fail)"
         run: |
           printf 'line one\r\nline two\r\n' > defect.txt
