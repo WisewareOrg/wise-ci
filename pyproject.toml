@@ -31,7 +31,9 @@ testpaths = ["*/tests"]
 parallel = true
 patch = ["subprocess"]
 source = ["."]
-omit = ["*/tests/*", ".venv/**"]
+# .claude/** is gitignored machinery, not project content (docs/README.md) — an agent worktree
+# under .claude/worktrees/ can otherwise duplicate a check's own source as unexecuted.
+omit = ["*/tests/*", ".venv/**", ".claude/**"]
 # The main pytest process never runs a check's own code — the subprocess route the tests use
 # does (docs/TESTING.md § Real dependencies where possible) — so it always collects nothing
 # itself; that's expected, not a sign of a broken run, and include_namespace_packages below
@@ -42,6 +44,6 @@ disable_warnings = ["no-data-collected"]
 fail_under = 100
 include_namespace_packages = true
 # [run] omit is not inherited here: with include_namespace_packages, the report's own file
-# discovery walks `source` independently and .venv leaks in as a pile of 0%-covered "packages"
-# unless it is excluded again at this level.
-omit = ["*/tests/*", ".venv/**"]
+# discovery walks `source` independently and .venv (and an agent worktree under .claude/) leaks
+# in as a pile of 0%-covered "packages" unless excluded again at this level too.
+omit = ["*/tests/*", ".venv/**", ".claude/**"]
