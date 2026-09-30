@@ -34,10 +34,9 @@ jobs:
 
       # justfile's test recipe, one-check branch: a developer's own `just test check-eol` runs
       # here too, so a typo or a broken change to that branch fails CI the same way it would fail
-      # a human running it locally (docs/TESTING.md § In CI). Must run before test-ci below: both
-      # use coverage's parallel mode, and parallel erase() on start deletes every sibling matching
-      # its own data file's name — this step's plain .coverage does not match test-ci's
-      # .coverage.check-eol.*, but test-ci's erase() run first would be undone by this one's.
+      # a human running it locally (docs/TESTING.md § In CI). Must run before test-ci below: this
+      # step's own erase() on start deletes every `.coverage.*` file, which would include test-ci's
+      # `.coverage.check-eol` were it run first.
       - name: pytest, one-check mode (just test check-eol)
         run: just test check-eol
 
@@ -58,6 +57,7 @@ jobs:
           name: coverage-check-eol
           path: .coverage.*
           include-hidden-files: true
+          if-no-files-found: error
 
   # check-eol run over wise-ci's own tree: the check's integration test (docs/TESTING.md
   # § In CI; on a clean repository this only ever passes).

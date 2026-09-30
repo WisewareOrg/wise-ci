@@ -63,13 +63,10 @@ Each check job also runs `test`'s own one-check branch (`just test <check>`), be
 the final job also runs its no-argument, full-run branch (`just test`), before downloading any
 check's data. Every branch of every recipe therefore runs somewhere in CI, so a typo or a broken
 change to any of them, including the one a developer runs locally, fails CI structurally rather than
-only a local run. Order matters for the two in-job runs: coverage's parallel mode, on every run's
-start, erases any existing file whose name is its own data file's name plus a further suffix.
-`test <check>` writes the plain `.coverage`; `test-ci` writes `.coverage.<check>`, which is exactly
-that plain name plus a suffix. Run `test <check>` first and its own start erases nothing test-ci has
-written yet; run it after test-ci and its start would erase test-ci's file as a "sibling" of its own
-plain name. `test-ci`'s own narrower erase, in either order, can never reach back to delete the
-plain file, since the plain name is not one of test-ci's own suffixed siblings.
+only a local run. `test <check>` must run before `test-ci` in each check job: `test <check>`'s own
+start erases every `.coverage.*` file, which would include `test-ci`'s `.coverage.<check>` were it
+run first — `if-no-files-found: error` on the upload step is what catches this class of mistake at
+its source if the order is ever wrong.
 
 Which files must appear in the merged report is itself re-derived rather than trusted, in the final
 job, between `merge-coverage` and the `coverage-report` recipe that reports it: it lists every
