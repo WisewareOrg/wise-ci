@@ -21,6 +21,10 @@ from pathlib import Path
 ROOT = Path.cwd()
 
 
+def _proof_untested():
+    return 1
+
+
 def main():
     problems = False
 
