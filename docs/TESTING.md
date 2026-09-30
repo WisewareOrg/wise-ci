@@ -69,10 +69,10 @@ would otherwise drop that check's source out of the report unnoticed rather than
 `just --list` shows the commands. `just test` runs `uv run pytest`, configured entirely through
 `pyproject.toml` (`[tool.pytest.ini_options]`, `[tool.coverage.run]`, `[tool.coverage.report]`):
 test discovery, quiet output, coverage source, and the 100% floor. Passed a check's folder name, it
-scopes coverage to that check alone (`--cov-reset --cov=<check>`), so one check's tests are not
-failed by another, untested check's source. A local run needs no separate re-derivation step: one
-`uv run pytest` is a single, unscoped, unsuppressed coverage session, so an untested or unwired
-check already shows at 0% and fails it directly. CI's own per-check jobs instead leave coverage
-unscoped but defer the fail-under verdict, since their own coverage is only ever partial, which is
-why they need the final job's own re-derivation step instead ([`CI.md`](CI.md) § Workflow
-supply-chain and privilege audit).
+scopes both test collection and coverage to that check's own `tests/` alone
+(`--cov-reset --cov=<check> <check>/tests`), matching what the full run's own `testpaths` glob
+already collects, so one check's tests are not failed by another, untested check's source. A local
+run needs no separate re-derivation step: one `uv run pytest` is a single, unscoped, unsuppressed
+coverage session, so an untested check already shows at 0% and fails it directly. CI's own
+per-check jobs instead leave coverage unscoped but defer the fail-under verdict, since their own
+coverage is only ever partial.

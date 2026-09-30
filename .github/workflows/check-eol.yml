@@ -36,7 +36,7 @@ jobs:
       - name: pytest, under coverage
         env:
           COVERAGE_FILE: .coverage.check-eol
-        run: uv run --locked pytest --cov-fail-under=0 check-eol
+        run: uv run --locked pytest --cov-fail-under=0 check-eol/tests
 
       # Coverage data files are dotfiles; the wiring workflow's final job combines every
       # check's data into the one report (docs/TESTING.md § In CI).
