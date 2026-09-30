@@ -50,6 +50,13 @@ GitHub API for every job in its own run and fails if any of them, other than its
 with a successful conclusion — a job added to the wiring workflow without being added to `needs:`
 would otherwise run unwatched rather than blocking the merge.
 
+Which files must appear in the merged report is itself re-derived rather than trusted: the final
+job, from its own checkout, lists every top-level folder with an `action.yml` and that folder's
+`.py` files outside `tests/`, and fails, naming them, if any is missing from the merged coverage
+data — independently of the coverage configuration that normally discovers them. A check job whose
+own checkout was narrowed, or a coverage configuration that stops discovering a check's folder,
+would otherwise drop that check's source out of the report unnoticed rather than failing it.
+
 ## Running tests locally
 
 `just --list` shows the commands. CI runs its commands directly rather than through `just`.
