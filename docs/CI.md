@@ -78,9 +78,9 @@ push or the weekly run there is no merge to fail, so it fails that run instead.
 On a pull request or a push, the scan walks **the commits the event carries** rather than the tree at
 its tip — the pull request's own commits, or the commits a push delivered — so a secret added and then
 removed within one branch still fails: the value is compromised from the moment it is pushed, and the
-commit that removes it changes nothing. On the weekly run, gitleaks-action recognises neither `push`
-nor `pull_request` as its event, so it scans the repository's full history instead of a commit range —
-the one path by which this gate does reach behind the branch point, on a week's delay.
+commit that removes it changes nothing. On `schedule`, gitleaks-action scans the repository's full
+history instead of a commit range — the one path by which this gate does reach behind the branch
+point, on a week's delay.
 
 **What a pull request or a push does not reach**, and what may therefore not be read into a green
 result between weekly runs: history behind the branch point; a commit reachable only through a merge's
