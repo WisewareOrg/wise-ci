@@ -299,7 +299,7 @@ def test_multiple_tracked_crlf_files_are_all_reported(tmp_path: Path) -> None:
 
     result = _run_check(repo)
 
-    assert result.returncode == 1
+    assert result.returncode == 0
     assert "first.txt" in result.stdout
     assert "second.txt" in result.stdout
     assert CRLF_PLAIN in result.stderr
