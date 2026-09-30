@@ -107,7 +107,7 @@ jobs:
 
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
         with:
-          just-version: "1.51.0"
+          just-version: "1.58.0"
 
       # justfile's test recipe, full-run branch: a developer's own `just test` (every check, no
       # argument) runs here too, so a typo or a broken change to that branch fails CI the same way
