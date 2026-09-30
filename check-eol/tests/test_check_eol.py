@@ -1,7 +1,7 @@
-"""Specifies check-eol/check-eol.py against WiseKiosk's scripts/cases/check-eol-py.md (ref 1becdf0)
--- a seed of cases, not an exhaustive list (docs/TESTING.md "Every case is a test") -- plus the
-forced-CRLF-blob and binary-attribute-gap claims stated in that case file's prose, and the
-GITHUB_ACTIONS annotation pair.
+"""Specifies check-eol/check-eol.py: tracked CRLF in various shapes, the untracked-file guard, both
+git-failure branches, the GITHUB_ACTIONS annotation pair, a CRLF blob forced past git's own
+add-time normalisation, and the binary-attribute gap and its `-text` boundary
+(check-eol/README.md).
 
 Each case builds a real, isolated git repository in a temporary directory and runs the real script
 against it as a subprocess (docs/TESTING.md "Real dependencies where possible"). Nothing defective is
@@ -199,8 +199,8 @@ CASES: list[_Case] = [
         _must_fail(stdout_has="file.md", stderr_has=CRLF_PLAIN),
     ),
     _Case(
-        # After a commit, nothing is staged; this row is the same shape as crlf-tracked-txt on
-        # purpose -- WiseKiosk records it to rule out staged-vs-committed state mattering.
+        # After a commit, nothing is staged; this case is the same shape as crlf-tracked-txt on
+        # purpose -- proving staged-vs-committed state doesn't matter.
         "crlf-committed-nothing-staged",
         _tracked({"committed.txt": b"line one\r\nline two\r\n"}),
         _must_fail(stdout_has="committed.txt", stderr_has=CRLF_PLAIN),
@@ -243,8 +243,8 @@ CASES: list[_Case] = [
     _Case("cr-mid-line", _tracked({"midline.txt": b"line\rmore text\n"}), _must_pass),
     _Case("empty-tracked-tree", _empty_repo, _must_pass),
     _Case(
-        # Not a WiseKiosk row: every row there is a top-level file. This confirms the search
-        # recurses -- the migration's own docstring claims "the whole tracked tree".
+        # Confirms the search recurses into subdirectories, not just the top level -- the
+        # script's own docstring claims "the whole tracked tree".
         "crlf-tracked-nested",
         _tracked({"subdir/nested/file.txt": b"line one\r\nline two\r\n"}),
         _must_fail(stdout_has="subdir/nested/file.txt", stderr_has=CRLF_PLAIN),
@@ -260,7 +260,7 @@ CASES: list[_Case] = [
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c.id)
-def test_case_file_row(case: _Case, tmp_path: Path) -> None:
+def test_case(case: _Case, tmp_path: Path) -> None:
     repo = case.build(tmp_path)
     result = _run_check(repo)
     case.check(result)
@@ -292,9 +292,8 @@ def test_outside_a_repository_fails_with_gits_status(tmp_path: Path) -> None:
 
 
 def test_multiple_tracked_crlf_files_are_all_reported(tmp_path: Path) -> None:
-    """Not a WiseKiosk row: every row there seeds a single defect. `git grep -l` lists every
-    matching file, not just the first -- a search that stopped at one match would still pass every
-    other case here but would fail this one."""
+    """`git grep -l` lists every matching file, not just the first -- a search that stopped at one
+    match would still pass every other case here but would fail this one."""
     repo = _init_repo(tmp_path / "repo")
     _commit(repo, {"first.txt": b"a\r\n", "second.txt": b"b\r\n"})
 
@@ -395,7 +394,7 @@ def test_binary_attribute_gap_is_pinned_as_passing(tmp_path: Path) -> None:
     """check-eol/README.md's documented gap: a file whose .gitattributes sets the `binary` macro is
     exempt both from CRLF normalisation on add and from the grep search itself, so a genuinely
     CRLF-terminated file passes. Pinned here as the expected (if regrettable) outcome of that gap,
-    not as a guard against it -- the owner ruled not to gate it (check-eol/README.md)."""
+    not as a guard against it -- check-eol/README.md documents this as accepted, not gated."""
     payload = b"line one\r\nline two\r\n"
     repo = _init_repo(tmp_path / "repo")
     _commit(repo, {"secret.txt": payload}, attributes="secret.txt binary\n")
@@ -406,9 +405,9 @@ def test_binary_attribute_gap_is_pinned_as_passing(tmp_path: Path) -> None:
 
 
 def test_bare_text_attribute_does_not_open_the_gap(tmp_path: Path) -> None:
-    """The case file's own boundary on the gap above: "a plain `-text` does not do this; only the
-    full `binary` macro" -- `-text` alone disables add-time normalisation but does not set `-diff`,
-    so the grep search still treats the file as text and still catches the CRLF."""
+    """A boundary on the gap above: `-text` alone disables add-time normalisation but does not set
+    `-diff`, so the grep search still treats the file as text and still catches the CRLF -- only
+    the full `binary` macro (tested above) opens the gap."""
     payload = b"line one\r\nline two\r\n"
     repo = _init_repo(tmp_path / "repo")
     _commit(repo, {"secret.txt": payload}, attributes="secret.txt -text\n")
