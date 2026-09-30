@@ -45,6 +45,11 @@ is not run by its tests. A check folder with no tests, or one not wired in, coun
 fails the report. [`CI.md`](CI.md) says how that job blocks a merge. How a check in a language other
 than Python joins the one report is decided with the first such check.
 
+The final job's own `needs:` list is hand-kept, so it is not trusted alone: the job also asks the
+GitHub API for every job in its own run and fails if any of them, other than itself, is not complete
+with a successful conclusion — a job added to the wiring workflow without being added to `needs:`
+would otherwise run unwatched rather than blocking the merge.
+
 ## Running tests locally
 
 `just --list` shows the commands. CI runs its commands directly rather than through `just`.

@@ -20,8 +20,9 @@ suite later is a visible diff rather than a silent one.
 
 **Every check that exists blocks a merge into `main`**, through one required status check: the
 wiring workflow's final job ([`TESTING.md`](TESTING.md)). Every workflow that runs on a pull request
-is called by the wiring workflow, and that job fails if any of them failed, so adding a check, a job
-or a CodeQL leg needs no change to branch protection.
+is called by the wiring workflow, and that job fails if any of them failed — checked against the
+run's own job list, not only its hand-kept `needs:` ([`TESTING.md`](TESTING.md) § In CI) — so adding a
+check, a job or a CodeQL leg needs no change to branch protection.
 `gh api repos/tjwise99/wise-ci/rules/branches/main` reads the live set. The codeql leg fails only on
 an execution error — it is not where a CodeQL finding fails a merge. A finding gates through the
 ruleset's own `code_scanning` rule instead, configured for CodeQL at every alert severity. That rule

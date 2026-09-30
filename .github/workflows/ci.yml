@@ -44,12 +44,30 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read # lists every job in this run, so one left out of needs: cannot hide
     steps:
       # A job skipped because a dependency failed reads green by default; this asserts success
       # explicitly instead (docs/TESTING.md § In CI).
       - name: Require every called workflow to have succeeded
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
         run: exit 1
+
+      # needs: above is hand-kept; this checks the run's own job list instead of trusting that
+      # list to stay in sync with it, so a job added to this workflow without being added to
+      # needs: cannot run unwatched (docs/TESTING.md § In CI).
+      - name: Require every job in this run to have succeeded
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
+            --jq '.jobs[] | select(.name != "ci") | select(.status != "completed" or .conclusion != "success") | .name' \
+            > "$RUNNER_TEMP/unfinished-jobs"
+          if [ -s "$RUNNER_TEMP/unfinished-jobs" ]; then
+            cat "$RUNNER_TEMP/unfinished-jobs"
+            exit 1
+          fi
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
