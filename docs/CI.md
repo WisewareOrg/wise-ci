@@ -33,14 +33,13 @@ This mechanises the security review a solo project has no second reader to perfo
 
 ## Workflow supply-chain and privilege audit
 
-The workflows are themselves a supply chain and themselves privileged. Both are audited from the
-files by two maintained tools, in the `workflow-audit` job
-([`../.github/workflows/checks.yml`](../.github/workflows/checks.yml)), each run from a digest-pinned
-official image over the `.github/workflows` input set: `zizmor` at the `pedantic` persona, with
-`--strict-collection`, for what a workflow may do — action pinning, permission grants, credential
-persistence and template injection among its audit set — and `actionlint` for whether a workflow is
-well-formed at all: schema, expression and reference errors, with `shellcheck` and `pyflakes` over
-`run:` scripts.
+The workflows are themselves a supply chain and themselves privileged. Audited from the files in the
+`workflow-audit` job ([`../.github/workflows/checks.yml`](../.github/workflows/checks.yml)), each tool
+run from a digest-pinned official image: `zizmor` at the `pedantic` persona, with `--strict-collection`,
+over the `.github/workflows` input set, for what a workflow may do — action pinning, permission grants,
+credential persistence and template injection among its audit set — and `actionlint`, over the same
+input set, for whether a workflow is well-formed at all: schema, expression and reference errors, with
+`shellcheck` and `pyflakes` over a workflow's own inline `run:` scripts.
 
 - **Every action is pinned to an immutable reference** — a commit SHA, or an image digest where the
   step is a container. A tag is a pointer its owner can move after anyone reviewed it; neither of
@@ -58,6 +57,11 @@ well-formed at all: schema, expression and reference errors, with `shellcheck` a
   remains, reporting clean over a narrowed set that dropped the unreadable file — `--strict-collection`
   is what turns that warning into a failure instead, so a workflow neither tool could read fails the
   step rather than being silently absent from zizmor's own audited set.
+- **A script a `run:` step calls, rather than inlines, is shellchecked too.** actionlint's own
+  embedded `shellcheck` only reaches a workflow's inline `run:` text, not a file a step calls by
+  path, such as `tooling/coverage-population.sh`. The same job runs `shellcheck` standalone, from
+  actionlint's own image, over every tracked `*.sh` file (`git ls-files '*.sh'`), and fails if that
+  list is empty rather than reporting a clean scan over nothing.
 
 **What the gate deliberately lets through.** The `workflow-audit` job's zizmor step runs with no
 `GITHUB_TOKEN`, so the audits needing the GitHub API — `known-vulnerable-actions` and
