@@ -208,6 +208,13 @@ CASES: list[_Case] = [
     ),
     _Case("cr-mid-line", _tracked({"midline.txt": b"line\rmore text\n"}), _must_pass),
     _Case("empty-tracked-tree", _empty_repo, _must_pass),
+    _Case(
+        # Not a WiseKiosk row: every row there is a top-level file. This confirms the search
+        # recurses -- the migration's own docstring claims "the whole tracked tree".
+        "crlf-tracked-nested",
+        _tracked({"subdir/nested/file.txt": b"line one\r\nline two\r\n"}),
+        _must_fail(stdout_has="subdir/nested/file.txt", stderr_has=CRLF_PLAIN),
+    ),
 ]
 
 
@@ -234,6 +241,22 @@ def test_outside_a_repository_fails_with_gits_status(tmp_path: Path) -> None:
 
     assert result.returncode == probe.returncode
     assert result.stdout == ""
+    _no_traceback(result)
+
+
+def test_multiple_tracked_crlf_files_are_all_reported(tmp_path: Path) -> None:
+    """Not a WiseKiosk row: every row there seeds a single defect. `git grep -l` lists every
+    matching file, not just the first -- a search that stopped at one match would still pass every
+    other case here but would fail this one."""
+    repo = _init_repo(tmp_path / "repo")
+    _commit(repo, {"first.txt": b"a\r\n", "second.txt": b"b\r\n"})
+
+    result = _run_check(repo)
+
+    assert result.returncode == 1
+    assert "first.txt" in result.stdout
+    assert "second.txt" in result.stdout
+    assert CRLF_PLAIN in result.stderr
     _no_traceback(result)
 
 
