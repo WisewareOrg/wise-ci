@@ -28,15 +28,18 @@ jobs:
         with:
           version: "0.12.3"
 
-      # Unscoped coverage (pyproject.toml's [tool.coverage.run] source = ["."]), over this job's
-      # own full checkout, is what makes an untested file or an unwired check show 0% once the
-      # wiring workflow's final job combines every check's data (docs/TESTING.md § In CI);
-      # --cov-fail-under=0 defers the fail_under=100 verdict to that combined report, since this
-      # job's own coverage is necessarily partial — it runs only check-eol's tests.
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: "1.51.0"
+
+      # justfile's test-ci recipe: unscoped coverage (pyproject.toml's [tool.coverage.run]
+      # source = ["."]), over this job's own full checkout, is what makes an untested file or an
+      # unwired check show 0% once the wiring workflow's final job combines every check's data
+      # (docs/TESTING.md § In CI); --cov-fail-under=0 defers the fail_under=100 verdict to that
+      # combined report, since this job's own coverage is necessarily partial — it runs only
+      # check-eol's tests.
       - name: pytest, under coverage
-        env:
-          COVERAGE_FILE: .coverage.check-eol
-        run: uv run --locked pytest --cov-fail-under=0 check-eol/tests
+        run: just test-ci check-eol
 
       # Coverage data files are dotfiles; the wiring workflow's final job combines every
       # check's data into the one report (docs/TESTING.md § In CI).
