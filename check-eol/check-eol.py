@@ -4,8 +4,7 @@
 `.gitattributes` decides which files git treats as text.
 
 The population is the tracked set, so an untracked, non-ignored file is invisible to the search and
-is reported as unsearchable rather than silently unsearched — visibility fails it, not content. The
-pairing with `check-untracked.py` is defence-in-depth, per docs/CI.md § Repository shape. Both
+is reported as unsearchable rather than silently unsearched — visibility fails it, not content. Both
 findings accumulate in one run rather than short-circuiting, so an untracked file beside a CRLF
 defect is one visit, not two.
 

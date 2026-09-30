@@ -96,7 +96,7 @@ that configuration's own directory, the repository root — never downward into 
 pinned install under `tooling/commitlint/node_modules` is unreachable that way; the step sets
 `NODE_PATH` to it instead. Without `NODE_PATH`, resolution falls back to whatever npx cache or global
 install the machine holds, so a local run can pass on a copy the runner does not have. The PR title
-is attacker-controlled, so it enters the run step only via env mapping, never inline into `run:`. The
+is attacker-controlled, so it enters the run step only via env/file, never inline into `run:`. The
 job runs on `pull_request` only — no PR title exists on a push. It reads the pull request's current
 title from the GitHub API, not the snapshot the triggering event carries, so re-running it after a
 title fix checks the fixed title.
