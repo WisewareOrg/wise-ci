@@ -130,7 +130,11 @@ jobs:
             find "$dir" -name '*.py' -not -path "$dir/tests/*"
           done | sort > "$RUNNER_TEMP/expected-py-files"
 
-          uv run --locked coverage json -o "$RUNNER_TEMP/coverage.json"
+          # --fail-under=0: coverage.json's own default fail_under (pyproject.toml, 100) would
+          # otherwise exit this command on an under-covered file before the missing-file
+          # comparison below ever runs, hiding the name this step exists to report. The 100% bar
+          # itself is the next step's job.
+          uv run --locked coverage json --fail-under=0 -o "$RUNNER_TEMP/coverage.json"
           jq -r '.files | keys[]' "$RUNNER_TEMP/coverage.json" | sort > "$RUNNER_TEMP/covered-py-files"
 
           missing="$(comm -23 "$RUNNER_TEMP/expected-py-files" "$RUNNER_TEMP/covered-py-files")"
