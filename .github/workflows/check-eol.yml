@@ -21,6 +21,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          sparse-checkout: |
+            check-eol
+            pyproject.toml
+            uv.lock
+            justfile
+          sparse-checkout-cone-mode: false
 
       # A verdict moves only when a workflow or a pinned tool does (docs/CI.md § Workflow
       # supply-chain and privilege audit); Renovate bumps this version natively.
