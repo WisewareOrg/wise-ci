@@ -1,0 +1,33 @@
+[project]
+name = "wise-ci"
+version = "0"
+requires-python = ">=3.12"
+
+[tool.uv]
+package = false
+default-groups = ["test"]
+python-downloads = "never"
+python-preference = "only-system"
+
+[dependency-groups]
+test = [
+  "pytest",
+  "coverage>=7.10",
+]
+
+[tool.pytest.ini_options]
+addopts = ["--strict-markers", "--strict-config"]
+
+[tool.coverage.run]
+parallel = true
+patch = ["subprocess"]
+source = ["."]
+omit = ["*/tests/*", ".venv/**"]
+
+[tool.coverage.report]
+fail_under = 100
+include_namespace_packages = true
+# [run] omit is not inherited here: with include_namespace_packages, the report's own file
+# discovery walks `source` independently and .venv leaks in as a pile of 0%-covered "packages"
+# unless it is excluded again at this level (reproduced: scratchpad/covprobe).
+omit = ["*/tests/*", ".venv/**"]
