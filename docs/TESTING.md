@@ -50,13 +50,19 @@ GitHub API for every job in its own run and fails if any of them, other than its
 with a successful conclusion — a job added to the wiring workflow without being added to `needs:`
 would otherwise run unwatched rather than blocking the merge.
 
-Which files must appear in the merged report is driven by `pyproject.toml`'s coverage configuration,
-not re-derived independently of it: `source = ["."]` and `include_namespace_packages = true`
-(`[tool.coverage.report]`) make coverage walk the whole repository tree itself, so a check folder's
-`.py` file with no executing test shows at 0% rather than being absent from the report. Each check
-job runs with that same unscoped source, over its own full checkout, and defers its own fail-under
-verdict to the final job (`--cov-fail-under=0`) — its own coverage is necessarily partial, since it
-runs only its own check's tests.
+Each check job's own coverage run leaves its source unscoped (`pyproject.toml`'s
+`source = ["."]`, over its own full checkout) and defers its own fail-under verdict to the final
+job (`--cov-fail-under=0`) — its own coverage is necessarily partial, since it runs only its own
+check's tests. `include_namespace_packages = true` is what then makes a check folder's `.py` file
+with no executing test show at 0% in the final job's merged report, rather than being absent from
+it.
+
+Which files must appear in the merged report is itself re-derived rather than trusted, in the final
+job: it lists every top-level folder with an `action.yml` and that folder's `.py` files outside
+`tests/`, from its own checkout, and fails, naming them, if any is missing from the merged coverage
+data — independently of the coverage configuration that normally discovers them. A check job whose
+own checkout was narrowed, or a coverage configuration that stops discovering a check's folder,
+would otherwise drop that check's source out of the report unnoticed rather than failing it.
 
 ## Running tests locally
 
@@ -64,6 +70,9 @@ runs only its own check's tests.
 `pyproject.toml` (`[tool.pytest.ini_options]`, `[tool.coverage.run]`, `[tool.coverage.report]`):
 test discovery, quiet output, coverage source, and the 100% floor. Passed a check's folder name, it
 scopes coverage to that check alone (`--cov-reset --cov=<check>`), so one check's tests are not
-failed by another, untested check's source — CI's own per-check jobs instead leave coverage
-unscoped and defer the fail-under verdict, since their own coverage is only ever partial
-([`CI.md`](CI.md) § Workflow supply-chain and privilege audit).
+failed by another, untested check's source. A local run needs no separate re-derivation step: one
+`uv run pytest` is a single, unscoped, unsuppressed coverage session, so an untested or unwired
+check already shows at 0% and fails it directly. CI's own per-check jobs instead leave coverage
+unscoped but defer the fail-under verdict, since their own coverage is only ever partial, which is
+why they need the final job's own re-derivation step instead ([`CI.md`](CI.md) § Workflow
+supply-chain and privilege audit).

@@ -113,9 +113,52 @@ jobs:
       # Each check job's own coverage run, over its full checkout with source=".", is what
       # makes an untested file or an unwired check show 0% here (pyproject.toml's
       # include_namespace_packages); this job only combines and reports what those runs'
-      # uploaded artifacts carry — its own checkout is what lets `coverage report` read the
+      # uploaded artifacts carry — its own checkout is what lets the steps below read the
       # source (docs/TESTING.md § In CI).
-      - name: Merge coverage and fail under 100%
+      - name: Merge coverage
+        run: uv run --locked coverage combine
+
+      # Which files must appear in the merged report is re-derived rather than trusted:
+      # independently of the coverage configuration that normally discovers them, this lists
+      # every top-level folder with an `action.yml` and that folder's `.py` files outside
+      # `tests/`, from this job's own checkout, and fails, naming them, if any is missing from
+      # the merged coverage data (docs/TESTING.md § In CI). A check job whose own checkout was
+      # narrowed, or a coverage configuration that stops discovering a check's folder, would
+      # otherwise drop that check's source out of the report unnoticed rather than failing it.
+      # Inline rather than a tracked script, so actionlint's own embedded shellcheck reaches it
+      # (docs/CI.md § Workflow supply-chain and privilege audit).
+      - name: Every check's source file is present in the merged coverage data
         run: |
-          uv run --locked coverage combine
-          uv run --locked coverage report -m
+          set -euo pipefail
+
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+
+          for dir in */; do
+            dir="${dir%/}"
+            [ -f "$dir/action.yml" ] || continue
+            find "$dir" -name '*.py' -not -path "$dir/tests/*"
+          done | sort > "$tmp/expected-py-files"
+
+          if [ ! -s "$tmp/expected-py-files" ]; then
+            echo "no check's source files were found — run this from the repository root" >&2
+            exit 1
+          fi
+
+          if ! grep -qxF "check-eol/check-eol.py" "$tmp/expected-py-files"; then
+            echo "expected file list is missing check-eol/check-eol.py" >&2
+            exit 1
+          fi
+
+          uv run --locked coverage json --fail-under=0 -o "$tmp/coverage.json"
+          jq -r '.files | keys[]' "$tmp/coverage.json" | sort > "$tmp/covered-py-files"
+
+          missing="$(comm -23 "$tmp/expected-py-files" "$tmp/covered-py-files")"
+          if [ -n "$missing" ]; then
+            echo "missing from the merged coverage data:"
+            echo "$missing"
+            exit 1
+          fi
+
+      - name: Coverage report, fail under 100%
+        run: uv run --locked coverage report -m
