@@ -37,7 +37,7 @@ jobs:
           include-hidden-files: true
 
   # check-eol run over wise-ci's own tree: the check's integration test (docs/TESTING.md
-  # § Every case is a test; on a clean repository this only ever passes).
+  # § In CI; on a clean repository this only ever passes).
   self-check:
     name: self-check
     runs-on: ubuntu-latest

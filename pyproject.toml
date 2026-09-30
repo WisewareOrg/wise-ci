@@ -29,5 +29,5 @@ fail_under = 100
 include_namespace_packages = true
 # [run] omit is not inherited here: with include_namespace_packages, the report's own file
 # discovery walks `source` independently and .venv leaks in as a pile of 0%-covered "packages"
-# unless it is excluded again at this level (reproduced: scratchpad/covprobe).
+# unless it is excluded again at this level.
 omit = ["*/tests/*", ".venv/**"]

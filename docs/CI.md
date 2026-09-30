@@ -109,6 +109,5 @@ wise-ci's own tree, in [`../.github/workflows/check-eol.yml`](../.github/workflo
 `self-check` job, called by the wiring workflow like every other required check
 ([`TESTING.md`](TESTING.md)).
 
-**What the gate deliberately lets through.** `action.yml` only calls the script
-([`TESTING.md`](TESTING.md) § The action), so nothing here proves the action turns a failing script
-into a red job — an accepted gap, revisited when the first check takes inputs.
+**What the gate deliberately lets through.** [`TESTING.md`](TESTING.md) § The action states the one
+gap this leaves in every check's action, check-eol included.
