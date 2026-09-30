@@ -14,10 +14,11 @@ instead.
 
 | Document | Guarantees | Excludes |
 |---|---|---|
-| [`../README.md`](../README.md) | What wise-ci is, how a repository consumes a check, and the entry point to every other document | A decision with a rejected alternative (an ADR); what a check asserts and why (`CI.md`) |
-| [`CI.md`](CI.md) | **Every check on this repository**: what CI provides, what blocks a merge, what each gate is allowed to let through, and the reasoning for each stance | A decision with a rejected alternative (an ADR); a check a machine cannot decide (`../CONTRIBUTING.md`) |
-| [`decisions/`](decisions/README.md) | A decision with a rejected alternative, carried as a versioned document: merged text is revisable, each correction is a rev, and every citation of one pins the rev it read | What a check asserts, and why (`CI.md`) |
-| `<check>/README.md` | That check's own behaviour, its owner rulings, and its gap explanations (ADR 0001 rev 1 point 4) | A decision with a rejected alternative (an ADR); what a check asserts on the repository's behalf (`CI.md`) |
+| [`../README.md`](../README.md) | What wise-ci is, how a repository consumes a check, how releases are versioned, and the entry point to every other document | A trade study (an ADR); what a check asserts and why (`CI.md`) |
+| [`CI.md`](CI.md) | **Every check on this repository**: what CI provides, what blocks a merge, what each gate is allowed to let through, and the reasoning for each stance | A trade study (an ADR); a check a machine cannot decide (`../CONTRIBUTING.md`); how a check is tested (`TESTING.md`) |
+| [`TESTING.md`](TESTING.md) | How a check is tested: where its tests live, what they use, and what CI runs of them | What blocks a merge (`CI.md`); a check's own behaviour (`<check>/README.md`) |
+| [`decisions/`](decisions/README.md) | A decision that took a trade study, carried as a versioned document: merged text is revisable, each correction is a rev, and every citation of one pins the rev it read | What a check asserts, and why (`CI.md`) |
+| `<check>/README.md` | That check's own behaviour, the rulings made about it, and its gap explanations | A trade study (an ADR); what a check asserts on the repository's behalf (`CI.md`) |
 | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | How a change gets made and merged, and **the design-first rule**: nothing is implemented that has not been written down first | What a check asserts, and why (`CI.md`); what wise-ci is (`../README.md`); working rules specific to an AI agent (`../CLAUDE.md`) |
 | [`../SECURITY.md`](../SECURITY.md) | The threat model | Repository truth (`../README.md`); what a check asserts (`CI.md`) |
 | [`../CLAUDE.md`](../CLAUDE.md) | Working rules layered on top for an AI agent — review independence, and halt-and-ask where a decision is silent | Any fact about wise-ci (every document above) |

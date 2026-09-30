@@ -2,10 +2,10 @@
 
 **Rev:** 1
 
-An ADR captures a decision **with a rejected alternative** — the "why not the other way" is the whole
-point of writing one down. A decision with no real alternative considered is a changelog entry and
-belongs in a commit message, not here. New ADR: copy [`TEMPLATE.md`](TEMPLATE.md), take the lowest
-free number, and add it to the table.
+An ADR records a choice that took a **trade study**: real alternatives, analysed against each other.
+A decision that did not need that analysis is a convention, and belongs in the document that governs
+its subject, not here. New ADR: copy
+[`TEMPLATE.md`](TEMPLATE.md), take the lowest free number, and add it to the table.
 
 **An ADR is versioned, not frozen.** Merged text is revisable, and a correction is a new rev rather
 than a block appended to the old text. The rev is in the ADR's head, with one line per rev in its
@@ -31,15 +31,8 @@ one takes a rev whose *Revisions* line records `superseded by ADR NNNN rev M` �
 A number identifies a document rather than a moment: a squash commit on `main` naming one cannot be
 amended, so a number in git history need not mean what it means here.
 
-**An owner ruling carries its attribution.** Where this document records a decision as settled — the
-choice itself, or the disposition of a rejected alternative — an owner's ruling is marked
-`(owner, YYYY-MM-DD)`, or by a direct quote, at the point it was ruled. An unattributed decision is
-the recording author's reasoning, not an owner ruling; nothing else distinguishes a settled ruling
-from a session's proposal, so the marker is what a later reader relies on.
-
 | # | Rev | Decided | Decision |
 |---|---|---|---|
-| [0001](0001-shape-of-wise-ci.md) | 1 | 2026-09-27 | wise-ci is one repo of composite actions, one per check in its own top-level folder, one version tag for the whole repo, consumed by commit-SHA pin bumped by Renovate; a check's tests live beside it and replace the prose case record; wise-ci gates itself as each check migrates in; maintained tools are shared as config presets, not wrapped |
 
 ## Revisions
 

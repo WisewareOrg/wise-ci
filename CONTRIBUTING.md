@@ -5,11 +5,11 @@ The human contributor entry point: how a change gets merged. **What wise-ci is**
 
 ## Before you build anything
 
-**Design-first: nothing is implemented that has not been written down first.** A change with a real
-rejected alternative gets an [ADR](docs/decisions/README.md). Anything observable a decision does not
-state — an interface name, a payload shape, a config key, a failure behaviour, a threshold — becomes
-a stated behaviour in the check's README, pinned by a test, before it is built
-(ADR 0001 rev 1 point 4). A new check follows [ADR 0001 rev 1](docs/decisions/0001-shape-of-wise-ci.md).
+**Design-first: nothing is implemented that has not been written down first.** A choice that takes a
+trade study gets an [ADR](docs/decisions/README.md). Anything observable a decision does not state —
+an interface name, a payload shape, a config key, a failure behaviour, a threshold — becomes a test
+before it is built ([`docs/TESTING.md`](docs/TESTING.md)). A new check takes the shape the
+[README](README.md) describes.
 
 **Do not build generality against a case that does not exist** — no abstraction without a second
 consumer, no comment-enforced invariants, no denylist secret handling, no non-tunable config keys, no
@@ -123,18 +123,10 @@ appended for the same reason; inserting one is permitted and renumbers everythin
     asserts, it restates rather than cites. Summarizing and citing is permitted; a second independent
     statement is what goes stale in one copy while the other stays right, with nothing comparing them.
 
-**Decisions**
-
-16. **Attributed decisions.** Does each decision the change records as settled — in an ADR's
-    alternatives or prose — carry its owner attribution, or a direct quote where the owner ruled it?
-    An unattributed decision reads as an owner ruling but may be a session's invention — the marker is
-    [`docs/decisions/README.md`](docs/decisions/README.md)'s.
-
 **Deletions**
 
-17. **Orphaned names.** Where the change removes a recipe, check, or workflow step, does any
+16. **Orphaned names.** Where the change removes a recipe, check, or workflow step, does any
     operator-facing reference to its name survive that no gate reaches — a justfile `[doc()]`, a
     workflow step `name:`, `--help` text? No check resolves a script name in prose against the
-    repository; this stays a review habit rather than a check
-    (owner, 2026-08-17, WiseKiosk #160 post-adoption-wave sweep) — a check here would have to tell
+    repository; this stays a review habit rather than a check — a check here would have to tell
     operative prose from a rev-pinned historical record, which is judgment.

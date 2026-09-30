@@ -1,0 +1,8 @@
+name: check-eol
+description: Every file git treats as text is LF-only, over the whole tracked tree.
+runs:
+  using: composite
+  steps:
+    - name: check-eol
+      shell: bash
+      run: python3 "$GITHUB_ACTION_PATH/check-eol.py"

@@ -9,40 +9,42 @@ edit here and a change to the check, not a specification change.
 ## First-party source scanning
 
 [`../.github/workflows/codeql.yml`](../.github/workflows/codeql.yml)'s `codeql` job runs CodeQL's
-default code-scanning suite over the project's own source, on every pull request against `main`,
-every push to `main`, and weekly (so a dormant branch is still covered).
+default code-scanning suite over the project's own source. The wiring workflow calls it on every
+pull request, every push to `main`, and weekly (so a dormant branch is still covered) — the one
+trigger for every gate in this repository ([`TESTING.md`](TESTING.md) § In CI).
 
 The CodeQL matrix carries one leg per language of first-party source in the tree; a change that adds
-a language adds its leg to the matrix, and its display name to the branch protection ruleset's
-required contexts.
+a language adds its leg to the matrix.
 
 No `queries:` input: the action's own default is the code-scanning suite, so widening to a named
 suite later is a visible diff rather than a silent one.
 
-**The branch protection ruleset's required contexts are every `checks.yml` job id, plus every
-CodeQL matrix leg's own display name** — `gh api repos/tjwise99/wise-ci/rules/branches/main` reads
-the live set rather than this line enumerating it. The codeql leg fails only on an execution
-error — it is not where a CodeQL finding fails a merge. A finding gates through the ruleset's own
-`code_scanning` rule instead, configured for CodeQL at every alert severity. That rule is ruleset
-configuration rather than a tracked file, so no check here can assert it.
+**Every check that exists blocks a merge into `main`**, through one required status check: the
+wiring workflow's final job ([`TESTING.md`](TESTING.md)). Every workflow this repository runs is
+called by the wiring workflow, and that job fails if any of them failed — checked against the run's
+own job list, not only its hand-kept `needs:` ([`TESTING.md`](TESTING.md) § In CI) — so adding a
+check, a job or a CodeQL leg needs no change to branch protection.
+`gh api repos/tjwise99/wise-ci/rules/branches/main` reads the live set. The codeql leg fails only on
+an execution error — it is not where a CodeQL finding fails a merge. A finding gates through the
+ruleset's own `code_scanning` rule instead, configured for CodeQL at every alert severity. That rule
+is ruleset configuration rather than a tracked file, so no check here can assert it.
 
 This mechanises the security review a solo project has no second reader to perform.
 
 ## Workflow supply-chain and privilege audit
 
-The workflows are themselves a supply chain and themselves privileged. Both are audited from the
-files by two maintained tools, in the `workflow-audit` job
-([`../.github/workflows/checks.yml`](../.github/workflows/checks.yml)), each run from a digest-pinned
-official image over the `.github/workflows` input set: `zizmor` at the `pedantic` persona, with
-`--strict-collection`, for what a workflow may do — action pinning, permission grants, credential
-persistence and template injection among its audit set — and `actionlint` for whether a workflow is
-well-formed at all: schema, expression and reference errors, with `shellcheck` and `pyflakes` over
-`run:` scripts.
+The workflows are themselves a supply chain and themselves privileged. Audited from the files in the
+`workflow-audit` job ([`../.github/workflows/checks.yml`](../.github/workflows/checks.yml)), each tool
+run from a digest-pinned official image: `zizmor` at the `pedantic` persona, with `--strict-collection`,
+over the `.github/workflows` input set, for what a workflow may do — action pinning, permission grants,
+credential persistence and template injection among its audit set — and `actionlint`, over the same
+input set, for whether a workflow is well-formed at all: schema, expression and reference errors, with
+`shellcheck` and `pyflakes` over a workflow's own inline `run:` scripts.
 
 - **Every action is pinned to an immutable reference** — a commit SHA, or an image digest where the
   step is a container. A tag is a pointer its owner can move after anyone reviewed it; neither of
-  those is. A `uses:` beginning `./` is exempt: a repository-local action moves with the commit that
-  calls it, so there is no upstream to pin.
+  those is. A `uses:` beginning `./` is exempt: a repository-local action or workflow moves with the
+  commit that calls it, so there is no upstream to pin.
 - **No workflow grants a write permission at the top level, and no grant goes unexplained.**
   `excessive-permissions` fails a top-level write grant, and fails a workflow declaring no
   `permissions:` block at all — what an undeclared block would inherit is a repository setting no
@@ -68,14 +70,19 @@ they are what the rule above constrains.
 
 ## Secret scanning
 
-A pull request, and every push to the default branch, is scanned for committed credentials, and a
-finding fails the merge, in the `secret-scan` job. The scan walks **the commits the event carries**
-rather than the tree at its tip — the pull request's own commits, or the commits a push delivered —
-so a secret added and then removed within one branch still fails: the value is compromised from the
-moment it is pushed, and the commit that removes it changes nothing.
+A pull request, every push to the default branch, and the wiring workflow's weekly run are scanned
+for committed credentials in the `secret-scan` job. A finding fails the merge on a pull request; on a
+push or the weekly run there is no merge to fail, so it fails that run instead.
 
-**What that shape does not reach**, and what may therefore not be read into a green result: history
-behind the branch point, which this gate does not re-read; a commit reachable only through a merge's
+On a pull request or a push, the scan walks **the commits the event carries** rather than the tree at
+its tip — the pull request's own commits, or the commits a push delivered — so a secret added and then
+removed within one branch still fails: the value is compromised from the moment it is pushed, and the
+commit that removes it changes nothing. On `schedule`, gitleaks-action scans the repository's full
+history instead of a commit range — the one path by which this gate does reach behind the branch
+point, on a week's delay.
+
+**What a pull request or a push does not reach**, and what may therefore not be read into a green
+result between weekly runs: history behind the branch point; a commit reachable only through a merge's
 second parent, because the walk follows first parents and skips merges; and the tail of a range longer
 than the event's own commit list. The scan is pattern-based besides, so it catches the credential
 shapes it holds rules for and nothing reports what it missed. It raises the cost of committing a
@@ -93,6 +100,20 @@ dependency. commitlint resolves a configuration's `extends` by walking `node_mod
 that configuration's own directory, the repository root — never downward into a descendant — so the
 pinned install under `tooling/commitlint/node_modules` is unreachable that way; the step sets
 `NODE_PATH` to it instead. Without `NODE_PATH`, resolution falls back to whatever npx cache or global
-install the machine holds, so a local run can pass on a copy the runner does not have. The PR title
-is attacker-controlled, so it enters the run step only via env mapping, never inline into `run:`. The
-job runs on `pull_request` only — no PR title exists on a push.
+install the machine holds, so a local run can pass on a copy the runner does not have. What it checks
+is attacker-controlled, so it enters the run step only via env/file, never inline into `run:`. On a
+pull request it reads the PR's current title from the GitHub API, not the snapshot the triggering
+event carries, so re-running it after a title fix checks the fixed title. On a push or the wiring
+workflow's weekly run there is no PR, so it checks the head commit's own subject line instead — the
+text that already reached `main`.
+
+## check-eol
+
+Every file git treats as text is LF-only, over the whole tracked tree — `.gitattributes` decides which
+files that is; what it checks, and what it does not catch, is
+[`../check-eol/README.md`](../check-eol/README.md)'s to state. The check runs as a required gate on
+wise-ci's own tree, in [`../.github/workflows/check-eol.yml`](../.github/workflows/check-eol.yml)'s
+`self-check` job, called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)).
+
+**What the gate deliberately lets through.** [`TESTING.md`](TESTING.md) § The action states the one
+gap this leaves in every check's action, check-eol included.

@@ -1,0 +1,180 @@
+name: ci
+
+# The one entry point for every gate this repository has (docs/TESTING.md § In CI): every pull
+# request, with no `paths:` filter — a required check that never starts blocks the merge
+# indefinitely — every push to `main`, and weekly (so a dormant branch is still covered).
+# No `edited`: pr-title reads the PR's current title via the API on pull_request, so re-running it
+# after a title fix checks the fixed title (docs/CI.md § PR title), instead of re-running every check.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions: {}
+
+# A superseded pull-request head cancels its own run. A push or schedule run gets a group of its
+# own, keyed on the sha: in a shared group a newly queued run would replace the pending one even
+# with cancel-in-progress false, and a replaced push run is a push whose commits secret-scan never
+# walks.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Every job's `name:` equals its id, except the three reusable-workflow calls below, whose
+  # own jobs report to branch protection as `<this job> / <their job>` — none of those
+  # composite names is itself required; only `ci` is (docs/CI.md § First-party source scanning).
+  checks:
+    name: checks
+    permissions:
+      contents: read
+      pull-requests: read # checks.yml's pr-title job reads the PR's current title from the API
+    uses: ./.github/workflows/checks.yml
+
+  codeql:
+    name: codeql
+    permissions:
+      contents: read # codeql.yml's own top-level permissions declares it; a caller's grant is its ceiling
+      security-events: write # analyze uploads the SARIF results to code scanning
+      actions: read # init reads workflow run metadata
+    uses: ./.github/workflows/codeql.yml
+
+  check-eol:
+    name: check-eol
+    permissions:
+      contents: read
+    uses: ./.github/workflows/check-eol.yml
+
+  ci:
+    name: ci
+    needs: [checks, codeql, check-eol]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read # lists every job in this run, so one left out of needs: cannot hide
+    steps:
+      # A job skipped because a dependency failed reads green by default; this asserts success
+      # explicitly instead (docs/TESTING.md § In CI).
+      - name: Require every called workflow to have succeeded
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1
+
+      # needs: above is hand-kept; this checks the run's own job list instead of trusting that
+      # list to stay in sync with it, so a job added to this workflow without being added to
+      # needs: cannot run unwatched (docs/TESTING.md § In CI). An empty or incomplete job list —
+      # a failed API call, a wrong run id — fails loudly rather than reading as "nothing failed".
+      - name: Require every job in this run to have succeeded
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate --jq '.jobs[]' \
+            > "$RUNNER_TEMP/run-jobs.json"
+
+          count="$(jq -s 'length' "$RUNNER_TEMP/run-jobs.json")"
+          if [ "$count" -eq 0 ]; then
+            echo "the run's job list came back empty" >&2
+            exit 1
+          fi
+
+          known="$(jq -s '[.[] | select(.name == "check-eol / test")] | length' "$RUNNER_TEMP/run-jobs.json")"
+          if [ "$known" -eq 0 ]; then
+            echo "the run's job list is missing check-eol / test" >&2
+            exit 1
+          fi
+
+          unfinished="$(jq -s -r '[.[] | select(.name != "ci") | select(.status != "completed" or .conclusion != "success") | .name] | .[]' "$RUNNER_TEMP/run-jobs.json")"
+          if [ -n "$unfinished" ]; then
+            echo "$unfinished"
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # A verdict moves only when a workflow or a pinned tool does (docs/CI.md § Workflow
+      # supply-chain and privilege audit); Renovate bumps this version natively.
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.3"
+
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: "1.51.0"
+
+      # justfile's test recipe, full-run branch: a developer's own `just test` (every check, no
+      # argument) runs here too, so a typo or a broken change to that branch fails CI the same way
+      # it would fail a human running it locally (docs/TESTING.md § In CI). Self-contained — its
+      # own coverage source and .coverage output are unrelated to the merge/report steps below, and
+      # it runs before the downloaded artifacts even exist, so neither can interfere with the other.
+      - name: pytest, full local run (just test)
+        run: just test
+
+      - name: Download every check's coverage data
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: coverage-*
+          merge-multiple: true
+
+      # Each check job's own coverage run, over its full checkout with source=".", is what
+      # makes an untested file or an unwired check show 0% here (pyproject.toml's
+      # include_namespace_packages); this job only combines and reports what those runs'
+      # uploaded artifacts carry — its own checkout is what lets the steps below read the
+      # source (docs/TESTING.md § In CI). justfile's merge-coverage recipe.
+      - name: Merge coverage
+        run: just merge-coverage
+
+      # Which files must appear in the merged report is re-derived rather than trusted:
+      # independently of the coverage configuration that normally discovers them, this lists
+      # every top-level folder with an `action.yml` and that folder's `.py` files outside
+      # `tests/`, from this job's own checkout, and fails, naming them, if any is missing from
+      # the merged coverage data (docs/TESTING.md § In CI). A check job whose own checkout was
+      # narrowed, or a coverage configuration that stops discovering a check's folder, would
+      # otherwise drop that check's source out of the report unnoticed rather than failing it.
+      # Inline rather than a tracked script, so actionlint's own embedded shellcheck reaches it
+      # (docs/CI.md § Workflow supply-chain and privilege audit); its one coverage command is
+      # still the justfile's coverage-json recipe, so no pytest or coverage command in CI
+      # bypasses just.
+      - name: Every check's source file is present in the merged coverage data
+        run: |
+          set -euo pipefail
+
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+
+          for dir in */; do
+            dir="${dir%/}"
+            [ -f "$dir/action.yml" ] || continue
+            find "$dir" -name '*.py' -not -path "$dir/tests/*"
+          done | sort > "$tmp/expected-py-files"
+
+          if [ ! -s "$tmp/expected-py-files" ]; then
+            echo "no check's source files were found — run this from the repository root" >&2
+            exit 1
+          fi
+
+          if ! grep -qxF "check-eol/check-eol.py" "$tmp/expected-py-files"; then
+            echo "expected file list is missing check-eol/check-eol.py" >&2
+            exit 1
+          fi
+
+          just coverage-json "$tmp/coverage.json"
+          jq -r '.files | keys[]' "$tmp/coverage.json" | sort > "$tmp/covered-py-files"
+
+          missing="$(comm -23 "$tmp/expected-py-files" "$tmp/covered-py-files")"
+          if [ -n "$missing" ]; then
+            echo "missing from the merged coverage data:"
+            echo "$missing"
+            exit 1
+          fi
+
+      # justfile's coverage-report recipe.
+      - name: Coverage report, fail under 100%
+        run: just coverage-report
