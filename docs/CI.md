@@ -99,3 +99,16 @@ is attacker-controlled, so it enters the run step only via env mapping, never in
 job runs on `pull_request` only — no PR title exists on a push. It reads the pull request's current
 title from the GitHub API, not the snapshot the triggering event carries, so re-running it after a
 title fix checks the fixed title.
+
+## check-eol
+
+Every file git treats as text is LF-only, over the whole tracked tree — `.gitattributes` decides which
+files that is; what it checks, and what it does not catch, is
+[`../check-eol/README.md`](../check-eol/README.md)'s to state. The check runs as a required gate on
+wise-ci's own tree, in [`../.github/workflows/check-eol.yml`](../.github/workflows/check-eol.yml)'s
+`self-check` job, called by the wiring workflow like every other required check
+([`TESTING.md`](TESTING.md)).
+
+**What the gate deliberately lets through.** `action.yml` only calls the script
+([`TESTING.md`](TESTING.md) § The action), so nothing here proves the action turns a failing script
+into a red job — an accepted gap, revisited when the first check takes inputs.
