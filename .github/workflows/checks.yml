@@ -54,6 +54,12 @@ jobs:
           entrypoint: shellcheck
           args: ${{ steps.sh-files.outputs.files }}
 
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+
+      # tooling/lint-justfile.sh (docs/CI.md § Workflow supply-chain and privilege audit).
+      - name: Every justfile recipe is a single line calling a script
+        run: bash tooling/lint-justfile.sh
+
   secret-scan:
     name: secret-scan
     runs-on: ubuntu-latest

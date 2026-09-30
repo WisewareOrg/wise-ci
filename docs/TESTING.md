@@ -59,4 +59,7 @@ would otherwise drop that check's source out of the report unnoticed rather than
 
 ## Running tests locally
 
-`just --list` shows the commands. CI runs its commands directly rather than through `just`.
+`just --list` shows the commands. Every recipe is a single line calling a script under `tooling/`;
+CI calls the same scripts directly, never through `just`, so local and CI run identical logic — a
+recipe with a shebang, or more than one line, is a repository-hygiene gate's own finding
+([`CI.md`](CI.md) § Workflow supply-chain and privilege audit).
