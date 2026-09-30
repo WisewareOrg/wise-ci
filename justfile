@@ -4,6 +4,6 @@ set shell := ["bash", "-uc"]
 default:
     @just --list
 
-[doc("Run every check's tests with merged coverage, failing under 100%. Pass a check's folder name to run just that one. Quiet on success; full pytest/coverage output on failure.")]
+[doc("Run every check's tests with coverage, failing under 100%. Pass a check's folder name to run just that one, scoped to its own coverage. Quiet on success; full pytest/coverage output on failure.")]
 test check="":
-    @bash tooling/test.sh {{quote(check)}}
+    @uv run --locked pytest {{ if check == "" { "" } else { "--cov-reset --cov=" + quote(check) + " " + quote(check) } }}

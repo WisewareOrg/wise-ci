@@ -110,11 +110,12 @@ jobs:
           pattern: coverage-*
           merge-multiple: true
 
-      # Each check job's own `coverage run`, over its full checkout with source=".", is what
+      # Each check job's own coverage run, over its full checkout with source=".", is what
       # makes an untested file or an unwired check show 0% here (pyproject.toml's
-      # include_namespace_packages); this job only merges and reports what those runs' uploaded
-      # artifacts carry — its own checkout is what lets `coverage report` read the source.
-      # tooling/coverage-report.sh is shared with `just test`, so local and CI run identical logic
-      # (docs/TESTING.md § In CI).
+      # include_namespace_packages); this job only combines and reports what those runs'
+      # uploaded artifacts carry — its own checkout is what lets `coverage report` read the
+      # source (docs/TESTING.md § In CI).
       - name: Merge coverage and fail under 100%
-        run: bash tooling/coverage-report.sh
+        run: |
+          uv run --locked coverage combine
+          uv run --locked coverage report -m

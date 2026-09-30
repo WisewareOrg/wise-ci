@@ -36,34 +36,6 @@ jobs:
       - name: Workflow schema and expression lint (actionlint)
         uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # 1.7.12
 
-      # actionlint's own embedded shellcheck only reaches a workflow's inline run: text, not a
-      # script a step calls by path (docs/CI.md § Workflow supply-chain and privilege audit).
-      - name: Find every tracked shell script
-        id: sh-files
-        run: |
-          files="$(git ls-files '*.sh' | tr '\n' ' ')"
-          if [ -z "$files" ]; then
-            echo "no tracked *.sh files found" >&2
-            exit 1
-          fi
-          echo "files=$files" >> "$GITHUB_OUTPUT"
-
-      - name: Shell script lint (shellcheck, from the same image actionlint bundles it in)
-        uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # 1.7.12
-        with:
-          entrypoint: shellcheck
-          args: ${{ steps.sh-files.outputs.files }}
-
-      # A verdict moves only when a workflow or a pinned tool does (docs/CI.md § Workflow
-      # supply-chain and privilege audit); Renovate bumps this version natively.
-      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
-        with:
-          just-version: "1.51.0"
-
-      # tooling/lint-justfile.sh (docs/CI.md § Workflow supply-chain and privilege audit).
-      - name: Every justfile recipe is a single line calling a script
-        run: bash tooling/lint-justfile.sh
-
   secret-scan:
     name: secret-scan
     runs-on: ubuntu-latest

@@ -28,10 +28,15 @@ jobs:
         with:
           version: "0.12.3"
 
-      # tooling/test-check.sh — shared with `just test`, so local and CI run identical logic
-      # (docs/TESTING.md § In CI).
+      # Unscoped coverage (pyproject.toml's [tool.coverage.run] source = ["."]), over this job's
+      # own full checkout, is what makes an untested file or an unwired check show 0% once the
+      # wiring workflow's final job combines every check's data (docs/TESTING.md § In CI);
+      # --cov-fail-under=0 defers the fail_under=100 verdict to that combined report, since this
+      # job's own coverage is necessarily partial — it runs only check-eol's tests.
       - name: pytest, under coverage
-        run: bash tooling/test-check.sh check-eol
+        env:
+          COVERAGE_FILE: .coverage.check-eol
+        run: uv run --locked pytest --cov-fail-under=0 check-eol
 
       # Coverage data files are dotfiles; the wiring workflow's final job combines every
       # check's data into the one report (docs/TESTING.md § In CI).

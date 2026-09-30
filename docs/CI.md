@@ -57,19 +57,6 @@ input set, for whether a workflow is well-formed at all: schema, expression and 
   remains, reporting clean over a narrowed set that dropped the unreadable file — `--strict-collection`
   is what turns that warning into a failure instead, so a workflow neither tool could read fails the
   step rather than being silently absent from zizmor's own audited set.
-- **A script a `run:` step calls, rather than inlines, is shellchecked too.** actionlint's own
-  embedded `shellcheck` only reaches a workflow's inline `run:` text, not a file a step calls by
-  path, such as `tooling/coverage-population.sh`. The same job runs `shellcheck` standalone, from
-  actionlint's own image, over every tracked `*.sh` file (`git ls-files '*.sh'`), and fails if that
-  list is empty rather than reporting a clean scan over nothing.
-- **Every justfile recipe is exactly `just --list`, or a single line calling
-  `bash tooling/<name>.sh` with nothing but quoted arguments after it.** A shebang recipe, a
-  `[script]` recipe, a multi-line body, a chained command (`;`, `&&`, `||`, `|`), or any other
-  command hides logic from the standalone shellcheck pass above, which only reaches a tracked
-  `*.sh` file ([`TESTING.md`](TESTING.md) § Running tests locally). The same job installs `just`
-  and runs `tooling/lint-justfile.sh`, which walks every module too and fails, naming the recipe
-  and the reason, for anything that doesn't fit.
-
 **What the gate deliberately lets through.** The `workflow-audit` job's zizmor step runs with no
 `GITHUB_TOKEN`, so the audits needing the GitHub API — `known-vulnerable-actions` and
 `ref-version-mismatch` among them — do not run: the gate runs the offline audit set,

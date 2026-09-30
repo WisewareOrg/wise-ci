@@ -13,10 +13,17 @@ python-preference = "only-system"
 test = [
   "pytest",
   "coverage>=7.10",
+  "pytest-cov>=7.1.0",
 ]
 
 [tool.pytest.ini_options]
-addopts = ["--strict-markers", "--strict-config"]
+# --cov=. (rather than bare --cov) fixes the coverage source at the repository root by default, so
+# `uv run pytest`'s own fail_under check (from [tool.coverage.report] below) covers every check;
+# one-check mode overrides it with --cov-reset --cov=<check> (justfile, docs/TESTING.md § In CI).
+addopts = ["--strict-markers", "--strict-config", "-q", "--cov=.", "--cov-report=term-missing"]
+# Glob, not a literal list: matches every existing and future "<check>/tests/" at the repository
+# root without naming a check (docs/TESTING.md § Where tests live).
+testpaths = ["*/tests"]
 
 [tool.coverage.run]
 parallel = true
