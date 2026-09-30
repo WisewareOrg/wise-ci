@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Every job's `name:` equals its id: required status checks key on the displayed name.
+  # Every job's `name:` equals its id, for consistency across every workflow in this repository.
   test:
     name: test
     runs-on: ubuntu-latest

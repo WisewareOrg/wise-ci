@@ -39,11 +39,11 @@ runs the check as a gate on wise-ci itself. That gate is the check's integration
 repository it only ever passes, so the failing direction is proven by the tests running the script.
 
 A check's workflow file runs only when the wiring workflow calls it. The wiring workflow runs on every
-pull request, never only when certain paths change, and calls every check's workflow. Its final job
-merges their coverage into one report, and fails if any check failed or if any line of a check's code
-is not run by its tests. A check folder with no tests, or one not wired in, counts as untested and
-fails the report. [`CI.md`](CI.md) says how that job blocks a merge. How a check in a language other
-than Python joins the one report is decided with the first such check.
+pull request, every push to `main`, and weekly, never only when certain paths change, and calls every
+check's workflow. Its final job merges their coverage into one report, and fails if any check failed
+or if any line of a check's code is not run by its tests. A check folder with no tests, or one not
+wired in, counts as untested and fails the report. [`CI.md`](CI.md) says how that job blocks a merge.
+How a check in a language other than Python joins the one report is decided with the first such check.
 
 The final job's own `needs:` list is hand-kept, so it is not trusted alone: the job also asks the
 GitHub API for every job in its own run and fails if any of them, other than itself, is not complete

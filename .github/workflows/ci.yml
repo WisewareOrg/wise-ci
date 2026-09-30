@@ -1,17 +1,26 @@
 name: ci
 
-# The wiring workflow. Runs on every pull request, with no `paths:` filter — a required check
-# that never starts blocks the merge indefinitely (docs/TESTING.md § In CI).
-# No `edited`: pr-title reads the PR's current title via the API, so re-running it after a
-# title fix checks the fixed title (docs/CI.md § PR title), instead of re-running every check.
+# The one entry point for every gate this repository has (docs/TESTING.md § In CI): every pull
+# request, with no `paths:` filter — a required check that never starts blocks the merge
+# indefinitely — every push to `main`, and weekly (so a dormant branch is still covered).
+# No `edited`: pr-title reads the PR's current title via the API on pull_request, so re-running it
+# after a title fix checks the fixed title (docs/CI.md § PR title), instead of re-running every check.
 on:
   pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'
 
 permissions: {}
 
+# A superseded pull-request head cancels its own run. A push or schedule run gets a group of its
+# own, keyed on the sha: in a shared group a newly queued run would replace the pending one even
+# with cancel-in-progress false, and a replaced push run is a push whose commits secret-scan never
+# walks.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # Every job's `name:` equals its id, except the three reusable-workflow calls below, whose

@@ -4,21 +4,20 @@ name: checks
 # always be true of the repo and hold through any rewrite. CI holds no custom
 # credential (SECURITY.md § Threat model).
 on:
-  push:
-    branches: [main]
   workflow_call:
 
 permissions: {}
 
-# A superseded pull-request head cancels its own run. A push run gets a group of its own, keyed on
-# the sha: in a shared group a newly queued run replaces the pending one even with cancel-in-progress
-# false, and a replaced push run is a push whose commits the secret scan never walks.
+# A superseded pull-request head cancels its own run. A push or schedule run gets a group of its
+# own, keyed on the sha: in a shared group a newly queued run replaces the pending one even with
+# cancel-in-progress false, and a replaced push run is a push whose commits the secret scan never
+# walks.
 concurrency:
   group: checks-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Every job's `name:` equals its id: required status checks key on the displayed name.
+  # Every job's `name:` equals its id, for consistency across every workflow in this repository.
   workflow-audit:
     name: workflow-audit
     runs-on: ubuntu-latest
@@ -54,13 +53,14 @@ jobs:
 
   pr-title:
     name: pr-title
-    # The PR title is what becomes the commit on `main` under squash-merge.
-    # It is attacker-controlled, so it enters the run step only via env/file, never inline.
-    if: github.event_name == 'pull_request'
+    # On pull_request, this is what becomes the commit on `main` under squash-merge; on push and
+    # schedule there is no PR, so it is the head commit's own subject — what already reached main
+    # (docs/CI.md § PR title). Either way it is attacker-controlled, so it enters the run step
+    # only via env/file, never inline.
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read # reads the PR's current title from the API, not the event snapshot
+      pull-requests: read # reads the PR's current title from the API, on pull_request only
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -76,11 +76,18 @@ jobs:
       # Reads the PR's current title, so re-running after a title fix checks the fixed title
       # (docs/CI.md § PR title) — the event's own snapshot goes stale the moment the title changes.
       - name: Read the PR's current title
+        if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: gh api "repos/$REPO/pulls/$PR_NUMBER" --jq .title > "$RUNNER_TEMP/pr-title"
+
+      # No PR exists on push or schedule; the head commit's own subject is what already reached
+      # main (docs/CI.md § PR title).
+      - name: Read the head commit's subject
+        if: github.event_name != 'pull_request'
+        run: git log -1 --format=%s HEAD > "$RUNNER_TEMP/pr-title"
 
       # NODE_PATH resolves the configs' `extends` from the pinned install (docs/CI.md § PR title).
       - name: PR title is a Conventional Commit (the squash-merge commit on main)
