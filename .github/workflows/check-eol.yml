@@ -1,0 +1,51 @@
+name: check-eol
+
+# docs/TESTING.md § In CI: runs only when the wiring workflow (ci.yml) calls it.
+on:
+  workflow_call:
+
+permissions: {}
+
+concurrency:
+  group: check-eol-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Every job's `name:` equals its id: required status checks key on the displayed name.
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+
+      - name: pytest, under coverage
+        run: uv run --locked coverage run -m pytest check-eol/tests
+
+      # Coverage data files are dotfiles; the wiring workflow's final job combines every
+      # check's data into the one report (docs/TESTING.md § In CI).
+      - name: Upload coverage data
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-check-eol
+          path: .coverage.*
+          include-hidden-files: true
+
+  # check-eol run over wise-ci's own tree: the check's integration test (docs/TESTING.md
+  # § Every case is a test; on a clean repository this only ever passes).
+  self-check:
+    name: self-check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./check-eol

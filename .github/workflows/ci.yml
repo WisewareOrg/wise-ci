@@ -1,0 +1,69 @@
+name: ci
+
+# The wiring workflow. Runs on every pull request against main, with no `paths:` filter — a
+# required check that never starts blocks the merge indefinitely (docs/TESTING.md § In CI).
+# No `edited`: a title fix needs a new commit (test-design-log.md entry 36).
+on:
+  pull_request:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Every job's `name:` equals its id, except the three reusable-workflow calls below, whose
+  # own jobs report to branch protection as `<this job> / <their job>` — none of those
+  # composite names is itself required; only `ci` is (docs/CI.md § First-party source scanning).
+  checks:
+    name: checks
+    permissions:
+      contents: read
+    uses: ./.github/workflows/checks.yml
+
+  codeql:
+    name: codeql
+    permissions:
+      security-events: write # analyze uploads the SARIF results to code scanning
+      actions: read # init reads workflow run metadata
+    uses: ./.github/workflows/codeql.yml
+
+  check-eol:
+    name: check-eol
+    permissions:
+      contents: read
+    uses: ./.github/workflows/check-eol.yml
+
+  ci:
+    name: ci
+    needs: [checks, codeql, check-eol]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      # A job skipped because a dependency failed reads green by default; this asserts success
+      # explicitly instead (docs/TESTING.md § In CI).
+      - name: Require every called workflow to have succeeded
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+
+      - name: Download every check's coverage data
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: coverage-*
+          merge-multiple: true
+
+      # A check folder with no tests, or one not wired in here, shows 0% and fails this
+      # (pyproject.toml's include_namespace_packages, docs/TESTING.md § In CI).
+      - name: Merge coverage and fail under 100%
+        run: |
+          uv run --locked coverage combine
+          uv run --locked coverage report -m
