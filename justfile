@@ -19,3 +19,7 @@ merge-coverage:
 [doc("CI only: report the merged coverage, failing under 100% (docs/TESTING.md § In CI).")]
 coverage-report:
     @uv run --locked coverage report -m
+
+[doc("CI only: write the merged coverage as JSON, uncapped, for the population guard to read (docs/TESTING.md § In CI).")]
+coverage-json out:
+    @uv run --locked coverage json --fail-under=0 -o {{ quote(out) }}

@@ -59,22 +59,35 @@ own check's tests. `include_namespace_packages = true` is what then makes a chec
 file with no executing test show at 0% once the wiring workflow's final job combines every check's
 data with the `merge-coverage` recipe, rather than being absent from it.
 
+Each check job also runs `test`'s own one-check branch (`just test <check>`), before `test-ci`, and
+the final job also runs its no-argument, full-run branch (`just test`), before downloading any
+check's data. Every branch of every recipe therefore runs somewhere in CI, so a typo or a broken
+change to any of them, including the one a developer runs locally, fails CI structurally rather than
+only a local run. Order matters for the two in-job runs: coverage's parallel mode, on every run's
+start, erases any existing file whose name is its own data file's name plus a further suffix.
+`test <check>` writes the plain `.coverage`; `test-ci` writes `.coverage.<check>`, which is exactly
+that plain name plus a suffix. Run `test <check>` first and its own start erases nothing test-ci has
+written yet; run it after test-ci and its start would erase test-ci's file as a "sibling" of its own
+plain name. `test-ci`'s own narrower erase, in either order, can never reach back to delete the
+plain file, since the plain name is not one of test-ci's own suffixed siblings.
+
 Which files must appear in the merged report is itself re-derived rather than trusted, in the final
 job, between `merge-coverage` and the `coverage-report` recipe that reports it: it lists every
 top-level folder with an `action.yml` and that folder's `.py` files outside `tests/`, from its own
-checkout, and fails, naming them, if any is missing from the merged coverage data — independently
-of the coverage configuration that normally discovers them. A check job whose own checkout was
-narrowed, or a coverage configuration that stops discovering a check's folder, would otherwise drop
-that check's source out of the report unnoticed rather than failing it.
+checkout, and fails, naming them, if any is missing from the merged coverage data (read with the
+`coverage-json` recipe) — independently of the coverage configuration that normally discovers them.
+A check job whose own checkout was narrowed, or a coverage configuration that stops discovering a
+check's folder, would otherwise drop that check's source out of the report unnoticed rather than
+failing it.
 
 ## Running tests locally
 
 `just --list` shows every recipe, including the CI-only ones described above (`test-ci`,
-`merge-coverage`, `coverage-report`). `test` is the one for local use: it runs `uv run pytest`,
-configured entirely through `pyproject.toml` (`[tool.pytest.ini_options]`, `[tool.coverage.run]`,
-`[tool.coverage.report]`): test discovery, quiet output, coverage source, and the 100% floor.
-Passed a check's folder name, it scopes both test collection and coverage to that check's own
-`tests/` alone (`--cov-reset --cov=<check> <check>/tests`), matching what the full run's own
+`merge-coverage`, `coverage-report`, `coverage-json`). `test` is the one for local use: it runs
+`uv run pytest`, configured entirely through `pyproject.toml` (`[tool.pytest.ini_options]`,
+`[tool.coverage.run]`, `[tool.coverage.report]`): test discovery, quiet output, coverage source, and
+the 100% floor. Passed a check's folder name, it scopes both test collection and coverage to that
+check's own `tests/` alone (`--cov-reset --cov=<check> <check>/tests`), matching what the full run's own
 `testpaths` glob already collects, so one check's tests are not failed by another, untested check's
 source. A local run needs no separate re-derivation step: one `uv run pytest` is a single,
 unscoped, unsuppressed coverage session, so an untested check already shows at 0% and fails it

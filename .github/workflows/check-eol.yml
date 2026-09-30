@@ -32,6 +32,15 @@ jobs:
         with:
           just-version: "1.51.0"
 
+      # justfile's test recipe, one-check branch: a developer's own `just test check-eol` runs
+      # here too, so a typo or a broken change to that branch fails CI the same way it would fail
+      # a human running it locally (docs/TESTING.md § In CI). Must run before test-ci below: both
+      # use coverage's parallel mode, and parallel erase() on start deletes every sibling matching
+      # its own data file's name — this step's plain .coverage does not match test-ci's
+      # .coverage.check-eol.*, but test-ci's erase() run first would be undone by this one's.
+      - name: pytest, one-check mode (just test check-eol)
+        run: just test check-eol
+
       # justfile's test-ci recipe: unscoped coverage (pyproject.toml's [tool.coverage.run]
       # source = ["."]), over this job's own full checkout, is what makes an untested file or an
       # unwired check show 0% once the wiring workflow's final job combines every check's data

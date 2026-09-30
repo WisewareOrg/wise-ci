@@ -108,6 +108,14 @@ jobs:
         with:
           just-version: "1.51.0"
 
+      # justfile's test recipe, full-run branch: a developer's own `just test` (every check, no
+      # argument) runs here too, so a typo or a broken change to that branch fails CI the same way
+      # it would fail a human running it locally (docs/TESTING.md § In CI). Self-contained — its
+      # own coverage source and .coverage output are unrelated to the merge/report steps below, and
+      # it runs before the downloaded artifacts even exist, so neither can interfere with the other.
+      - name: pytest, full local run (just test)
+        run: just test
+
       - name: Download every check's coverage data
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -130,7 +138,9 @@ jobs:
       # narrowed, or a coverage configuration that stops discovering a check's folder, would
       # otherwise drop that check's source out of the report unnoticed rather than failing it.
       # Inline rather than a tracked script, so actionlint's own embedded shellcheck reaches it
-      # (docs/CI.md § Workflow supply-chain and privilege audit).
+      # (docs/CI.md § Workflow supply-chain and privilege audit); its one coverage command is
+      # still the justfile's coverage-json recipe, so no pytest or coverage command in CI
+      # bypasses just.
       - name: Every check's source file is present in the merged coverage data
         run: |
           set -euo pipefail
@@ -154,7 +164,7 @@ jobs:
             exit 1
           fi
 
-          uv run --locked coverage json --fail-under=0 -o "$tmp/coverage.json"
+          just coverage-json "$tmp/coverage.json"
           jq -r '.files | keys[]' "$tmp/coverage.json" | sort > "$tmp/covered-py-files"
 
           missing="$(comm -23 "$tmp/expected-py-files" "$tmp/covered-py-files")"
