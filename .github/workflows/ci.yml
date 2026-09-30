@@ -36,6 +36,7 @@ jobs:
   codeql:
     name: codeql
     permissions:
+      contents: read # codeql.yml's own top-level permissions declares it; a caller's grant is its ceiling
       security-events: write # analyze uploads the SARIF results to code scanning
       actions: read # init reads workflow run metadata
     uses: ./.github/workflows/codeql.yml
