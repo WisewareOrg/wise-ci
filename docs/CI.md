@@ -57,6 +57,7 @@ input set, for whether a workflow is well-formed at all: schema, expression and 
   remains, reporting clean over a narrowed set that dropped the unreadable file — `--strict-collection`
   is what turns that warning into a failure instead, so a workflow neither tool could read fails the
   step rather than being silently absent from zizmor's own audited set.
+
 **What the gate deliberately lets through.** The `workflow-audit` job's zizmor step runs with no
 `GITHUB_TOKEN`, so the audits needing the GitHub API — `known-vulnerable-actions` and
 `ref-version-mismatch` among them — do not run: the gate runs the offline audit set,

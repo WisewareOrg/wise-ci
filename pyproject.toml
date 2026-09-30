@@ -19,7 +19,8 @@ test = [
 [tool.pytest.ini_options]
 # --cov=. (rather than bare --cov) fixes the coverage source at the repository root by default, so
 # `uv run pytest`'s own fail_under check (from [tool.coverage.report] below) covers every check;
-# one-check mode overrides it with --cov-reset --cov=<check> (justfile, docs/TESTING.md § In CI).
+# one-check mode overrides it with --cov-reset --cov=<check> (justfile, docs/TESTING.md § Running
+# tests locally).
 addopts = ["--strict-markers", "--strict-config", "-q", "--cov=.", "--cov-report=term-missing"]
 # Glob, not a literal list: matches every existing and future "<check>/tests/" at the repository
 # root without naming a check (docs/TESTING.md § Where tests live).
