@@ -13,23 +13,21 @@ default code-scanning suite over the project's own source, on every pull request
 every push to `main`, and weekly (so a dormant branch is still covered).
 
 The CodeQL matrix carries one leg per language of first-party source in the tree; a change that adds
-a language adds its leg to the matrix, and its display name to the branch protection ruleset's
-required contexts.
+a language adds its leg to the matrix.
 
 No `queries:` input: the action's own default is the code-scanning suite, so widening to a named
 suite later is a visible diff rather than a silent one.
 
-**The branch protection ruleset's required contexts are every `checks.yml` job id, plus every
-CodeQL matrix leg's own display name** — `gh api repos/tjwise99/wise-ci/rules/branches/main` reads
-the live set rather than this line enumerating it. The codeql leg fails only on an execution
-error — it is not where a CodeQL finding fails a merge. A finding gates through the ruleset's own
-`code_scanning` rule instead, configured for CodeQL at every alert severity. That rule is ruleset
-configuration rather than a tracked file, so no check here can assert it.
+**Every check that exists blocks a merge into `main`**, through one required status check: the
+wiring workflow's final job ([`TESTING.md`](TESTING.md)). Every workflow that runs on a pull request
+is called by the wiring workflow, and that job fails if any of them failed, so adding a check, a job
+or a CodeQL leg needs no change to branch protection.
+`gh api repos/tjwise99/wise-ci/rules/branches/main` reads the live set. The codeql leg fails only on
+an execution error — it is not where a CodeQL finding fails a merge. A finding gates through the
+ruleset's own `code_scanning` rule instead, configured for CodeQL at every alert severity. That rule
+is ruleset configuration rather than a tracked file, so no check here can assert it.
 
 This mechanises the security review a solo project has no second reader to perform.
-
-This gate has no local form: CodeQL's analysis needs a built database via the CodeQL CLI, which no
-`just` recipe wraps.
 
 ## Workflow supply-chain and privilege audit
 
@@ -44,8 +42,8 @@ well-formed at all: schema, expression and reference errors, with `shellcheck` a
 
 - **Every action is pinned to an immutable reference** — a commit SHA, or an image digest where the
   step is a container. A tag is a pointer its owner can move after anyone reviewed it; neither of
-  those is. A `uses:` beginning `./` is exempt: a repository-local action moves with the commit that
-  calls it, so there is no upstream to pin.
+  those is. A `uses:` beginning `./` is exempt: a repository-local action or workflow moves with the
+  commit that calls it, so there is no upstream to pin.
 - **No workflow grants a write permission at the top level, and no grant goes unexplained.**
   `excessive-permissions` fails a top-level write grant, and fails a workflow declaring no
   `permissions:` block at all — what an undeclared block would inherit is a repository setting no
@@ -69,9 +67,6 @@ deterministically, so a verdict moves only when a workflow or a pinned image doe
 sits behind an admin-only API. It is read-only; the top-level blocks are what a check can see, and
 they are what the rule above constrains.
 
-This gate has no local form either: no `just` recipe wraps zizmor or actionlint, though both run
-from the same digest-pinned images this file names.
-
 ## Secret scanning
 
 A pull request, and every push to the default branch, is scanned for committed credentials, and a
@@ -87,9 +82,6 @@ than the event's own commit list. The scan is pattern-based besides, so it catch
 shapes it holds rules for and nothing reports what it missed. It raises the cost of committing a
 credential; it is not an assertion that the repository holds none.
 
-This gate has no local form: gitleaks runs only in CI, walking the event's own commit list, which a
-local run has no equivalent for.
-
 ## PR title
 
 The PR title — the commit that reaches `main` under squash-merge — is a Conventional Commit, checked
@@ -104,34 +96,6 @@ pinned install under `tooling/commitlint/node_modules` is unreachable that way; 
 `NODE_PATH` to it instead. Without `NODE_PATH`, resolution falls back to whatever npx cache or global
 install the machine holds, so a local run can pass on a copy the runner does not have. The PR title
 is attacker-controlled, so it enters the run step only via env mapping, never inline into `run:`. The
-job runs on `pull_request` only — no PR title exists on a push.
-
-This gate has no local form: the PR title it checks does not exist until a pull request does.
-
-## Python test tier
-
-The `tests` job ([`../.github/workflows/checks.yml`](../.github/workflows/checks.yml)) runs
-`just test`: the project's whole Python test suite, under coverage, gated at 100% branch coverage.
-[`TESTING.md`](TESTING.md) says what each test tier guarantees and why the bar is 100%.
-
-This gate has a local form: `just verify` runs the same recipe offline, for iterating before a
-change is ready ([`../CONTRIBUTING.md`](../CONTRIBUTING.md)). CI is still the merge-time authority —
-a local run and the runner's own environment are not guaranteed identical.
-
-## Action-level proof
-
-Each migrated check gets an `action-tests-<check>` job, proving the *action* a consumer's workflow
-calls — the composite step, not this repository's own tree — against an archived, standalone copy
-(`TESTING.md`'s F1). `action-tests` is the required aggregate: it `needs` every `action-tests-<check>`
-job and fails unless each one's result is `success` (closing F2; `TESTING.md`).
-
-This gate has no local form. Nothing offline stands in for a consumer's own `uses:` step.
-
-## Self-gating
-
-Once a check migrates, the `check-eol` job runs it over wise-ci's own tree (`uses: ./check-eol`),
-per ADR 0001 rev 1 point 5 — the Self-gating tier row in `TESTING.md`. It is not a required check.
-
-This gate has no local form of its own, though the script it runs can be invoked directly
-(`python3 check-eol/check-eol.py`, from the repository root) the same way any consumer's tree
-would run it.
+job runs on `pull_request` only — no PR title exists on a push. It reads the pull request's current
+title from the GitHub API, not the snapshot the triggering event carries, so re-running it after a
+title fix checks the fixed title.

@@ -23,9 +23,8 @@ What was chosen, stated as plainly as possible.
 
 ## Alternatives considered
 
-At least one rejected option, and *why* it was rejected. An ADR with no rejected alternative is
-just a changelog entry with a heading — if there isn't a real alternative to name, this doesn't
-need an ADR; put the rationale in the commit message instead.
+The alternatives the trade study weighed, and the analysis that rejected each. A choice that needed
+no such analysis is not an ADR ([`README.md`](README.md)).
 
 ## Consequences
 
