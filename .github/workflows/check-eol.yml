@@ -22,7 +22,11 @@ jobs:
         with:
           persist-credentials: false
 
+      # A verdict moves only when a workflow or a pinned tool does (docs/CI.md § Workflow
+      # supply-chain and privilege audit); Renovate bumps this version natively.
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.3"
 
       # tooling/test-check.sh — shared with `just test`, so local and CI run identical logic
       # (docs/TESTING.md § In CI).
