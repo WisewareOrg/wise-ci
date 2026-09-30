@@ -1,7 +1,7 @@
 name: ci
 
-# The wiring workflow. Runs on every pull request against main, with no `paths:` filter — a
-# required check that never starts blocks the merge indefinitely (docs/TESTING.md § In CI).
+# The wiring workflow. Runs on every pull request, with no `paths:` filter — a required check
+# that never starts blocks the merge indefinitely (docs/TESTING.md § In CI).
 # No `edited`: pr-title reads the PR's current title via the API, so re-running it after a
 # title fix checks the fixed title (docs/CI.md § PR title), instead of re-running every check.
 on:
@@ -54,18 +54,34 @@ jobs:
 
       # needs: above is hand-kept; this checks the run's own job list instead of trusting that
       # list to stay in sync with it, so a job added to this workflow without being added to
-      # needs: cannot run unwatched (docs/TESTING.md § In CI).
+      # needs: cannot run unwatched (docs/TESTING.md § In CI). An empty or incomplete job list —
+      # a failed API call, a wrong run id — fails loudly rather than reading as "nothing failed".
       - name: Require every job in this run to have succeeded
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
         run: |
-          gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
-            --jq '.jobs[] | select(.name != "ci") | select(.status != "completed" or .conclusion != "success") | .name' \
-            > "$RUNNER_TEMP/unfinished-jobs"
-          if [ -s "$RUNNER_TEMP/unfinished-jobs" ]; then
-            cat "$RUNNER_TEMP/unfinished-jobs"
+          set -euo pipefail
+
+          gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate --jq '.jobs[]' \
+            > "$RUNNER_TEMP/run-jobs.json"
+
+          count="$(jq -s 'length' "$RUNNER_TEMP/run-jobs.json")"
+          if [ "$count" -eq 0 ]; then
+            echo "the run's job list came back empty" >&2
+            exit 1
+          fi
+
+          known="$(jq -s '[.[] | select(.name == "check-eol / test")] | length' "$RUNNER_TEMP/run-jobs.json")"
+          if [ "$known" -eq 0 ]; then
+            echo "the run's job list is missing check-eol / test" >&2
+            exit 1
+          fi
+
+          unfinished="$(jq -s -r '[.[] | select(.name != "ci") | select(.status != "completed" or .conclusion != "success") | .name] | .[]' "$RUNNER_TEMP/run-jobs.json")"
+          if [ -n "$unfinished" ]; then
+            echo "$unfinished"
             exit 1
           fi
 
@@ -81,8 +97,11 @@ jobs:
           pattern: coverage-*
           merge-multiple: true
 
-      # A check folder with no tests, or one not wired in here, shows 0% and fails this
-      # (pyproject.toml's include_namespace_packages, docs/TESTING.md § In CI).
+      # Each check job's own `coverage run`, over its full checkout with source=".", is what
+      # makes an untested file or an unwired check show 0% here (pyproject.toml's
+      # include_namespace_packages); this job only merges and reports what those runs' uploaded
+      # artifacts carry — its own checkout is what lets `coverage report` read the source
+      # (docs/TESTING.md § In CI).
       - name: Merge coverage and fail under 100%
         run: |
           uv run --locked coverage combine
