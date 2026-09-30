@@ -2,7 +2,8 @@ name: ci
 
 # The wiring workflow. Runs on every pull request against main, with no `paths:` filter — a
 # required check that never starts blocks the merge indefinitely (docs/TESTING.md § In CI).
-# No `edited`: a title fix needs a new commit (test-design-log.md entry 36).
+# No `edited`: pr-title reads the PR's current title via the API, so re-running it after a
+# title fix checks the fixed title (docs/CI.md § PR title), instead of re-running every check.
 on:
   pull_request:
 
@@ -20,6 +21,7 @@ jobs:
     name: checks
     permissions:
       contents: read
+      pull-requests: read # checks.yml's pr-title job reads the PR's current title from the API
     uses: ./.github/workflows/checks.yml
 
   codeql:
