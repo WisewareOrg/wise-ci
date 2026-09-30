@@ -40,7 +40,12 @@ _IDENTITY = {
 
 
 def _env(**overrides: str) -> dict[str, str]:
-    env = {**os.environ, **_ISOLATION, **_IDENTITY}
+    # Every GIT_* variable is stripped first: GIT_DIR, GIT_WORK_TREE, GIT_CONFIG_COUNT/KEY_n/VALUE_n
+    # and GIT_CONFIG_PARAMETERS all reach a fixture's git calls and the script otherwise, silently
+    # redirecting commands onto an unrelated repository or injecting configuration no case set.
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    env.update(_ISOLATION)
+    env.update(_IDENTITY)
     env.pop("GITHUB_ACTIONS", None)  # a case sets this itself; the ambient run must not leak it in
     env.update(overrides)
     return env
@@ -117,11 +122,17 @@ class _Case:
     check: Callable[[subprocess.CompletedProcess], None]
 
 
-def _must_fail(*, stderr_has: str, stdout_has: str = "") -> Callable[[subprocess.CompletedProcess], None]:
+def _must_fail(
+    *, stderr_has: str, stdout_has: str = "", stderr_path: str = ""
+) -> Callable[[subprocess.CompletedProcess], None]:
     def check(result: subprocess.CompletedProcess) -> None:
         assert result.returncode == 1
         if stdout_has:
             assert stdout_has in result.stdout
+        if stderr_path:
+            # the untracked list itself (untracked.stdout), not just the fixed message that refers
+            # to it -- deleting the write of that list would otherwise survive undetected.
+            assert stderr_path in result.stderr
         assert stderr_has in result.stderr
         assert CLEAN_MSG not in result.stdout
         _no_traceback(result)
@@ -159,6 +170,23 @@ def _empty_repo(tmp_path: Path) -> Path:
     return _init_repo(tmp_path / "repo")
 
 
+def _gitignored_untracked(gitignore: str, ignored: dict[str, bytes]) -> Callable[[Path], Path]:
+    def build(tmp_path: Path) -> Path:
+        repo = _init_repo(tmp_path / "repo")
+        _commit(repo, {".gitignore": gitignore.encode()})
+        for relpath, content in ignored.items():
+            target = repo / relpath
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(content)
+            # independent confirmation: git itself resolves this path against the ignore rules,
+            # not the --exclude-standard flag the check under test relies on.
+            check_ignore = _git(repo, "check-ignore", "-q", relpath)
+            assert check_ignore.returncode == 0
+        return repo
+
+    return build
+
+
 CASES: list[_Case] = [
     _Case(
         "crlf-tracked-txt",
@@ -185,20 +213,26 @@ CASES: list[_Case] = [
     _Case(
         "untracked-crlf",
         _untracked({}, {"bad.txt": b"line one\r\nline two\r\n"}),
-        _must_fail(stderr_has=UNTRACKED_MSG),
+        _must_fail(stderr_has=UNTRACKED_MSG, stderr_path="bad.txt"),
     ),
     _Case(
         "untracked-all-lf",
         _untracked({}, {"clean.txt": b"line one\nline two\n"}),
-        _must_fail(stderr_has=UNTRACKED_MSG),
+        _must_fail(stderr_has=UNTRACKED_MSG, stderr_path="clean.txt"),
     ),
     _Case(
         "untracked-beside-tracked-crlf",
         _untracked({"tracked.txt": b"line one\r\nline two\r\n"}, {"loose.txt": b"other\n"}),
-        _must_fail(stdout_has="tracked.txt", stderr_has=UNTRACKED_MSG),
+        _must_fail(stdout_has="tracked.txt", stderr_has=UNTRACKED_MSG, stderr_path="loose.txt"),
     ),
     _Case("all-lf-tree", _tracked({"a.txt": b"line one\nline two\n"}), _must_pass),
-    _Case("binary-file-with-cr", _tracked({"image.bin": b"\x00\x01\x02\r\x03"}), _must_pass),
+    _Case(
+        # \r must sit at a real line end for -I to be the reason this passes -- \x00...\x02\r\x03
+        # (no trailing \n) never matches \r$ even without -I, so it would pass regardless.
+        "binary-file-with-cr",
+        _tracked({"image.bin": b"\x00\x01\x02line\r\n\x03"}),
+        _must_pass,
+    ),
     _Case(
         # The untracked-all-lf file above, now tracked: the untracked guard is silent and the
         # search itself judges it clean.
@@ -215,6 +249,13 @@ CASES: list[_Case] = [
         _tracked({"subdir/nested/file.txt": b"line one\r\nline two\r\n"}),
         _must_fail(stdout_has="subdir/nested/file.txt", stderr_has=CRLF_PLAIN),
     ),
+    _Case(
+        # Proves --exclude-standard's valid-input direction: every untracked case above shows what
+        # fails; none shows a legitimately ignored file (e.g. build output) passing.
+        "untracked-but-gitignored",
+        _gitignored_untracked("build/\n", {"build/output.txt": b"line one\r\nline two\r\n"}),
+        _must_pass,
+    ),
 ]
 
 
@@ -228,16 +269,22 @@ def test_case_file_row(case: _Case, tmp_path: Path) -> None:
 def test_outside_a_repository_fails_with_gits_status(tmp_path: Path) -> None:
     plain = tmp_path / "not-a-repo"
     plain.mkdir()
+    # GIT_CEILING_DIRECTORIES stops git's upward discovery at tmp_path: without it, a pytest
+    # --basetemp placed inside a git work tree lets git discover that outer repo instead of
+    # failing here, so the case would depend on where the temp dir happens to sit.
+    env = _env(GIT_CEILING_DIRECTORIES=str(tmp_path))
     # independent confirmation: the same git invocation the script makes, run directly.
     probe = subprocess.run(
         ["git", "-C", str(plain), "ls-files", "--others", "--exclude-standard", "--", "."],
-        env=_env(),
+        env=env,
         capture_output=True,
         text=True,
     )
     assert probe.returncode != 0
 
-    result = _run_check(plain)
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT)], cwd=plain, env=env, capture_output=True, text=True
+    )
 
     assert result.returncode == probe.returncode
     assert result.stdout == ""
