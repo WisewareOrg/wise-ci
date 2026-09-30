@@ -356,3 +356,19 @@ def test_binary_attribute_gap_is_pinned_as_passing(tmp_path: Path) -> None:
     result = _run_check(repo)
 
     _must_pass(result)
+
+
+def test_bare_text_attribute_does_not_open_the_gap(tmp_path: Path) -> None:
+    """The case file's own boundary on the gap above: "a plain `-text` does not do this; only the
+    full `binary` macro" -- `-text` alone disables add-time normalisation but does not set `-diff`,
+    so the grep search still treats the file as text and still catches the CRLF."""
+    payload = b"line one\r\nline two\r\n"
+    repo = _init_repo(tmp_path / "repo")
+    _commit(repo, {"secret.txt": payload}, attributes="secret.txt -text\n")
+
+    result = _run_check(repo)
+
+    assert result.returncode == 1
+    assert "secret.txt" in result.stdout
+    assert CRLF_PLAIN in result.stderr
+    _no_traceback(result)
