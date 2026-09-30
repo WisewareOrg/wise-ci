@@ -29,6 +29,11 @@ test check="":
     done
     if [ "$status" -eq 0 ]; then
         uv run --locked coverage combine >>"$log" 2>&1 || true
+        if [ -z "{{check}}" ] && ! bash tooling/coverage-population.sh >>"$log" 2>&1; then
+            status=1
+        fi
+    fi
+    if [ "$status" -eq 0 ]; then
         if [ -n "{{check}}" ]; then
             report_args=(--include="{{check}}/*")
         else
