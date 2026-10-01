@@ -1,10 +1,13 @@
 name: checks
 
 # Repo-wide invariant gates that need no application code. They encode what must
-# always be true of the repo and hold through any rewrite. CI holds no custom
-# credential (SECURITY.md § Threat model).
+# always be true of the repo and hold through any rewrite. The one custom
+# credential is the gitleaks-action license (SECURITY.md § Threat model).
 on:
   workflow_call:
+    secrets:
+      GITLEAKS_LICENSE:
+        required: true
 
 permissions: {}
 
