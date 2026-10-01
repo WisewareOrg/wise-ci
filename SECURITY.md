@@ -8,8 +8,8 @@ secrets the job can reach. A bad wise-ci change is therefore a change to every c
 ## Threats, and what covers each
 
 **A bad release reaches consumers with nobody looking.** A consumer extending the
-`tjwise99/wise-renovate` preset automerges a minor, patch or digest update once its own CI is green,
-with no human review; a major update opens a pull request and waits. The preset exempts `tjwise99/`
+`WisewareOrg/wise-renovate` preset automerges a minor, patch or digest update once its own CI is green,
+with no human review; a major update opens a pull request and waits. The preset exempts `WisewareOrg/`
 packages from its release-age delay, so a wise-ci release automerges as soon as it is tagged. What
 covers it:
 
@@ -34,6 +34,8 @@ script handles the input ([`docs/TESTING.md`](docs/TESTING.md)). zizmor's templa
 covers wise-ci's own workflows, not a check's `action.yml` ([`docs/CI.md`](docs/CI.md)); keeping
 `action.yml` to that single call is what keeps the unaudited part small.
 
-**wise-ci's own CI is used against it.** What covers it: CI holds no custom credential — the only
-token any workflow uses is GitHub's own `GITHUB_TOKEN`, scoped per job, with every grant beyond read
-explained beside it, and the workflows themselves are audited ([`docs/CI.md`](docs/CI.md)).
+**wise-ci's own CI is used against it.** What covers it: the only token any workflow uses is GitHub's
+own `GITHUB_TOKEN`, scoped per job, with every grant beyond read explained beside it; the one custom
+credential, the `GITLEAKS_LICENSE` key gitleaks-action requires of an organization, grants no access
+to the repository or its secrets, and the workflows themselves are audited
+([`docs/CI.md`](docs/CI.md)).

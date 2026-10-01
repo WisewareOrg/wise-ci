@@ -32,6 +32,8 @@ jobs:
       contents: read
       pull-requests: read # checks.yml's pr-title job reads the PR's current title from the API
     uses: ./.github/workflows/checks.yml
+    secrets:
+      GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
   codeql:
     name: codeql
