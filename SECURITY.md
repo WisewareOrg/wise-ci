@@ -8,8 +8,8 @@ secrets the job can reach. A bad wise-ci change is therefore a change to every c
 ## Threats, and what covers each
 
 **A bad release reaches consumers with nobody looking.** A consumer extending the
-`tjwise99/wise-renovate` preset automerges a minor, patch or digest update once its own CI is green,
-with no human review; a major update opens a pull request and waits. The preset exempts `tjwise99/`
+`WisewareOrg/wise-renovate` preset automerges a minor, patch or digest update once its own CI is green,
+with no human review; a major update opens a pull request and waits. The preset exempts `WisewareOrg/`
 packages from its release-age delay, so a wise-ci release automerges as soon as it is tagged. What
 covers it:
 
