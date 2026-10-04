@@ -1,5 +1,5 @@
 """Specifies check-branch/check-branch.py: the organization process stated once in
-WisewareOrg/.github PROCESS.md (PROC-001-008, PROC-010 -- PROC-009 is commitlint's), ported from
+WisewareOrg/.github PROCESS.md (PROC-001-008, PROC-010), ported from
 WiseKiosk's scripts/check-branch.py with the behaviour changes and env contract pinned by the
 issue-6 plan ("Decisions you are approving") and the owner's 2026-10-03/04 carry comment:
 built-in ticket types task/bug/design/process (PROC-010, no `types` input); env read at call time
