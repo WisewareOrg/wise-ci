@@ -23,7 +23,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Every job's `name:` equals its id, except the three reusable-workflow calls below, whose
+  # Every job's `name:` equals its id, except the four reusable-workflow calls below, whose
   # own jobs report to branch protection as `<this job> / <their job>` — none of those
   # composite names is itself required; only `ci` is (docs/CI.md § First-party source scanning).
   checks:

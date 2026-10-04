@@ -19,10 +19,10 @@ from.
 ## Tickets, branches, and titles
 
 Open an issue first: the branch name is derived from it. Ticket, branch-naming, linkage and
-PR-title rules are stated once in
+PR-title rules — including the ticket types (PROC-010) — are stated once in
 [WisewareOrg/.github's `PROCESS.md`](https://github.com/WisewareOrg/.github/blob/main/PROCESS.md),
-not restated here. wise-ci takes no `types` input: `PROCESS.md`'s four ticket types (`task`, `bug`,
-`design`, `process`) are built into the check as-is.
+not restated here. The `check-branch` action itself takes no `types` input: PROCESS.md's ticket
+types are built into it as-is.
 
 Enforced by the `check-branch` and `pr-title` CI checks.
 

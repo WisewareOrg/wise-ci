@@ -23,7 +23,9 @@ import sys
 import urllib.error
 import urllib.request
 
-BRANCH_PATTERN = re.compile(r"^(task|bug|design|process)_[1-9][0-9]*-[a-z0-9]+(_[a-z0-9]+)*$")
+TYPES = ("task", "bug", "design", "process")
+TYPES_LABEL = "|".join(TYPES)
+BRANCH_PATTERN = re.compile(rf"^({TYPES_LABEL})_[1-9][0-9]*-[a-z0-9]+(_[a-z0-9]+)*$")
 
 
 def fail(message, proc=None):
@@ -60,7 +62,7 @@ def main():
     branch = os.environ.get("HEAD_REF") or ""
     default_branch = os.environ.get("DEFAULT_BRANCH", "")
 
-    if branch == default_branch or branch.startswith("renovate/"):
+    if branch and (branch == default_branch or branch.startswith("renovate/")):
         print(f"Branch '{branch}' is exempt: the default branch and Renovate's own branches "
               "are not work branches.")
         return
@@ -68,7 +70,7 @@ def main():
     if not matches_shape(branch):
         fail(
             f"branch '{branch}' does not match type_number-snake_name — type one of "
-            "task|bug|design|process, number a GitHub issue number, name lowercase "
+            f"{TYPES_LABEL}, number a GitHub issue number, name lowercase "
             "snake_case (e.g. task_27-process_gates)",
             proc="PROC-001",
         )
@@ -90,8 +92,7 @@ def main():
         fail(f"GitHub API returned {status} for {api_base}/issues/{number}", proc="PROC-003")
     if "pull_request" in issue:
         fail(f"#{number} is a pull request, not an issue", proc="PROC-003")
-    expected_repo_url = f"{api_base}"
-    if issue.get("repository_url", "").lower() != expected_repo_url.lower():
+    if issue.get("repository_url", "").lower() != api_base.lower():
         fail(f"issue #{number} is not in {repo} (transferred to another repository?)", proc="PROC-003")
     state = issue.get("state")
     if state != "open":
@@ -105,11 +106,11 @@ def main():
             "— the branch type must match the ticket's template label",
             proc="PROC-004",
         )
-    type_labels = [name for name in label_names if name in ("task", "bug", "design", "process")]
+    type_labels = [name for name in label_names if name in TYPES]
     if len(type_labels) != 1:
         fail(
             f"issue #{number} carries {len(type_labels)} type labels "
-            f"({', '.join(type_labels) or 'none'}) — exactly one of task|bug|design|process "
+            f"({', '.join(type_labels) or 'none'}) — exactly one of {TYPES_LABEL} "
             "names the template it was opened from, and a second makes the branch type "
             "ambiguous",
             proc="PROC-004",
