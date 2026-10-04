@@ -1,0 +1,99 @@
+name: check-branch
+
+# docs/TESTING.md § In CI: runs only when the wiring workflow (ci.yml) calls it.
+on:
+  workflow_call:
+
+permissions: {}
+
+concurrency:
+  group: check-branch-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Every job's `name:` equals its id, for consistency across every workflow in this repository.
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # A verdict moves only when a workflow or a pinned tool does (docs/CI.md § Workflow
+      # supply-chain and privilege audit); Renovate bumps this version natively.
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.20"
+
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: "1.58.0"
+
+      # justfile's test recipe, one-check branch: a developer's own `just test check-branch` runs
+      # here too, so a typo or a broken change to that branch fails CI the same way it would fail
+      # a human running it locally (docs/TESTING.md § In CI). Must run before test-ci below: this
+      # step's own erase() on start deletes every `.coverage.*` file, which would include test-ci's
+      # `.coverage.check-branch` were it run first.
+      - name: pytest, one-check mode (just test check-branch)
+        run: just test check-branch
+
+      # justfile's test-ci recipe: unscoped coverage (pyproject.toml's [tool.coverage.run]
+      # source = ["."]), over this job's own full checkout, is what makes an untested file or an
+      # unwired check show 0% once the wiring workflow's final job combines every check's data
+      # (docs/TESTING.md § In CI); --cov-fail-under=0 defers the fail_under=100 verdict to that
+      # combined report, since this job's own coverage is necessarily partial — it runs only
+      # check-branch's tests.
+      - name: pytest, under coverage
+        run: just test-ci check-branch
+
+      # Coverage data files are dotfiles; the wiring workflow's final job combines every
+      # check's data into the one report (docs/TESTING.md § In CI).
+      - name: Upload coverage data
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-check-branch
+          path: .coverage.*
+          include-hidden-files: true
+          if-no-files-found: error
+
+  # check-branch run over its own ticket's pull request: the check's integration test
+  # (docs/TESTING.md § In CI). No PR exists on push or schedule, so the action step there is a
+  # no-op rather than a failure (checks.yml's pr-title job, the same step-level guard).
+  self-check:
+    name: self-check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./check-branch
+        if: github.event_name == 'pull_request'
+
+  # Proves the failing direction: a branch violating PROC-001 must fail the action, not merely
+  # "pass to this point" (docs/TESTING.md § In CI).
+  expected-failure:
+    name: expected-failure
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: check-branch ('nodashes' violates PROC-001; expected to fail)
+        id: check-branch
+        continue-on-error: true
+        uses: ./check-branch
+        with:
+          branch: nodashes
+
+      - name: The previous step must have failed
+        if: steps.check-branch.outcome != 'failure'
+        run: exit 1
