@@ -121,16 +121,10 @@ this leaves in check-eol's own action.
 ## check-branch
 
 Branch-shape, ticket-linkage and epic-membership rules, stated once in `WisewareOrg/.github`'s
-`PROCESS.md` (PROC-001 through PROC-008, and PROC-010; PROC-009, the PR-title convention, is
-commitlint's) — what it checks, and what it does not catch, is
-[`../check-branch/README.md`](../check-branch/README.md)'s to state. The check runs as a required
-gate on wise-ci's own pull requests, in
+`PROCESS.md` (PROC-001 through PROC-008, and PROC-010) — what it checks, and what it does not
+catch, is [`../check-branch/README.md`](../check-branch/README.md)'s to state. The check runs as a
+required gate on wise-ci's own pull requests, in
 [`../.github/workflows/check-branch.yml`](../.github/workflows/check-branch.yml)'s `self-check` job,
 called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)); on a push or the
 weekly run there is no pull request to check, so that job's one action step is skipped rather than
 failed (the `checks.yml` `pr-title` job's own step-level guard).
-
-**The failing direction is proven, not merely asserted.** The same workflow's `expected-failure` job
-runs the action against a branch name that violates PROC-001 and asserts the step's own outcome is
-`failure` — the gap [`TESTING.md`](TESTING.md) § The action records for check-eol's action does not
-apply here.

@@ -32,25 +32,15 @@ jobs:
         with:
           just-version: "1.58.0"
 
-      # justfile's test recipe, one-check branch: a developer's own `just test check-eol` runs
-      # here too, so a typo or a broken change to that branch fails CI the same way it would fail
-      # a human running it locally (docs/TESTING.md § In CI). Must run before test-ci below: this
-      # step's own erase() on start deletes every `.coverage.*` file, which would include test-ci's
-      # `.coverage.check-eol` were it run first.
+      # docs/TESTING.md § In CI.
       - name: pytest, one-check mode (just test check-eol)
         run: just test check-eol
 
-      # justfile's test-ci recipe: unscoped coverage (pyproject.toml's [tool.coverage.run]
-      # source = ["."]), over this job's own full checkout, is what makes an untested file or an
-      # unwired check show 0% once the wiring workflow's final job combines every check's data
-      # (docs/TESTING.md § In CI); --cov-fail-under=0 defers the fail_under=100 verdict to that
-      # combined report, since this job's own coverage is necessarily partial — it runs only
-      # check-eol's tests.
+      # docs/TESTING.md § In CI.
       - name: pytest, under coverage
         run: just test-ci check-eol
 
-      # Coverage data files are dotfiles; the wiring workflow's final job combines every
-      # check's data into the one report (docs/TESTING.md § In CI).
+      # docs/TESTING.md § In CI.
       - name: Upload coverage data
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

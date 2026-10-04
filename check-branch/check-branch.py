@@ -1,17 +1,5 @@
 #!/usr/bin/env python3
-"""The branch name must follow type_number-snake_name, type one of task|bug|design|process
-(PROC-001, PROC-010): the number resolves via the GitHub API to an open issue, in this
-repository, carrying an open milestone and exactly one type label matching the branch's type
-(PROC-003/004/005). The default branch and renovate/* are exempt (PROC-002). When the triggering
-pull request exists, its Development field (closingIssuesReferences) must link the branch's
-issue, by number and repository (PROC-006); the PR's base and the issue's GraphQL parent must
-agree, also by number and repository: no parent for the default branch, a parent anchored at the
-base's own number for an integration branch (PROC-007/008).
-
-Runs only inside a pull request: HEAD_REF, PR_NUMBER, DEFAULT_BRANCH, GITHUB_TOKEN and
-GITHUB_REPOSITORY are read from the environment at call time, set by action.yml from the
-triggering event; there is no argv and no git subprocess, so outside a pull request this fails
-closed rather than falling back to a local lookup.
+"""Enforces PROCESS.md's PROC-001-008 and PROC-010; see check-branch/README.md.
 
 Dependencies: none (stdlib only).
 """

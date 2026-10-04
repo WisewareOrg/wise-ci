@@ -18,7 +18,8 @@ instead.
 | [`CI.md`](CI.md) | **Every check on this repository**: what CI provides, what blocks a merge, what each gate is allowed to let through, and the reasoning for each stance | A trade study (an ADR); a check a machine cannot decide (`../CONTRIBUTING.md`); how a check is tested (`TESTING.md`) |
 | [`TESTING.md`](TESTING.md) | How a check is tested: where its tests live, what they use, and what CI runs of them | What blocks a merge (`CI.md`); a check's own behaviour (`<check>/README.md`) |
 | [`decisions/`](decisions/README.md) | A decision that took a trade study, carried as a versioned document: merged text is revisable, each correction is a rev, and every citation of one pins the rev it read | What a check asserts, and why (`CI.md`) |
-| `<check>/README.md` | That check's own behaviour, the rulings made about it, and its gap explanations | A trade study (an ADR); what a check asserts on the repository's behalf (`CI.md`) |
+| `<check>/README.md` | That check's own behaviour, the rulings made about it, and its gap explanations | A trade study (an ADR); what a check asserts on the repository's behalf (`CI.md`); an input's description or default (`<check>/action.yml`) |
+| `<check>/action.yml` | That check's inputs: each one's description and default | Why an input exists (`<check>/README.md`) |
 | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | How a change gets made and merged, and **the design-first rule**: nothing is implemented that has not been written down first | What a check asserts, and why (`CI.md`); what wise-ci is (`../README.md`); working rules specific to an AI agent (`../CLAUDE.md`) |
 | [`../SECURITY.md`](../SECURITY.md) | The threat model | Repository truth (`../README.md`); what a check asserts (`CI.md`) |
 | [`../CLAUDE.md`](../CLAUDE.md) | Working rules layered on top for an AI agent — review independence, and halt-and-ask where a decision is silent | Any fact about wise-ci (every document above) |

@@ -3,45 +3,27 @@
 Enforces the branch-shape, ticket-linkage and epic-membership rules stated once in
 [`WisewareOrg/.github`'s `PROCESS.md`](https://github.com/WisewareOrg/.github/blob/main/PROCESS.md)
 (PROC-001 through PROC-008, and PROC-010; PROC-009, the PR-title convention, is commitlint's, not
-this check's). **This restates no requirement** — wise-ci carries no requirements tree
-([`../docs/CI.md`](../docs/CI.md)); `PROCESS.md` is the one place these rules are decided, and this
-check is one of the gates that enforces them.
-
-The branch name is `type_number-snake_name` — `type` one of `task`, `bug`, `design`, `process`
-(PROC-010), `number` a GitHub issue number, `snake_name` lowercase snake_case (PROC-001). The
-default branch and `renovate/*` are exempt (PROC-002). `number` must resolve to an issue, in the
-same repository, that is open, carries exactly one of the four type labels matching the branch's
-own type, and an open milestone (PROC-003/004/005). Once the triggering pull request exists, its
-Development field (`closingIssuesReferences`) must link that issue, by number and repository
-(PROC-006); the PR's base and the issue's GraphQL parent must then agree — no parent for the
-default branch, a parent anchored at the base branch's own number, in the same repository, for an
-integration branch (PROC-007/008).
+this check's). **This restates no requirement** — this check is one of the gates that enforces
+them.
 
 Runs only inside a pull request: outside one, the check fails closed rather than falling back to a
 local lookup.
 
 ## Inputs
 
-| Input | Default | |
-|---|---|---|
-| `github-token` | `${{ github.token }}` | Token for the GitHub REST and GraphQL calls this check makes. |
-| `branch` | `${{ github.event.pull_request.head.ref }}` | The branch name to check. Overridable for a workflow that needs to check a branch other than the triggering PR's own head — this repository's own `expected-failure` CI job does. |
-
-## Consuming
-
-```yaml
-- uses: WisewareOrg/wise-ci/check-branch@<sha> # vX.Y.Z
-```
+See [`action.yml`](action.yml) for each input's description and default. `branch` is overridable
+for a workflow that needs to check a branch other than the triggering PR's own head.
 
 `contents: read` is the only permission this needs on a public repository — every REST and GraphQL
 call it makes reads data a public repository exposes to an unauthenticated or read-scoped token. A
-private consumer additionally needs `issues: read` and `pull-requests: read`.
+private consumer additionally needs `issues: read` and `pull-requests: read`. See
+[`../README.md`](../README.md) § Consuming a check for how to reference this action.
 
 ## History
 
-**The branch types are built in, not a `types` input.** `PROCESS.md`'s PROC-010 fixes the ticket-
-type set at `task`, `bug`, `design`, `process`; a consumer with a different set is not this check's
-case to generalise for. This also retires `branch-shape.regex`'s file-based pattern, and with it the
+**The branch types are built in, not a `types` input.** PROC-010 fixes the ticket-type set; a
+consumer with a different set is not this check's case to generalise for. This also retires
+`branch-shape.regex`'s file-based pattern, and with it the
 generality that file carried: each of its non-blank lines was an independent alternative pattern, not
 only a type-set list — nothing in `PROCESS.md` asks for that generality, and no input reintroduces
 even the narrower form (a type-set substituted into one fixed pattern) that an earlier design for
@@ -50,11 +32,6 @@ line proved only that *a* pattern matched, not that the type read out of it was 
 authoritative type group — a file whose lines disagreed on the type set could satisfy the first
 guard while the second caught it. A single fixed pattern with one alternation has only the one
 question this script asks.
-
-**A type-label count must count only type labels.** An issue carrying a second, non-type label (this
-repository's own tickets often do) is not ambiguous — only a second label drawn from the four-type
-set is. The count PROC-004 enforces is over labels in that set, not over an issue's label count at
-large.
 
 **A branch's number can resolve to a pull request rather than an issue.** GitHub draws issues and
 pull requests from one counter, so a branch named for a merged pull request's number is shape-valid
