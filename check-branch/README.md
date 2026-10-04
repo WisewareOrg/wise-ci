@@ -74,7 +74,7 @@ multiple sub-issues sharing one integration branch, and nested integration branc
 ## Rejected alternatives
 
 Carried forward from WiseKiosk's ADR 0006 and ADR 0013, where the alternative is about an
-obligation this check now owns — tagged by the PROC ID it bears on; an alternative about PROC-009
+obligation this check owns — tagged by the PROC ID it bears on; an alternative about PROC-009
 (the PR title) or about where in WiseKiosk's own process convention lived is WiseKiosk's own
 history, not this check's.
 
@@ -87,7 +87,7 @@ history, not this check's.
 - **Regex over the PR body for a closing keyword** (PROC-006): prose can claim a link the platform
   never recorded — observed live on a stacked PR carrying the keyword with an empty
   `closingIssuesReferences`. The check reads GitHub's recorded state, never the text.
-  **CI writing the linkage itself, via a write-scoped token** (PROC-006): gates verify; they do not
+- **CI writing the linkage itself, via a write-scoped token** (PROC-006): gates verify; they do not
   mutate.
 - **Detecting a bad ticket at issue-creation time, or auditing the whole backlog on a schedule or
   from every pull request** (PROC-004, PROC-005): GitHub has no required check for issue creation,
@@ -101,7 +101,7 @@ history, not this check's.
 
 **A stale verdict.** The check runs once, against the pull request's state at that moment; editing
 an issue's labels, milestone, or parent afterward does not re-run it, so a PR that passed stays
-green against a ticket that would now fail it.
+green against a ticket whose metadata has since changed to fail it.
 
 **More than 20 closing references.** The Development-field query pages only the first 20 nodes of
 `closingIssuesReferences`; a PR closing more issues than that has its later references read
