@@ -703,6 +703,19 @@ def test_missing_head_ref_fails_on_shape_not_as_an_outside_pr_fault(monkeypatch,
     assert "PROC-001" in capsys.readouterr().err
 
 
+def test_empty_head_ref_and_default_branch_is_not_exempt(monkeypatch, capsys):
+    """PROC-002/PROC-001, plan's 'outside a pull request: fail closed': when HEAD_REF and
+    DEFAULT_BRANCH are both unset (no PR context), the empty branch must not compare equal to
+    the empty default branch and be reported exempt -- it falls through to PROC-001's shape
+    check like any other non-matching branch."""
+    code = _expect_fail(
+        monkeypatch, _no_api_call, head_ref=None, default_branch="", pr_number=None
+    )
+
+    assert code == 1
+    assert "PROC-001" in capsys.readouterr().err
+
+
 # ---------------------------------------------------------------------------------------------
 # api_request itself: its own branches, patching urllib.request.urlopen (not api_request)
 # ---------------------------------------------------------------------------------------------
