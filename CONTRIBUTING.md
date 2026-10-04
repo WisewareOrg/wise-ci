@@ -18,30 +18,13 @@ from.
 
 ## Tickets, branches, and titles
 
-Open an issue first: the branch name is derived from it.
+Open an issue first: the branch name is derived from it. Ticket, branch-naming, linkage and
+PR-title rules are stated once in
+[WisewareOrg/.github's `PROCESS.md`](https://github.com/WisewareOrg/.github/blob/main/PROCESS.md),
+not restated here. wise-ci takes no `types` input: `PROCESS.md`'s four ticket types (`task`, `bug`,
+`design`, `process`) are built into the check as-is.
 
-```
-design_1-founding_adr
-└──┬──┘ └┬┘ └────┬────┘
-   │     │       └─ lowercase snake_case
-   │     └─ the issue's own number
-   └─ task | bug | design — the issue's type label
-```
-
-`main` and Renovate branches (`renovate/*`) are exempt. Every other branch must also satisfy all
-of:
-
-- the issue is **open**, **milestoned**, and carries **exactly one** type label — a second one makes
-  the branch type ambiguous;
-- its **parent matches the PR base** — a sub-issue's PR targets its integration branch, a top-level
-  issue's targets `main`;
-- the PR's **Development field links the ticket**: `Closes #N` in the body writes that record on a
-  default-base PR and writes **nothing** on an integration or epic base, which has to be linked
-  separately, in the web UI's Development panel.
-
-**PR titles are Conventional Commits** — the repo squash-merges, so the title becomes the commit
-on `main`. A `fixup!`/`squash!`/merge subject passes as a commit message, whose text the squash
-discards, and is refused as a title.
+Enforced by the `check-branch` and `pr-title` CI checks.
 
 ## Getting a change merged
 
