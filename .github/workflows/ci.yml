@@ -23,7 +23,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Every job's `name:` equals its id, except the three reusable-workflow calls below, whose
+  # Every job's `name:` equals its id, except the four reusable-workflow calls below, whose
   # own jobs report to branch protection as `<this job> / <their job>` — none of those
   # composite names is itself required; only `ci` is (docs/CI.md § First-party source scanning).
   checks:
@@ -49,9 +49,15 @@ jobs:
       contents: read
     uses: ./.github/workflows/check-eol.yml
 
+  check-branch:
+    name: check-branch
+    permissions:
+      contents: read
+    uses: ./.github/workflows/check-branch.yml
+
   ci:
     name: ci
-    needs: [checks, codeql, check-eol]
+    needs: [checks, codeql, check-eol, check-branch]
     if: always()
     runs-on: ubuntu-latest
     permissions:
@@ -85,11 +91,13 @@ jobs:
             exit 1
           fi
 
-          known="$(jq -s '[.[] | select(.name == "check-eol / test")] | length' "$RUNNER_TEMP/run-jobs.json")"
-          if [ "$known" -eq 0 ]; then
-            echo "the run's job list is missing check-eol / test" >&2
-            exit 1
-          fi
+          for name in "check-eol / test" "check-branch / test" "check-branch / self-check" "check-branch / expected-failure"; do
+            known="$(jq -s --arg name "$name" '[.[] | select(.name == $name)] | length' "$RUNNER_TEMP/run-jobs.json")"
+            if [ "$known" -eq 0 ]; then
+              echo "the run's job list is missing $name" >&2
+              exit 1
+            fi
+          done
 
           unfinished="$(jq -s -r '[.[] | select(.name != "ci") | select(.status != "completed" or .conclusion != "success") | .name] | .[]' "$RUNNER_TEMP/run-jobs.json")"
           if [ -n "$unfinished" ]; then
@@ -162,10 +170,12 @@ jobs:
             exit 1
           fi
 
-          if ! grep -qxF "check-eol/check-eol.py" "$tmp/expected-py-files"; then
-            echo "expected file list is missing check-eol/check-eol.py" >&2
-            exit 1
-          fi
+          for file in "check-eol/check-eol.py" "check-branch/check-branch.py"; do
+            if ! grep -qxF "$file" "$tmp/expected-py-files"; then
+              echo "expected file list is missing $file" >&2
+              exit 1
+            fi
+          done
 
           just coverage-json "$tmp/coverage.json"
           jq -r '.files | keys[]' "$tmp/coverage.json" | sort > "$tmp/covered-py-files"

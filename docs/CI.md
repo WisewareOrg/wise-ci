@@ -115,5 +115,16 @@ files that is; what it checks, and what it does not catch, is
 wise-ci's own tree, in [`../.github/workflows/check-eol.yml`](../.github/workflows/check-eol.yml)'s
 `self-check` job, called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)).
 
-**What the gate deliberately lets through.** [`TESTING.md`](TESTING.md) § The action states the one
-gap this leaves in every check's action, check-eol included.
+**What the gate deliberately lets through.** [`TESTING.md`](TESTING.md) § The action states the gap
+this leaves in check-eol's own action.
+
+## check-branch
+
+Branch-shape, ticket-linkage and epic-membership rules, stated once in `WisewareOrg/.github`'s
+`PROCESS.md` (PROC-001 through PROC-008, and PROC-010) — what it checks, and what it does not
+catch, is [`../check-branch/README.md`](../check-branch/README.md)'s to state. The check runs as a
+required gate on wise-ci's own pull requests, in
+[`../.github/workflows/check-branch.yml`](../.github/workflows/check-branch.yml)'s `self-check` job,
+called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)); on a push or the
+weekly run there is no pull request to check, so that job's one action step is skipped rather than
+failed (the `checks.yml` `pr-title` job's own step-level guard).

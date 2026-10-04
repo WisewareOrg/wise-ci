@@ -34,10 +34,12 @@ source = ["."]
 # .claude/** is gitignored machinery, not project content (docs/README.md) — an agent worktree
 # under .claude/worktrees/ can otherwise duplicate a check's own source as unexecuted.
 omit = ["*/tests/*", ".venv/**", ".claude/**"]
-# The main pytest process never runs a check's own code — the subprocess route the tests use
-# does (docs/TESTING.md § Real dependencies where possible) — so it always collects nothing
-# itself; that's expected, not a sign of a broken run, and include_namespace_packages below
-# still fails fail_under if a subprocess genuinely collected nothing.
+# A check's tests reach its script either as a subprocess (check-eol; docs/TESTING.md § Real
+# dependencies where possible), which the main pytest process itself collects nothing for, or by
+# importing it in-process (check-branch), which the main process collects directly. Collecting
+# nothing is expected on the subprocess route, not a sign of a broken run, and
+# include_namespace_packages below still fails fail_under if a subprocess genuinely collected
+# nothing.
 disable_warnings = ["no-data-collected"]
 
 [tool.coverage.report]

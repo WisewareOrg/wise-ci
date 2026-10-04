@@ -1,4 +1,4 @@
-name: check-eol
+name: check-branch
 
 # docs/TESTING.md § In CI: runs only when the wiring workflow (ci.yml) calls it.
 on:
@@ -7,7 +7,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: check-eol-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  group: check-branch-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -33,24 +33,24 @@ jobs:
           just-version: "1.58.0"
 
       # docs/TESTING.md § In CI.
-      - name: pytest, one-check mode (just test check-eol)
-        run: just test check-eol
+      - name: pytest, one-check mode (just test check-branch)
+        run: just test check-branch
 
       # docs/TESTING.md § In CI.
       - name: pytest, under coverage
-        run: just test-ci check-eol
+        run: just test-ci check-branch
 
       # docs/TESTING.md § In CI.
       - name: Upload coverage data
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: coverage-check-eol
+          name: coverage-check-branch
           path: .coverage.*
           include-hidden-files: true
           if-no-files-found: error
 
-  # check-eol run over wise-ci's own tree: the check's integration test (docs/TESTING.md
-  # § In CI; on a clean repository this only ever passes).
+  # check-branch run over its own ticket's pull request: the check's integration test
+  # (docs/TESTING.md § In CI; docs/CI.md § check-branch).
   self-check:
     name: self-check
     runs-on: ubuntu-latest
@@ -61,4 +61,27 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: ./check-eol
+      - uses: ./check-branch
+        if: github.event_name == 'pull_request'
+
+  # docs/TESTING.md § The action.
+  expected-failure:
+    name: expected-failure
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: check-branch ('nodashes' violates PROC-001; expected to fail)
+        id: check-branch
+        continue-on-error: true
+        uses: ./check-branch
+        with:
+          branch: nodashes
+
+      - name: The previous step must have failed
+        if: steps.check-branch.outcome != 'failure'
+        run: exit 1

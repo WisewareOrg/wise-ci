@@ -5,8 +5,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "f=\"${CLAUDE_PROJECT_DIR:-.}/CONTRIBUTING.md\"; m=\"The SessionStart hook in .claude/settings.json could not deliver CONTRIBUTING.md from $f. Read it before changing anything in this repository.\"; n=\"CONTRIBUTING.md for this repository, injected at session start, up to but excluding the review checklist, which reviewers walk against a pull request's diff.\"$'\\n\\n'; out=$(sed '/^## Review checklist/,$d' \"$f\" 2>/dev/null | jq -Rs --arg m \"$m\" --arg note \"$n\" 'if test(\"\\\\S\") then {hookSpecificOutput:{hookEventName:\"SessionStart\",additionalContext:($note + .)}} else {hookSpecificOutput:{hookEventName:\"SessionStart\",additionalContext:$m}} end' 2>/dev/null) && printf '%s' \"$out\" || printf '%s\\n' \"$m\"",
-            "statusMessage": "Loading CONTRIBUTING.md"
+            "command": "f=\"${CLAUDE_PROJECT_DIR:-.}/CONTRIBUTING.md\"; m=\"The SessionStart hook in .claude/settings.json could not deliver CONTRIBUTING.md from $f. Read it before changing anything in this repository.\"; n=\"CONTRIBUTING.md for this repository, injected at session start, up to but excluding the review checklist, which reviewers walk against a pull request's diff.\"$'\\n\\n'; purl=\"https://raw.githubusercontent.com/WisewareOrg/.github/main/PROCESS.md\"; p=$(curl -fsS --max-time 5 \"$purl\" 2>/dev/null); if [ -n \"$p\" ]; then pm=\"$p\"; else pm=\"Could not fetch PROCESS.md from $purl; read it before creating a branch or pull request.\"; fi; ps=$'\\n\\nPROCESS.md (WisewareOrg/.github), fetched at session start:\\n\\n'\"$pm\"; out=$(sed '/^## Review checklist/,$d' \"$f\" 2>/dev/null | jq -Rs --arg m \"$m\" --arg note \"$n\" --arg ps \"$ps\" 'if test(\"\\\\S\") then {hookSpecificOutput:{hookEventName:\"SessionStart\",additionalContext:($note + . + $ps)}} else {hookSpecificOutput:{hookEventName:\"SessionStart\",additionalContext:($m + $ps)}} end' 2>/dev/null) && printf '%s' \"$out\" || printf '%s\\n' \"$m$ps\"",
+            "statusMessage": "Loading CONTRIBUTING.md and PROCESS.md"
           }
         ]
       }
