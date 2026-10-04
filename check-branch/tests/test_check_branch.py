@@ -523,6 +523,53 @@ def test_development_link_passes_alongside_unrelated_extra_links(monkeypatch):
 
 
 # ---------------------------------------------------------------------------------------------
+# GraphQL own-input guard: the reply's own `parent` shape must be readable before any PROC-007/008
+# branching trusts it. Ruling (orchestrator): this is the check's own fail-closed fault over a
+# malformed reply, not a contributor violating a requirement, so it carries no PROC-NNN tag --
+# `check-branch: <message>`, with message text from WiseKiosk's parent-readable guard (extended to
+# the missing-`repository` case the plan's repository-matching adds).
+# ---------------------------------------------------------------------------------------------
+
+
+def test_parent_keyed_databaseid_instead_of_number_fails(monkeypatch, capsys):
+    """A parented issue whose GraphQL `parent` carries no `number` key at all (e.g. a reply keyed
+    `databaseId` instead) must not be misread as 'no parent' and must not crash -- a check that
+    reads nothing must not report success."""
+    fake = FakeAPI()
+    fake.issue = _issue(number=42)
+    fake.pull = _pull(base_ref=DEFAULT_BRANCH)
+    fake.graphql = _graphql(
+        closing=((42, REPO),), parent={"databaseId": 10, "repository": {"nameWithOwner": REPO}}
+    )
+
+    code = _expect_fail(monkeypatch, fake, head_ref="task_42-sample_name", pr_number="7")
+
+    assert code == 1
+    captured = capsys.readouterr().err
+    assert "check-branch:" in captured
+    assert "PROC-" not in captured
+    assert "a check that reads nothing must not report success" in captured
+
+
+def test_parent_missing_repository_field_fails(monkeypatch, capsys):
+    """A parented issue whose GraphQL `parent` carries a `number` but no `repository` sub-object
+    is equally unreadable for the repository matching PROC-007/008 now do -- it must not be
+    misread as a repository match and must not crash."""
+    fake = FakeAPI()
+    fake.issue = _issue(number=42)
+    fake.pull = _pull(base_ref=DEFAULT_BRANCH)
+    fake.graphql = _graphql(closing=((42, REPO),), parent={"number": 10})
+
+    code = _expect_fail(monkeypatch, fake, head_ref="task_42-sample_name", pr_number="7")
+
+    assert code == 1
+    captured = capsys.readouterr().err
+    assert "check-branch:" in captured
+    assert "PROC-" not in captured
+    assert "a check that reads nothing must not report success" in captured
+
+
+# ---------------------------------------------------------------------------------------------
 # PROC-007 (default-branch parent)
 # ---------------------------------------------------------------------------------------------
 
