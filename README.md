@@ -6,7 +6,7 @@ Each check lives in its own top-level folder with its `action.yml`.
 ## Consuming a check
 
 ```yaml
-- uses: tjwise99/wise-ci/<check>@<sha> # vX.Y.Z
+- uses: WisewareOrg/wise-ci/<check>@<sha> # vX.Y.Z
 ```
 
 A consumer pins a commit, with the version as a comment, and Renovate's `github-actions` manager
