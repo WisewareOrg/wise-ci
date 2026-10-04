@@ -2,9 +2,8 @@
 
 Enforces the branch-shape, ticket-linkage and epic-membership rules stated once in
 [`WisewareOrg/.github`'s `PROCESS.md`](https://github.com/WisewareOrg/.github/blob/main/PROCESS.md)
-(PROC-001 through PROC-008, and PROC-010; PROC-009, the PR-title convention, is commitlint's, not
-this check's). **This restates no requirement** — this check is one of the gates that enforces
-them.
+(PROC-001 through PROC-008, and PROC-010). **This restates no requirement** — this check is one of
+the gates that enforces them.
 
 Runs only inside a pull request: outside one, the check fails closed rather than falling back to a
 local lookup.
