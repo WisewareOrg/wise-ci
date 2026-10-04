@@ -1,0 +1,24 @@
+name: check-branch
+description: >-
+  The branch name, its linked issue, and (once a pull request exists) that issue's Development
+  link and parent must match WisewareOrg/.github's PROCESS.md.
+inputs:
+  github-token:
+    description: Token for the GitHub REST and GraphQL calls.
+    required: false
+    default: ${{ github.token }}
+  branch:
+    description: The branch name to check.
+    required: false
+    default: ${{ github.event.pull_request.head.ref }}
+runs:
+  using: composite
+  steps:
+    - name: check-branch
+      shell: bash
+      env:
+        HEAD_REF: ${{ inputs.branch }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: python3 "$GITHUB_ACTION_PATH/check-branch.py"
