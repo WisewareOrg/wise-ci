@@ -13,7 +13,7 @@ import os
 import shutil
 import subprocess
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
@@ -159,7 +159,6 @@ class _Case:
     id: str
     build: Callable[[Path], Path]
     check: Callable[[subprocess.CompletedProcess], None]
-    args: tuple = field(default=("--root", "docs/requirements"))
 
 
 def _seed(editor: Callable[[Path], None]) -> Callable[[Path], Path]:
@@ -498,7 +497,7 @@ CASES: list[_Case] = [
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c.id)
 def test_case(case: _Case, tmp_path: Path) -> None:
     repo = case.build(tmp_path)
-    result = _run_check(repo, *case.args)
+    result = _run_check(repo, "--root", "docs/requirements")
     case.check(result)
 
 
