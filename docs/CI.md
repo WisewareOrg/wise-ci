@@ -131,9 +131,9 @@ failed (the `checks.yml` `pr-title` job's own step-level guard).
 
 ## check-reqs
 
-The shared Doorstop requirements-tree gate WiseKiosk and meta-wisekiosk both consume — what it
-checks, and what it does not catch, is [`../check-reqs/README.md`](../check-reqs/README.md)'s to
-state. wise-ci carries no requirements tree of its own, so the check runs as a required gate over a
+The shared Doorstop requirements-tree gate a repository runs over its own tree — what it checks, and
+what it does not catch, is [`../check-reqs/README.md`](../check-reqs/README.md)'s to state. wise-ci
+carries no requirements tree of its own, so the check runs as a required gate over a
 minimal tree built on the fly, in
 [`../.github/workflows/check-reqs.yml`](../.github/workflows/check-reqs.yml)'s `self-check` job,
 called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)) — that job proves

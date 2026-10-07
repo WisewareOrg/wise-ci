@@ -1,8 +1,8 @@
 # check-reqs
 
 Gates a [Doorstop](https://doorstop.readthedocs.io/) requirements tree shaped as three documents —
-`sys`, `srs`, `tst` — each `SYS`/`SRS`/`TST` item one YAML file. It is the one shared implementation
-of the gate WiseKiosk and meta-wisekiosk both run over their own trees.
+`sys`, `srs`, `tst` — each `SYS`/`SRS`/`TST` item one YAML file. It is the shared implementation of
+the gate a repository runs over its own Doorstop requirements tree.
 
 ## Inputs
 
@@ -139,6 +139,11 @@ file. A consumer's own gate runs the checks the tree references.
 - `report_proposed` prints `0 of 0` for a tier with no items, and exits 0 — visible only through its
   own population figure, since `check_unreviewed` fails that state before `report_proposed` ever
   runs in the fixed order.
+- `check_unreviewed`, `check_method_consistency`, and `report_proposed` read only `root`; the
+  `doorstop` stage and the Doorstop-library stages read every document under the working directory.
+  A document outside `root` is invisible to the first three — its review freshness,
+  verification-justification coverage, and backlog count are never checked — even though its links
+  and headers still are, by whichever of the other stages reaches it first.
 - A mis-spelled status is listed by `report_proposed` as outside the vocabulary; nothing here gates
   it, for any tier.
 

@@ -66,7 +66,7 @@ def main(root: Path) -> int:
         print(
             "\nEvery item states what its verification settles and what it does not: below `test`,"
             "\nwhat blocks a mechanical check; at `test`, what the check leaves unproven"
-            "\n(check-reqs/README.md § Choosing a verification method).",
+            "\n(check-reqs/README.md § check_method_consistency).",
             file=sys.stderr,
         )
 
@@ -77,7 +77,7 @@ def main(root: Path) -> int:
         print(
             "\nAn unrecognised value ranks as nothing, so the rule above cannot judge the item and"
             "\nwould pass it in silence. Spell the method as one of the four"
-            "\n(check-reqs/README.md § Choosing a verification method).",
+            "\n(check-reqs/README.md § check_method_consistency).",
             file=sys.stderr,
         )
 
@@ -90,7 +90,7 @@ def main(root: Path) -> int:
             "\ncan be no more decidable than the least. Promote the lagging child, split the parent so"
             "\neach clause sits at its own honest method, or - where the parent holds a residue no child"
             "\ncarries - record a verification-justification"
-            "\n(check-reqs/README.md § Choosing a verification method).",
+            "\n(check-reqs/README.md § check_method_consistency).",
             file=sys.stderr,
         )
 
