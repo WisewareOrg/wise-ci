@@ -23,7 +23,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Every job's `name:` equals its id, except the four reusable-workflow calls below, whose
+  # Every job's `name:` equals its id, except the reusable-workflow calls below, whose
   # own jobs report to branch protection as `<this job> / <their job>` — none of those
   # composite names is itself required; only `ci` is (docs/CI.md § First-party source scanning).
   checks:
@@ -55,9 +55,15 @@ jobs:
       contents: read
     uses: ./.github/workflows/check-branch.yml
 
+  check-reqs:
+    name: check-reqs
+    permissions:
+      contents: read
+    uses: ./.github/workflows/check-reqs.yml
+
   ci:
     name: ci
-    needs: [checks, codeql, check-eol, check-branch]
+    needs: [checks, codeql, check-eol, check-branch, check-reqs]
     if: always()
     runs-on: ubuntu-latest
     permissions:
@@ -91,7 +97,7 @@ jobs:
             exit 1
           fi
 
-          for name in "check-eol / test" "check-branch / test" "check-branch / self-check" "check-branch / expected-failure"; do
+          for name in "check-eol / test" "check-branch / test" "check-branch / self-check" "check-branch / expected-failure" "check-reqs / test" "check-reqs / self-check" "check-reqs / expected-failure"; do
             known="$(jq -s --arg name "$name" '[.[] | select(.name == $name)] | length' "$RUNNER_TEMP/run-jobs.json")"
             if [ "$known" -eq 0 ]; then
               echo "the run's job list is missing $name" >&2
@@ -170,7 +176,11 @@ jobs:
             exit 1
           fi
 
-          for file in "check-eol/check-eol.py" "check-branch/check-branch.py"; do
+          for file in "check-eol/check-eol.py" "check-branch/check-branch.py" \
+            "check-reqs/check_reqs/__init__.py" "check-reqs/check_reqs/check_headers.py" \
+            "check-reqs/check_reqs/check_method_consistency.py" "check-reqs/check_reqs/check_suspect_links.py" \
+            "check-reqs/check_reqs/check_text_citations.py" "check-reqs/check_reqs/check_unreviewed.py" \
+            "check-reqs/check_reqs/report_proposed.py" "check-reqs/check_reqs/req_sha_item_validator.py"; do
             if ! grep -qxF "$file" "$tmp/expected-py-files"; then
               echo "expected file list is missing $file" >&2
               exit 1

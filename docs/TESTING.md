@@ -32,7 +32,9 @@ A check's `action.yml` only calls its script; any logic lives in the script, whe
 it. For check-eol, which takes no inputs, nothing proves the action turns a failing script into a
 red job — a known gap, accepted. check-branch, the first check to take inputs, closes that gap for
 itself: its workflow's `expected-failure` job runs the action with an input chosen to violate
-PROC-001 and asserts the step's own outcome is `failure`.
+PROC-001 and asserts the step's own outcome is `failure`. check-reqs's own `expected-failure` job
+closes the same gap for itself too, seeding a defect onto the minimal tree its `self-check` job
+builds.
 
 ## In CI
 

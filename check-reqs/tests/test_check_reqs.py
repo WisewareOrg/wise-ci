@@ -202,6 +202,24 @@ def _must_pass(result: subprocess.CompletedProcess) -> None:
     _no_wisekiosk_reference(combined)
 
 
+def _check_unstamped_link_outside_root_passes_stage_two_then_fails_at_doorstop(
+    result: subprocess.CompletedProcess,
+) -> None:
+    """Stage 1 never walks outside `root`, so it passes; stage 2 walks from the working directory,
+    finds the unstamped link, and silently skips it (its own pass line prints); stage 3 then fails
+    on the same outside-root document, whose only item being inactive leaves it with none."""
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0
+    assert _stage_header("check_unreviewed") in combined
+    assert _stage_header("check_suspect_links") in combined
+    assert "Every inactive item's links resolve and match the parents they were reviewed against." in combined
+    assert _stage_header("doorstop") in combined
+    for s in STAGES[3:]:
+        assert _stage_header(s) not in combined
+    _no_traceback(result)
+    _no_wisekiosk_reference(combined)
+
+
 def _raw_unreviewed_item(document: Path, stem: str, header: str, text: str, suffix: str = ".yml") -> Path:
     """Writes an item file directly, bypassing the `doorstop` CLI, carrying no review fingerprint --
     safe only for check_unreviewed rows, whose stage runs before Doorstop itself ever reads the
@@ -314,6 +332,36 @@ def _csl_inactive_dangling_parent(repo: Path) -> None:
     _set_fields(repo / TST1, links=[{"SRS999": stamp}])
 
 
+def _csl_both_dangling_and_stale(repo: Path) -> None:
+    # One inactive item carrying two links: one gone stale (its parent mutated), one naming a
+    # parent that was never there -- both report sections fire together.
+    _set_fields(repo / TST1, active=False)
+    stale_stamp = _load(repo / TST1)["links"][0]["SRS001"]
+    _reviewed_edit(repo, repo / SRS1, "SRS001", text="The software shall do yet another mutated thing.\n")
+    _set_fields(repo / TST1, links=[{"SRS001": stale_stamp}, {"SRS999": stale_stamp}])
+
+
+def _csl_unstamped_link_outside_root(repo: Path) -> None:
+    # check_unreviewed walks only `root`; check_suspect_links and doorstop itself walk from the
+    # working directory, so a document outside `root` is invisible to stage 1 but not to stage 2
+    # or 3 -- the one place an inactive item's never-stamped link is check_suspect_links' own to
+    # see, not check_unreviewed's.
+    document = minimal_tree.add_document(repo, "extra/qa", "QA", parent="TST")
+    path = document / "QA001.yml"
+    _dump(
+        path,
+        {
+            "active": False, "derived": False, "header": "Outside root, unstamped link",
+            "level": 1.0, "links": ["TST001"], "normative": True, "rationale": "",
+            "ref": "", "reviewed": None, "status": "accepted",
+            "text": "Lives outside --root; its link to TST001 carries no stamp.",
+            "verification-justification": "irrelevant to this stage",
+            "verification-method": "test",
+        },
+    )
+    assert _load(path)["links"] == ["TST001"]
+
+
 # -- doorstop (the --error-all --no-reformat subprocess) -------------------------------------------
 
 
@@ -322,7 +370,19 @@ def _doorstop_active_orphan_link(repo: Path) -> None:
     _set_fields(repo / SRS1, links=[{"SYS999": stamp}])
 
 
-# -- check_method_consistency: the one multi-step seed ---------------------------------------------
+# -- check_method_consistency: multi-step seeds --------------------------------------------------
+
+
+def _mc_parent_understates_with_justification_pass(repo: Path) -> None:
+    # SRS001 understating TST001 (test) at inspection, with a justification, is the legitimate
+    # case -- but lowering SRS001 alone would leave SYS001 (unchanged, at test) *overstating*
+    # relative to its now-inspection child. SYS001 drops to inspection too, keeping the SYS/SRS
+    # pair consistent (equal ranks), so only the SRS/TST pair exercises the exception.
+    _reviewed_edit(repo, repo / SYS1, "SYS001", clears=("SRS001",), **{"verification-method": "inspection"})
+    _reviewed_edit(
+        repo, repo / SRS1, "SRS001", clears=("TST001",),
+        **{"verification-method": "inspection", "verification-justification": "Settles a residual the TST child does not carry."},
+    )
 
 
 def _mc_normative_false_pass(repo: Path) -> None:
@@ -352,8 +412,10 @@ CASES: list[_Case] = [
           _must_fail_at("check_unreviewed", has="holds no document — missing, renamed, or deleted.")),
     _Case("cu-silo-renamed", _seed(_cu_silo_renamed),
           _must_fail_at("check_unreviewed", has="holds no document — missing, renamed, or deleted.")),
+    # The carried-over breakdown only ever names SYS/SRS/TST-prefixed UIDs (the fixed tuple in
+    # check_unreviewed.py); a nested document's own prefix is never named, only counted.
     _Case("cu-nested-item-unreviewed", _seed(_cu_nested_item_unreviewed),
-          _must_fail_at("check_unreviewed", has=("carry no review fingerprint", "NST001"))),
+          _must_fail_at("check_unreviewed", has="carry no review fingerprint")),
     _Case("cu-all-silos-removed", _seed(_cu_all_silos_removed),
           _must_fail_at("check_unreviewed", has="holds no document — missing, renamed, or deleted.")),
     _Case("cu-silo-emptied", _seed(_cu_silo_emptied),
@@ -370,6 +432,10 @@ CASES: list[_Case] = [
           _must_fail_at("check_suspect_links", has=("are suspect", "TST001", "SRS001"))),
     _Case("csl-inactive-dangling-parent", _seed(_csl_inactive_dangling_parent),
           _must_fail_at("check_suspect_links", has=("name a parent the tree does not hold", "SRS999"))),
+    _Case("csl-both-dangling-and-stale", _seed(_csl_both_dangling_and_stale),
+          _must_fail_at("check_suspect_links", has=("name a parent the tree does not hold", "are suspect", "SRS999", "SRS001"))),
+    _Case("csl-unstamped-link-outside-root-is-not-this-stages-finding", _seed(_csl_unstamped_link_outside_root),
+          _check_unstamped_link_outside_root_passes_stage_two_then_fails_at_doorstop),
 
     # doorstop
     _Case("doorstop-active-orphan-link", _seed(_doorstop_active_orphan_link),
@@ -385,6 +451,11 @@ CASES: list[_Case] = [
     _Case("mc-parent-understates-no-justification",
           _seed(lambda r: _reviewed_edit(r, r / SRS1, "SRS001", clears=("TST001",), **{"verification-method": "inspection", "verification-justification": ""})),
           _must_fail_at("check_method_consistency", has=("below every child with no verification-justification", "SRS001"))),
+    # The one legitimate exception docs/requirements/README.md's "Choosing a verification method"
+    # names: a parent below its least-decidable child, excused by its own verification-justification.
+    _Case("mc-parent-understates-with-justification-pass",
+          _seed(_mc_parent_understates_with_justification_pass),
+          _must_pass),
     _Case("mc-capitalised-method",
           _seed(lambda r: _reviewed_edit(r, r / TST1, "TST001", **{"verification-method": "Test"})),
           _must_fail_at("check_method_consistency", has=("carry an unrecognised verification-method", "'Test' is not one of"))),
@@ -417,6 +488,10 @@ CASES: list[_Case] = [
           _must_fail_at("check_headers", has="outside the permitted set")),
     _Case("ch-folded-header-pass", _seed(lambda r: _set_fields(r / SYS1, header="Sample system\nneed, folded")),
           _must_pass),
+    _Case("ch-duplicate-header", _seed(lambda r: _set_fields(r / TST1, header="SAMPLE SOFTWARE REQUIREMENT")),
+          _must_fail_at("check_headers", has=("carry the same header", "SRS001", "TST001"))),
+    _Case("ch-prefix-header", _seed(lambda r: _set_fields(r / SRS1, header="Sample verif")),
+          _must_fail_at("check_headers", has=("header is a prefix of", "SRS001", "TST001"))),
 ]
 
 

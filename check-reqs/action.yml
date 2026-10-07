@@ -1,0 +1,20 @@
+name: check-reqs
+description: >-
+  Every item and link in the Doorstop requirements tree under `root` carries a review
+  fingerprint Doorstop itself did not write, every parent link resolves and matches what it was
+  reviewed against (inactive items included), every verification method is recognised and no
+  more or less decidable than its children support, no item's `text` cites another item by
+  identifier, and every header is well-formed. Requires `uv` on PATH.
+inputs:
+  root:
+    description: The directory holding the sys/srs/tst Doorstop documents, resolved against the working directory.
+    required: false
+    default: docs/requirements
+runs:
+  using: composite
+  steps:
+    - name: check-reqs
+      shell: bash
+      env:
+        ROOT: ${{ inputs.root }}
+      run: uv run --locked --project "$GITHUB_ACTION_PATH/.." --package check-reqs check-reqs --root "$ROOT"

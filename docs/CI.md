@@ -128,3 +128,15 @@ required gate on wise-ci's own pull requests, in
 called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)); on a push or the
 weekly run there is no pull request to check, so that job's one action step is skipped rather than
 failed (the `checks.yml` `pr-title` job's own step-level guard).
+
+## check-reqs
+
+The shared Doorstop requirements-tree gate WiseKiosk and meta-wisekiosk both consume — what it
+checks, and what it does not catch, is [`../check-reqs/README.md`](../check-reqs/README.md)'s to
+state. wise-ci carries no requirements tree of its own, so the check runs as a required gate over a
+minimal tree built on the fly, in
+[`../.github/workflows/check-reqs.yml`](../.github/workflows/check-reqs.yml)'s `self-check` job,
+called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)) — that job proves
+the action, not any content here. The same workflow's `expected-failure` job seeds a defect onto
+that tree and asserts the action's own step outcome is `failure` ([`TESTING.md`](TESTING.md) § The
+action).
