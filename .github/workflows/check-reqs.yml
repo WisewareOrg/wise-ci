@@ -1,0 +1,122 @@
+name: check-reqs
+
+# docs/TESTING.md § In CI: runs only when the wiring workflow (ci.yml) calls it.
+on:
+  workflow_call:
+
+permissions: {}
+
+concurrency:
+  group: check-reqs-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Every job's `name:` equals its id, for consistency across every workflow in this repository.
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # A verdict moves only when a workflow or a pinned tool does (docs/CI.md § Workflow
+      # supply-chain and privilege audit); Renovate bumps this version natively.
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.20"
+
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: "1.58.0"
+
+      # docs/TESTING.md § In CI.
+      - name: pytest, one-check mode (just test check-reqs)
+        run: just test check-reqs
+
+      # docs/TESTING.md § In CI.
+      - name: pytest, under coverage
+        run: just test-ci check-reqs
+
+      # docs/TESTING.md § In CI.
+      - name: Upload coverage data
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-check-reqs
+          path: .coverage.*
+          include-hidden-files: true
+          if-no-files-found: error
+
+  # check-reqs run over a minimal tree built on the fly: the check's integration test
+  # (docs/TESTING.md § In CI; docs/CI.md § check-reqs). wise-ci carries no requirements tree of
+  # its own, so this proves the action rather than any content here.
+  self-check:
+    name: self-check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.20"
+
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: "1.58.0"
+
+      - name: Build the minimal tree
+        run: uv run --locked python check-reqs/tests/minimal_tree.py minimal-tree
+
+      - uses: ./check-reqs
+        with:
+          root: minimal-tree/docs/requirements
+
+  # docs/TESTING.md § The action.
+  expected-failure:
+    name: expected-failure
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.20"
+
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: "1.58.0"
+
+      - name: Build the minimal tree
+        run: uv run --locked python check-reqs/tests/minimal_tree.py minimal-tree
+
+      - name: "Delete the SYS item's reviewed: line"
+        run: sed -i '/^reviewed:/d' minimal-tree/docs/requirements/sys/SYS001.yml
+
+      - name: The seed landed
+        run: |
+          set -euo pipefail
+          if grep -q '^reviewed:' minimal-tree/docs/requirements/sys/SYS001.yml; then
+            echo "the reviewed: line is still present; the seed did not land" >&2
+            exit 1
+          fi
+
+      - name: check-reqs (SYS001 carries no review fingerprint; expected to fail)
+        id: check-reqs
+        continue-on-error: true
+        uses: ./check-reqs
+        with:
+          root: minimal-tree/docs/requirements
+
+      - name: The previous step must have failed
+        if: steps.check-reqs.outcome != 'failure'
+        run: exit 1

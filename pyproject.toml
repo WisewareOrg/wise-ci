@@ -9,11 +9,18 @@ default-groups = ["test"]
 python-downloads = "never"
 python-preference = "only-system"
 
+[tool.uv.workspace]
+members = ["check-reqs"]
+
+[tool.uv.sources]
+check-reqs = { workspace = true }
+
 [dependency-groups]
 test = [
   "pytest",
   "coverage>=7.10",
   "pytest-cov>=7.1.0",
+  "check-reqs",
 ]
 
 [tool.pytest.ini_options]
