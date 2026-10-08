@@ -147,6 +147,7 @@ Compares a repository's live rulesets against the floor stated once in `Wiseware
 `repository-floor.yml` (PROC-011) — what it checks, and what it does not catch, is
 [`../repo-floor/README.md`](../repo-floor/README.md)'s to state. Only its unit suite runs on
 wise-ci, in [`../.github/workflows/repo-floor.yml`](../.github/workflows/repo-floor.yml)'s `test`
-job, called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)). Nothing
-here runs the action itself against wise-ci's own rulesets yet — that self-check, and the
-expected-failure job alongside it, arrive with issue 27.
+job, called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)).
+
+**What the gate deliberately lets through.** [`TESTING.md`](TESTING.md) § The action states the
+gap this leaves in repo-floor's own action.

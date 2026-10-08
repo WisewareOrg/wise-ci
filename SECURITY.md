@@ -29,10 +29,13 @@ value from the consumer's environment. What covers it: review asks of every outp
 whether it carries a secret's value ([`CONTRIBUTING.md`](CONTRIBUTING.md), question 7, *Secrets*).
 
 **Attacker-controlled input reaches a shell.** A consumer's pull request supplies its own file names,
-branch names and titles. What covers it: a check's `action.yml` only calls its script, and the
-script handles the input ([`docs/TESTING.md`](docs/TESTING.md)). zizmor's template-injection audit
-covers wise-ci's own workflows, not a check's `action.yml` ([`docs/CI.md`](docs/CI.md)); keeping
-`action.yml` to that single call is what keeps the unaudited part small.
+branch names and titles. What covers it: a check's `action.yml` calls only its script, preceded at
+most by a pinned dependency-install step from wise-ci's own lock — repo-floor is the one check with
+that step, and it takes no caller input — and the script handles the input
+([`docs/TESTING.md`](docs/TESTING.md)). zizmor's template-injection audit covers wise-ci's own
+workflows, not a check's `action.yml` ([`docs/CI.md`](docs/CI.md)); keeping `action.yml` to that
+one script call, plus at most the one unparameterised install step, is what keeps the unaudited
+part small.
 
 **wise-ci's own CI is used against it.** What covers it: the only token any workflow uses is GitHub's
 own `GITHUB_TOKEN`, scoped per job, with every grant beyond read explained beside it; the one custom
@@ -47,14 +50,12 @@ the version is `==`-pinned in `pyproject.toml` and `uv.lock`, Renovate-managed l
 in this repository, and `--frozen` refuses to install anything the lock does not already pin.
 
 **The floor repo-floor checks against is unpinned.** Unlike every other consumer-facing reference
-in this repository, repo-floor reads `WisewareOrg/.github`'s `repository-floor.yml` at `main`, not
-a commit — a deliberate consequence of what a floor is for, not an oversight: a consumer pinning it
-would defeat the point of a live organizational minimum. What this means: `.github`'s own merge
-rights gate every repository that adopts repo-floor, since whoever can merge a floor change there
-changes what every adopting repository's gate requires, with no pull request on the consumer side
-to review it first.
+in this repository, repo-floor reads its floor at `main`, not a commit
+([`repo-floor/README.md`](repo-floor/README.md)) — a deliberate consequence of what a floor is for,
+not an oversight. What this means: `.github`'s own merge rights gate every repository that adopts
+repo-floor, since whoever can merge a floor change there changes what every adopting repository's
+gate requires, with no pull request on the consumer side to review it first.
 
-**A floor change merges before it is tested against itself.** What covers it: `.github`'s own pull
-requests are the one case where repo-floor reads the floor at that pull request's head commit
-instead of `main`, so a floor change is checked against the very floor it is about to become before
-it merges.
+**A floor change merges before it is tested against itself.** What covers it: the one exception to
+the above ([`repo-floor/README.md`](repo-floor/README.md)) is `.github`'s own pull requests, which
+read the floor at that pull request's own head commit instead.
