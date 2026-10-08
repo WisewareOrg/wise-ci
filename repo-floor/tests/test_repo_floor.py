@@ -438,6 +438,212 @@ def test_integration_id_both_absent_passes(monkeypatch):
 
 
 # ---------------------------------------------------------------------------------------------
+# required_status_checks' OTHER parameters (R1): every field the floor lists for a
+# required_status_checks rule must equal live exactly -- not only the required_status_checks
+# contexts list itself, which has its own subset-matched handling (R5) one branch up.
+# ---------------------------------------------------------------------------------------------
+
+_STRICT_POLICY_FLOOR = """\
+rulesets:
+  - name: process-gates
+    target: branch
+    enforcement: active
+    conditions:
+      ref_name:
+        include: ["~DEFAULT_BRANCH"]
+        exclude: []
+    bypass_actors: []
+    rules:
+      - type: required_status_checks
+        parameters:
+          strict_required_status_checks_policy: true
+          required_status_checks:
+            - context: check-branch
+"""
+
+
+def test_required_status_checks_other_parameter_mismatch_is_a_shortfall(monkeypatch, capsys):
+    """R1: strict_required_status_checks_policy is a required_status_checks parameter like any
+    other -- a differing value is a shortfall even though the required_status_checks contexts list
+    itself fully matches."""
+    live_rules = [
+        {
+            "type": "required_status_checks",
+            "parameters": {
+                "strict_required_status_checks_policy": False,
+                "required_status_checks": [{"context": "check-branch"}],
+            },
+        }
+    ]
+    fake = _single_ruleset_fake(_STRICT_POLICY_FLOOR, live_rules)
+
+    code = _expect_fail(monkeypatch, fake)
+
+    assert code == 1
+    captured = capsys.readouterr().err
+    assert "repo-floor: shortfall:" in captured
+    assert "process-gates: required_status_checks: floor True, repository False" in captured
+
+
+def test_required_status_checks_other_parameter_matching_passes(monkeypatch):
+    """Same contract, the other direction: a matching strict_required_status_checks_policy value
+    alongside a matching required_status_checks contexts list passes."""
+    live_rules = [
+        {
+            "type": "required_status_checks",
+            "parameters": {
+                "strict_required_status_checks_policy": True,
+                "required_status_checks": [{"context": "check-branch"}],
+            },
+        }
+    ]
+    fake = _single_ruleset_fake(_STRICT_POLICY_FLOOR, live_rules)
+
+    _expect_pass(monkeypatch, fake)
+
+
+# ---------------------------------------------------------------------------------------------
+# Lists of mappings compared as sets (H3), for a rule parameter other than
+# required_status_checks.required_status_checks: a code_scanning rule's code_scanning_tools
+# (real shape -- each tool a mapping of scalar fields, so _canonicalize's dict branch recurses
+# into the list's own elements).
+# ---------------------------------------------------------------------------------------------
+
+_CODE_SCANNING_FLOOR = """\
+rulesets:
+  - name: process-gates
+    target: branch
+    enforcement: active
+    conditions:
+      ref_name:
+        include: ["~DEFAULT_BRANCH"]
+        exclude: []
+    bypass_actors: []
+    rules:
+      - type: code_scanning
+        parameters:
+          code_scanning_tools:
+            - tool: CodeQL
+              alerts_threshold: errors
+              security_alerts_threshold: high_or_higher
+            - tool: Snyk Code
+              alerts_threshold: all
+              security_alerts_threshold: all
+"""
+
+
+def test_code_scanning_tools_mismatch_is_a_shortfall(monkeypatch, capsys):
+    """A changed tool threshold can never be satisfied by the live set, regardless of order."""
+    live_rules = [
+        {
+            "type": "code_scanning",
+            "parameters": {
+                "code_scanning_tools": [
+                    {"tool": "CodeQL", "alerts_threshold": "all", "security_alerts_threshold": "high_or_higher"},
+                    {"tool": "Snyk Code", "alerts_threshold": "all", "security_alerts_threshold": "all"},
+                ]
+            },
+        }
+    ]
+    fake = _single_ruleset_fake(_CODE_SCANNING_FLOOR, live_rules)
+
+    code = _expect_fail(monkeypatch, fake)
+
+    assert code == 1
+    captured = capsys.readouterr().err
+    assert "repo-floor: shortfall:" in captured
+    assert "process-gates" in captured
+    assert "code_scanning" in captured
+
+
+def test_code_scanning_tools_reordered_list_of_mappings_passes(monkeypatch):
+    """Same contract, the other direction: code_scanning_tools' own order carries no meaning (H3)
+    -- the same two mappings in the opposite order, and with one mapping's own fields reordered
+    too, still passes."""
+    live_rules = [
+        {
+            "type": "code_scanning",
+            "parameters": {
+                "code_scanning_tools": [
+                    {"tool": "Snyk Code", "alerts_threshold": "all", "security_alerts_threshold": "all"},
+                    {"security_alerts_threshold": "high_or_higher", "tool": "CodeQL", "alerts_threshold": "errors"},
+                ]
+            },
+        }
+    ]
+    fake = _single_ruleset_fake(_CODE_SCANNING_FLOOR, live_rules)
+
+    _expect_pass(monkeypatch, fake)
+
+
+# ---------------------------------------------------------------------------------------------
+# Lists of mappings compared as sets (H3), nested case: a repository_property ruleset condition's
+# include/exclude entries are themselves a list of mappings, and each mapping's own
+# property_values is a list too (real shape) -- _canonicalize's dict branch recurses into a
+# list-valued field of its own, not only a scalar one.
+# ---------------------------------------------------------------------------------------------
+
+_REPO_PROPERTY_FLOOR = """\
+rulesets:
+  - name: process-gates
+    target: branch
+    enforcement: active
+    conditions:
+      repository_property:
+        include:
+          - name: environment
+            property_values: ["production", "staging"]
+          - name: team
+            property_values: ["platform"]
+        exclude: []
+    bypass_actors: []
+    rules: []
+"""
+
+
+def _repo_property_conditions(environment_values, team_values=("platform",), order=("environment", "team")):
+    entries = {
+        "environment": {"name": "environment", "property_values": list(environment_values)},
+        "team": {"name": "team", "property_values": list(team_values)},
+    }
+    return {"repository_property": {"include": [entries[key] for key in order], "exclude": []}}
+
+
+def test_repository_property_values_mismatch_is_a_shortfall(monkeypatch, capsys):
+    """A changed property value can never be satisfied by the live set, regardless of order at
+    either nesting level."""
+    fake = FakeAPI()
+    fake.floor = (200, _headers(), _contents_body(_REPO_PROPERTY_FLOOR))
+    fake.list_pages = [(200, _headers(), json.dumps([_list_entry(1001, "process-gates")]))]
+    live_conditions = _repo_property_conditions(["production", "qa"])  # "qa" instead of "staging"
+    fake.details = {
+        1001: (200, _headers(), _detail_body(1001, "process-gates", conditions=live_conditions, rules=[]))
+    }
+
+    code = _expect_fail(monkeypatch, fake)
+
+    assert code == 1
+    captured = capsys.readouterr().err
+    assert "repo-floor: shortfall:" in captured
+    assert "process-gates" in captured
+    assert "conditions" in captured
+
+
+def test_repository_property_reordered_list_of_mappings_and_nested_list_passes(monkeypatch):
+    """Same contract, the other direction: the include list's own order and each entry's
+    property_values order both carry no meaning (H3) -- reordering both still passes."""
+    fake = FakeAPI()
+    fake.floor = (200, _headers(), _contents_body(_REPO_PROPERTY_FLOOR))
+    fake.list_pages = [(200, _headers(), json.dumps([_list_entry(1001, "process-gates")]))]
+    live_conditions = _repo_property_conditions(["staging", "production"], order=("team", "environment"))
+    fake.details = {
+        1001: (200, _headers(), _detail_body(1001, "process-gates", conditions=live_conditions, rules=[]))
+    }
+
+    _expect_pass(monkeypatch, fake)
+
+
+# ---------------------------------------------------------------------------------------------
 # Seeded typos (R6: fail-closed, no vocabulary list -- a typo cannot equal any live value)
 # ---------------------------------------------------------------------------------------------
 
