@@ -417,7 +417,7 @@ def test_compare_ruleset_unknown_parameter_key_never_matches(capsys):
     ok = rf.compare_ruleset("pull-request", floor_entry, live)
 
     assert not ok
-    assert "pull_request.bogus_key: floor 1, repository missing" in capsys.readouterr().err
+    assert "pull_request.parameters.bogus_key: floor 1, repository missing" in capsys.readouterr().err
 
 
 def test_compare_ruleset_plumbs_a_rule_parameter_list_of_mappings(capsys):
@@ -434,7 +434,39 @@ def test_compare_ruleset_plumbs_a_rule_parameter_list_of_mappings(capsys):
     ok = rf.compare_ruleset("process-gates", floor_entry, live)
 
     assert not ok
-    assert "code_scanning.code_scanning_tools" in capsys.readouterr().err
+    assert "code_scanning.parameters.code_scanning_tools" in capsys.readouterr().err
+
+
+def test_compare_ruleset_misspelled_parameters_key_is_a_shortfall(capsys):
+    """"paramters" (typo for "parameters") is a rule key like any other -- the live rule carries
+    no such key, so it is reported missing. It is never confused with "parameters" and never
+    silently skipped, even though the live rule's own (correctly spelled) parameters would fail
+    the floor's intended value too."""
+    floor_entry = _ruleset(rules=[{
+        "type": "pull_request",
+        "paramters": {"required_approving_review_count": 2},
+    }])
+    live = {"target": "branch", "enforcement": "active", "conditions": floor_entry["conditions"],
+            "rules": [{"type": "pull_request", "parameters": {"required_approving_review_count": 0}}]}
+
+    ok = rf.compare_ruleset("pull-request", floor_entry, live)
+
+    assert not ok
+    assert (
+        "pull_request.paramters: floor {'required_approving_review_count': 2}, repository missing"
+        in capsys.readouterr().err
+    )
+
+
+def test_compare_ruleset_correctly_spelled_parameters_with_matching_value_passes():
+    floor_entry = _ruleset(rules=[{
+        "type": "pull_request",
+        "parameters": {"required_approving_review_count": 2},
+    }])
+    live = {"target": "branch", "enforcement": "active", "conditions": floor_entry["conditions"],
+            "rules": [{"type": "pull_request", "parameters": {"required_approving_review_count": 2}}]}
+
+    assert rf.compare_ruleset("pull-request", floor_entry, live)
 
 
 def test_compare_ruleset_plumbs_a_ruleset_level_list_of_mappings(capsys):
