@@ -42,6 +42,10 @@ Nothing in this repository exercises repo-floor's install step or its action its
 here calls `./repo-floor` the way check-branch's own `self-check`/`expected-failure` jobs call
 `./check-branch`, a known gap accepted for this ticket and closed by issue 27's self-check.
 
+A GitHub REST response that is valid JSON but the wrong shape for its endpoint -- an object where
+a list is expected, or the reverse -- crashes repo-floor rather than reporting it as broken, though
+it still exits non-zero; accepted, since GitHub does not send a 200 response in that shape.
+
 ## In CI
 
 Each check has its own workflow file under `.github/workflows/`, which runs the check's tests and
