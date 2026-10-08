@@ -36,6 +36,12 @@ PROC-001 and asserts the step's own outcome is `failure`. check-reqs's own `expe
 closes the same gap for itself too, seeding a defect onto the minimal tree its `self-check` job
 builds.
 
+repo-floor's `action.yml` additionally installs PyYAML from the frozen lock
+([`SECURITY.md`](../SECURITY.md)) before calling its script — wise-ci's first runtime dependency.
+Nothing in this repository exercises that install or the action itself: no workflow here calls
+`./repo-floor` the way check-branch's own `self-check`/`expected-failure` jobs call `./check-branch`,
+a known gap accepted for this ticket and closed by issue 27's self-check.
+
 ## In CI
 
 Each check has its own workflow file under `.github/workflows/`, which runs the check's tests and

@@ -39,3 +39,22 @@ own `GITHUB_TOKEN`, scoped per job, with every grant beyond read explained besid
 credential, the `GITLEAKS_LICENSE` key gitleaks-action requires of an organization, grants no access
 to the repository or its secrets, and the workflows themselves are audited
 ([`docs/CI.md`](docs/CI.md)).
+
+**A caller's job fetches a package at run time.** repo-floor's `action.yml` is wise-ci's first
+action with a runtime dependency: its step runs `setup-uv` and `uv run --frozen` to install PyYAML
+from PyPI inside the consumer's own job, rather than running on the stdlib alone. What covers it:
+the version is `==`-pinned in `pyproject.toml` and `uv.lock`, Renovate-managed like every other pin
+in this repository, and `--frozen` refuses to install anything the lock does not already pin.
+
+**The floor repo-floor checks against is unpinned.** Unlike every other consumer-facing reference
+in this repository, repo-floor reads `WisewareOrg/.github`'s `repository-floor.yml` at `main`, not
+a commit — a deliberate consequence of what a floor is for, not an oversight: a consumer pinning it
+would defeat the point of a live organizational minimum. What this means: `.github`'s own merge
+rights gate every repository that adopts repo-floor, since whoever can merge a floor change there
+changes what every adopting repository's gate requires, with no pull request on the consumer side
+to review it first.
+
+**A floor change merges before it is tested against itself.** What covers it: `.github`'s own pull
+requests are the one case where repo-floor reads the floor at that pull request's head commit
+instead of `main`, so a floor change is checked against the very floor it is about to become before
+it merges.
