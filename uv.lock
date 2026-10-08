@@ -534,6 +534,9 @@ wheels = [
 name = "wise-ci"
 version = "0"
 source = { virtual = "." }
+dependencies = [
+    { name = "pyyaml" },
+]
 
 [package.dev-dependencies]
 test = [
@@ -544,6 +547,7 @@ test = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "pyyaml", specifier = "==6.0.3" }]
 
 [package.metadata.requires-dev]
 test = [
