@@ -138,9 +138,10 @@ def compare_fields(name, floor_dict, live_dict, path=""):
 def compare_ruleset(name, floor_entry, live):
     """Every field/rule the floor lists for this ruleset must equal the live value; fields and
     rules the floor does not list are never compared. bypass_actors is never compared here --
-    it is reported separately, unconditionally. A rule's own parameters compare the same way a
-    ruleset's top-level fields do, so a rule with no parameters key has nothing left to compare
-    and passes on its type alone, and a shortfall names the full rule_type.parameter path."""
+    it is reported separately, unconditionally. A rule's own keys other than type -- parameters
+    included, as an ordinary key like any other -- compare the same way a ruleset's top-level
+    fields do, so an unknown or misspelled key (e.g. a typo'd "paramters") is never silently
+    skipped: it is simply absent from the live rule, and fails as a shortfall."""
     fields = {k: v for k, v in floor_entry.items() if k not in ("name", "rules", "bypass_actors")}
     ok = compare_fields(name, fields, live)
 
@@ -155,9 +156,8 @@ def compare_ruleset(name, floor_entry, live):
             shortfall(name, f"{rule_type}: missing")
             ok = False
             continue
-        floor_params = rule.get("parameters") or {}
-        live_params = candidates[0].get("parameters") or {}
-        if not compare_fields(name, floor_params, live_params, path=rule_type):
+        rule_fields = {k: v for k, v in rule.items() if k != "type"}
+        if not compare_fields(name, rule_fields, candidates[0], path=rule_type):
             ok = False
     return ok
 
