@@ -72,15 +72,15 @@ def _canonicalize(value):
 
 
 def _canonical_list(values):
-    # GitHub's list ordering carries no meaning (H3), so a list compares as a set: sorted by
-    # each element's own repr, since elements may be dicts and not otherwise orderable.
+    # GitHub's list ordering carries no meaning, so a list compares as a set: sorted by each
+    # element's own repr, since elements may be dicts and not otherwise orderable.
     return tuple(sorted((_canonicalize(v) for v in values), key=repr))
 
 
 def values_equal(floor_value, live_value):
-    """R1/H3: exact equality, type-strict for scalars (so bool != int, int != float), order-
-    independent for lists. A floor value of None matches a live None or an absent key (the
-    caller passes dict.get()'s None for that case already) because type(None) is type(None)."""
+    """Exact equality, type-strict for scalars (so bool != int, int != float), order-independent
+    for lists. A floor value of None matches a live None or an absent key (the caller passes
+    dict.get()'s None for that case already) because type(None) is type(None)."""
     if isinstance(floor_value, dict):
         return isinstance(live_value, dict) and all(
             values_equal(v, live_value.get(k)) for k, v in floor_value.items()
@@ -91,8 +91,7 @@ def values_equal(floor_value, live_value):
 
 
 def validate_floor_shape(floor):
-    """H4: a floor file that is empty or malformed is broken, never a pass and never a
-    shortfall."""
+    """A floor file that is empty or malformed is broken, never a pass and never a shortfall."""
     if not isinstance(floor, dict):
         broken("floor is not a mapping")
     if "rulesets" not in floor:
@@ -119,7 +118,7 @@ def validate_floor_shape(floor):
 
 
 def check_required_status_checks(name, floor_contexts, live_contexts):
-    """R5: each floor context must be present live with the same context and the same
+    """Each floor context must be present live with the same context and the same
     integration_id -- absent in the floor means absent live, present means equal."""
     ok = True
     for floor_context in floor_contexts:
@@ -145,9 +144,9 @@ def check_required_status_checks(name, floor_contexts, live_contexts):
 
 
 def compare_ruleset(name, floor_entry, live):
-    """R1-R2, R6: every field/rule the floor lists for this ruleset must equal the live value;
-    fields and rules the floor does not list are never compared. bypass_actors is never compared
-    here -- R7 reports it separately, unconditionally."""
+    """Every field/rule the floor lists for this ruleset must equal the live value; fields and
+    rules the floor does not list are never compared. bypass_actors is never compared here --
+    it is reported separately, unconditionally."""
     ok = True
     for key, floor_value in floor_entry.items():
         if key in ("name", "rules", "bypass_actors"):
@@ -169,7 +168,7 @@ def compare_ruleset(name, floor_entry, live):
             ok = False
             continue
         if "parameters" not in rule:
-            continue  # H3: a floor rule with no parameters key compares type only
+            continue  # a floor rule with no parameters key compares type only
         floor_params = rule["parameters"] or {}
         live_params = candidates[0].get("parameters") or {}
         if rule_type == "required_status_checks":
@@ -195,8 +194,8 @@ def main():
     token = os.environ.get("GITHUB_TOKEN", "")
     pr_head_sha = os.environ.get("PR_HEAD_SHA")
 
-    # R8/H12: .github's own pull requests read the floor at their head commit, so a floor change
-    # is tested against itself before it merges; every other case reads main.
+    # .github's own pull requests read the floor at their head commit, so a floor change is
+    # tested against itself before it merges; every other case reads main.
     if event_name == "pull_request" and repo.lower() == FLOOR_OWNER_REPO.lower():
         ref = pr_head_sha
     else:
@@ -244,8 +243,8 @@ def main():
 
         if not compare_ruleset(name, entry, live):
             any_shortfall = True
-        # R7: bypass is never verifiable with a workflow token, so every floor ruleset found
-        # live is reported this way regardless of how it compared.
+        # Bypass is never verifiable with a workflow token, so every floor ruleset found live
+        # is reported this way regardless of how it compared.
         print(f"repo-floor: bypass not verified: {name}", file=sys.stderr)
 
     if any_shortfall:

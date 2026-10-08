@@ -24,22 +24,25 @@ See [`action.yml`](action.yml) for the one input's description and default.
 
 `contents: read` is the only permission this needs. See [`../README.md`](../README.md) §
 Consuming a check for how to reference this action. The action runs a Python script with
-[uv](https://docs.astral.sh/uv/); the runner needs no Python of its own; `setup-uv` installs the
-interpreter the project's `pyproject.toml` pins.
+[uv](https://docs.astral.sh/uv/): the caller's runner needs a system Python meeting
+`pyproject.toml`'s `requires-python`; its absence fails the step itself, not as a shortfall.
 
 ## What this does not catch
 
-**Bypass.** `current_user_can_bypass` is absent from the ruleset-detail response under a workflow
-token, so repo-floor can never confirm who can bypass a floor-named ruleset — only that the ruleset
-itself exists and matches. "Bypass not verified" is reported for every floor ruleset found live, on
-every run, pass or fail.
+**Bypass.** `bypass_actors` and `current_user_can_bypass` are both absent from the ruleset-detail
+response under a workflow token, so repo-floor can never confirm who can bypass a floor-named
+ruleset — only that the ruleset itself exists and matches. "Bypass not verified" is reported for
+every floor ruleset found live, on every run, pass or fail.
 
 **A repository that never calls this action.** repo-floor only checks a repository that adopts it
 as a gate; a repository short of the floor that never runs this check stays unnoticed.
 
-**A required-status-check context satisfied by the wrong job.** GitHub matches a required status
-check by its name alone — any check run carrying the same context string satisfies it, whether or
-not it came from the job the floor intends.
+**A required-status-check context satisfied by the wrong job.** This floor pins `integration_id`
+alongside each context, so a context is not satisfied by just any check run sharing its name —
+only by one from the same GitHub App. `integration_id` identifies GitHub Actions in general,
+though, not wise-ci specifically: any GitHub Actions job in the calling repository named
+`check-branch`, `pr-title` or `repo-floor` satisfies the matching context, whether or not it is the
+job the floor intends.
 
 **A caller's job not named for its context.** A required-status-check context such as
 `check-branch` or `repo-floor` is satisfied by a top-level job literally named that in the calling
