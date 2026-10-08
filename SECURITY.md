@@ -29,13 +29,33 @@ value from the consumer's environment. What covers it: review asks of every outp
 whether it carries a secret's value ([`CONTRIBUTING.md`](CONTRIBUTING.md), question 7, *Secrets*).
 
 **Attacker-controlled input reaches a shell.** A consumer's pull request supplies its own file names,
-branch names and titles. What covers it: a check's `action.yml` only calls its script, and the
-script handles the input ([`docs/TESTING.md`](docs/TESTING.md)). zizmor's template-injection audit
-covers wise-ci's own workflows, not a check's `action.yml` ([`docs/CI.md`](docs/CI.md)); keeping
-`action.yml` to that single call is what keeps the unaudited part small.
+branch names and titles. What covers it: a check's `action.yml` calls only its script, preceded at
+most by a pinned dependency-install step from wise-ci's own lock — repo-floor is the one check with
+that step, and it takes no caller input — and the script handles the input
+([`docs/TESTING.md`](docs/TESTING.md)). zizmor's template-injection audit covers wise-ci's own
+workflows, not a check's `action.yml` ([`docs/CI.md`](docs/CI.md)); keeping `action.yml` to that
+one script call, plus at most the one unparameterised install step, is what keeps the unaudited
+part small.
 
 **wise-ci's own CI is used against it.** What covers it: the only token any workflow uses is GitHub's
 own `GITHUB_TOKEN`, scoped per job, with every grant beyond read explained beside it; the one custom
 credential, the `GITLEAKS_LICENSE` key gitleaks-action requires of an organization, grants no access
 to the repository or its secrets, and the workflows themselves are audited
 ([`docs/CI.md`](docs/CI.md)).
+
+**A caller's job fetches a package at run time.** repo-floor's `action.yml` is wise-ci's first
+action with a runtime dependency: its step runs `setup-uv` and `uv run --frozen` to install PyYAML
+from PyPI inside the consumer's own job, rather than running on the stdlib alone. What covers it:
+the version is `==`-pinned in `pyproject.toml` and `uv.lock`, Renovate-managed like every other pin
+in this repository, and `--frozen` refuses to install anything the lock does not already pin.
+
+**The floor repo-floor checks against is unpinned.** Unlike every other consumer-facing reference
+in this repository, repo-floor reads its floor at `main`, not a commit
+([`repo-floor/README.md`](repo-floor/README.md)) — a deliberate consequence of what a floor is for,
+not an oversight. What this means: `.github`'s own merge rights gate every repository that adopts
+repo-floor, since whoever can merge a floor change there changes what every adopting repository's
+gate requires, with no pull request on the consumer side to review it first.
+
+**A floor change merges before it is tested against itself.** What covers it: the one exception to
+the above ([`repo-floor/README.md`](repo-floor/README.md)) is `.github`'s own pull requests, which
+read the floor at that pull request's own head commit instead.

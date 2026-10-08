@@ -28,13 +28,23 @@ environment variable the check reads, such as `GITHUB_ACTIONS`.
 
 ## The action
 
-A check's `action.yml` only calls its script; any logic lives in the script, where the tests reach
-it. For check-eol, which takes no inputs, nothing proves the action turns a failing script into a
-red job — a known gap, accepted. check-branch, the first check to take inputs, closes that gap for
+A check's `action.yml` calls only its script, preceded at most by a pinned dependency-install step
+from wise-ci's own lock — repo-floor is the one check with that step
+([`SECURITY.md`](../SECURITY.md)) — and any logic lives in the script, where the tests reach it.
+For check-eol, which takes no inputs, nothing proves the action turns a failing script into a red
+job — a known gap, accepted. check-branch, the first check to take inputs, closes that gap for
 itself: its workflow's `expected-failure` job runs the action with an input chosen to violate
 PROC-001 and asserts the step's own outcome is `failure`. check-reqs's own `expected-failure` job
 closes the same gap for itself too, seeding a defect onto the minimal tree its `self-check` job
 builds.
+
+Nothing in this repository exercises repo-floor's install step or its action itself: no workflow
+here calls `./repo-floor` the way check-branch's own `self-check`/`expected-failure` jobs call
+`./check-branch`, a known gap accepted for this ticket and closed by issue 27's self-check.
+
+A GitHub REST response that is valid JSON but the wrong shape for its endpoint -- an object where
+a list is expected, or the reverse -- crashes repo-floor rather than reporting it as broken, though
+it still exits non-zero; accepted, since GitHub does not send a 200 response in that shape.
 
 ## In CI
 

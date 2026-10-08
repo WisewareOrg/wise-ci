@@ -1,0 +1,25 @@
+name: repo-floor
+description: >-
+  A repository's live rulesets must meet the floor stated once in WisewareOrg/.github's
+  repository-floor.yml (PROCESS.md PROC-011).
+inputs:
+  github-token:
+    description: Token for the GitHub REST calls.
+    required: false
+    default: ${{ github.token }}
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      with:
+        version: "0.12.20"
+        enable-cache: false
+
+    - name: repo-floor
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: >-
+        uv run --project "$GITHUB_ACTION_PATH/.." --frozen --no-default-groups
+        python "$GITHUB_ACTION_PATH/repo-floor.py"
