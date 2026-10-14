@@ -37,10 +37,12 @@ workflow's `expected-failure` job runs the action with an input chosen to violat
 asserts the step's own outcome is `failure`. check-reqs's own `expected-failure` job closes the same
 gap for itself too, seeding a defect onto the minimal tree its `self-check` job builds.
 
-repo-floor's own `expected-failure` job closes the install-step/action half of that gap
-differently: it passes the action an invalid `github-token`, so the read itself breaks, and
-asserts the step's own outcome is `failure` — proving the action turns a failure into a red job
-through the same "broken" path a bad read takes, not through a floor shortfall. The
+repo-floor's own `expected-failure` job passes the action an invalid `github-token`, so the floor
+fetch itself breaks, and asserts the step's own outcome is `failure` — proving only that the
+action turns a failing run into a red job, no more: a broken install would read the same way,
+the same indistinguishability [`../pr-title/README.md`](../pr-title/README.md) § What this does
+not catch states for pr-title's own `expected-failure` job. The install step itself is proven by
+`process-gates.yml`'s `repo-floor` job passing, which a broken install could not do. The
 shortfall-specific comparison stays covered by its unit suite alone: repo-floor's floor location
 and target repository are fixed by design, not a consumer-overridable input, so no workflow here
 can arrange a live shortfall to seed.
