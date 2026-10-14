@@ -59,7 +59,10 @@ named, not a single catch-all pattern.
   running `cz check -l 100 --message "<101-char title>"` against the same title with and without `-l`.
 - **gitlint.** Unmaintained: last release `v0.19.1`, published 2023-03-10
   (`jorisroovers/gitlint` GitHub releases). Has no subject-case or scope-case rule.
-- **conventional-pre-commit.** A fixed regex with no case rules.
+- **conventional-pre-commit `v4.4.0`.** A fixed regex, assembled once per run from its own
+  configuration (`conventional_pre_commit/format.py:161-171`), with no case rules: the type
+  alternation is matched case-insensitively (`:124`, `(?i:...)`) and the subject pattern
+  (`:154`, ` .+$`) carries no case or full-stop constraint.
 - **amannn/action-semantic-pull-request `v6.1.1`.**
   It re-fetches the current title via the REST API rather than trusting the event payload
   (`src/index.js:42`: `const {data: pullRequest} = await client.rest.pulls.get(...)`), but its rules
@@ -71,7 +74,9 @@ named, not a single catch-all pattern.
   (`src/main.ts:26,31`) — the event's snapshot at trigger time, not a re-read — and when that
   snapshot carries no title it returns without failing (`src/main.ts:13-15`): it fails open. It
   takes no title input, and bundles its own commitlint configuration rather than wise-ci's.
-- **wagoid/commitlint-github-action.** Checks the pull request's commits, not its title.
+- **wagoid/commitlint-github-action `v6.2.1`.** Checks the pull request's commits, not its title:
+  `getPullRequestEventCommits` fetches them with `octokit.rest.pulls.listCommits`
+  (`src/action.mjs:53-67`); nothing in that file reads a pull request's title.
 - **Shell glue in `action.yml`.** Rejected under the owner's hard rule against shell; its injection
   surface would also move the title out of zizmor's `.github/workflows` input set.
 - **`commitlint --env` (title in a file).** commitlint `21.2.3`'s `--env` mode still requires `cwd` to
