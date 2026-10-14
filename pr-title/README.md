@@ -13,7 +13,10 @@ local lookup.
 
 ## Inputs
 
-See [`action.yml`](action.yml) for each input's description and default.
+See [`action.yml`](action.yml) for each input's description and default. `title` exists for
+`expected-failure` testing: passing it the triggering event's own title snapshot gives up the
+current-title re-read (see [The mechanism](#the-mechanism) below), so a consumer has no reason to
+set it.
 
 ## Consuming pr-title
 
@@ -40,8 +43,8 @@ wanting that needs its own `edited` trigger.
 The current title is read from the GitHub API, keyed on the triggering event's pull request number
 — never the event payload's own title snapshot, which goes stale the moment the title changes.
 That title is handed to commitlint on stdin; the configs it lints against are resolved from the
-action's own folder, not the consumer's checkout. `setup-node` puts Node 26.11.1 on `PATH` for the
-rest of the consumer's job, as a side effect of installing commitlint.
+action's own folder, not the consumer's checkout. `setup-node` puts the Node version pinned in
+`action.yml` on `PATH` for the rest of the consumer's job, as a side effect of installing commitlint.
 
 ## What this does not catch
 
@@ -53,8 +56,12 @@ workflow satisfies it, whatever this action's own step is called inside it.
 distinguishable only by which stream carries the output (`docs/decisions/0001-...md` §
 Consequences).
 
-**An install failure.** `expected-failure` would also go red if `npm ci` failed, for a reason
-unrelated to the seeded title; `test` and `self-check` are what actually prove the install.
+**An install failure, outside a pull request.** `expected-failure`'s step outcome is `failure`
+whether the seeded title failed lint or `npm ci` itself broke — the two are indistinguishable there,
+so a broken install still reports that job green. On a pull request, `self-check` is what actually
+proves the action's own install step, by running it against a title expected to pass; outside one,
+that step is skipped, and nothing else exercises it — `test`'s own `npm ci` is a direct workflow
+step, not the action's `$GITHUB_ACTION_PATH`-prefixed one.
 
 **A `.py` file shipped inside `node_modules`.** `ci.yml`'s per-check `.py`-file sweep would pick
 one up and fail the merged-coverage population guard loudly — not a silent gap, named here because

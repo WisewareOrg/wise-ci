@@ -8,9 +8,7 @@ inputs:
     required: false
     default: ${{ github.token }}
   title:
-    description: >-
-      The title to check, overriding the pull request's current title. For expected-failure
-      testing only — passing the event's own title snapshot gives up the current-title re-read.
+    description: The title to check, overriding the pull request's current title.
     required: false
     default: ""
 runs:
