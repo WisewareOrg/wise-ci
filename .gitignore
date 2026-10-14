@@ -3,7 +3,7 @@ __pycache__/
 *.pyc
 .venv/
 
-# Node (tooling/commitlint/)
+# Node (pr-title/)
 node_modules/
 
 # Secrets and env

@@ -3,8 +3,9 @@ name: ci
 # The one entry point for every gate this repository has (docs/TESTING.md § In CI): every pull
 # request, with no `paths:` filter — a required check that never starts blocks the merge
 # indefinitely — every push to `main`, and weekly (so a dormant branch is still covered).
-# No `edited`: pr-title reads the PR's current title via the API on pull_request, so re-running it
-# after a title fix checks the fixed title (docs/CI.md § PR title), instead of re-running every check.
+# No `edited`: pr-title reads the pull request's current title from the API on `pull_request`, so
+# re-running it after a title fix checks the fixed title (pr-title/README.md), instead of
+# re-running every check.
 on:
   pull_request:
   push:
@@ -30,7 +31,6 @@ jobs:
     name: checks
     permissions:
       contents: read
-      pull-requests: read # checks.yml's pr-title job reads the PR's current title from the API
     uses: ./.github/workflows/checks.yml
     secrets:
       GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
@@ -67,9 +67,16 @@ jobs:
       contents: read
     uses: ./.github/workflows/repo-floor.yml
 
+  pr-title:
+    name: pr-title
+    permissions:
+      contents: read
+      pull-requests: read # pr-title.yml's self-check job reads the PR's current title from the API
+    uses: ./.github/workflows/pr-title.yml
+
   ci:
     name: ci
-    needs: [checks, codeql, check-eol, check-branch, check-reqs, repo-floor]
+    needs: [checks, codeql, check-eol, check-branch, check-reqs, repo-floor, pr-title]
     if: always()
     runs-on: ubuntu-latest
     permissions:
@@ -103,7 +110,7 @@ jobs:
             exit 1
           fi
 
-          for name in "check-eol / test" "check-branch / test" "check-branch / self-check" "check-branch / expected-failure" "check-reqs / test" "check-reqs / self-check" "check-reqs / expected-failure" "repo-floor / test"; do
+          for name in "check-eol / test" "check-branch / test" "check-branch / self-check" "check-branch / expected-failure" "check-reqs / test" "check-reqs / self-check" "check-reqs / expected-failure" "repo-floor / test" "pr-title / test" "pr-title / self-check" "pr-title / expected-failure"; do
             known="$(jq -s --arg name "$name" '[.[] | select(.name == $name)] | length' "$RUNNER_TEMP/run-jobs.json")"
             if [ "$known" -eq 0 ]; then
               echo "the run's job list is missing $name" >&2
@@ -130,6 +137,14 @@ jobs:
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
         with:
           just-version: "1.58.0"
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26.11.1
+          package-manager-cache: false
+
+      - name: Install pr-title/, locked
+        run: npm --prefix pr-title ci --ignore-scripts
 
       # justfile's test recipe, full-run branch: a developer's own `just test` (every check, no
       # argument) runs here too, so a typo or a broken change to that branch fails CI the same way
@@ -182,7 +197,7 @@ jobs:
             exit 1
           fi
 
-          for file in "check-eol/check-eol.py" "check-branch/check-branch.py" "repo-floor/repo-floor.py" \
+          for file in "check-eol/check-eol.py" "check-branch/check-branch.py" "repo-floor/repo-floor.py" "pr-title/pr-title.py" \
             "check-reqs/check_reqs/__init__.py" "check-reqs/check_reqs/check_headers.py" \
             "check-reqs/check_reqs/check_method_consistency.py" "check-reqs/check_reqs/check_suspect_links.py" \
             "check-reqs/check_reqs/check_text_citations.py" "check-reqs/check_reqs/check_unreviewed.py" \
