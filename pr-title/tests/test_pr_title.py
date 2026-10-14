@@ -276,11 +276,12 @@ def test_api_error_fetching_the_title_fails(monkeypatch):
 
 
 def test_commitlint_runs_with_an_allowlisted_environment(monkeypatch, capfd, tmp_path):
-    """pr-title.py's own `COMMITLINT_ENV_KEYS` is the allowlist of environment variables passed
-    to commitlint's subprocess; this test reads that constant rather than restating it, so the
-    two can't drift. The stub writes every `key=value` pair it receives to stdout, one per line,
-    captured the way the title-case tests above capture commitlint's own stdout (capfd, for a
-    subprocess's inherited file descriptors)."""
+    """No variable set only in the parent process -- GITHUB_TOKEN or anything else -- reaches
+    commitlint's subprocess, by name or by value. Checked against parent-only decoys rather than
+    the child's full key set: python3/node/bash wrappers (NixOS, asdf) add their own vars once
+    exec'd, so asserting the child's keys are exactly an allowlist fails by host, not by defect
+    (docs/TESTING.md "a test gives the same result on any machine"). pt.COMMITLINT_ENV_KEYS is
+    still read directly, to confirm GITHUB_TOKEN is excluded from it."""
     stub = tmp_path / "commitlint-stub.py"
     stub.write_text(
         "#!/usr/bin/env python3\n"
@@ -290,7 +291,13 @@ def test_commitlint_runs_with_an_allowlisted_environment(monkeypatch, capfd, tmp
     )
     stub.chmod(0o755)
     monkeypatch.setattr(pt, "COMMITLINT_BIN", stub)
-    monkeypatch.setenv("SECRET_X", "decoy-secret-should-not-leak")
+
+    decoys = {
+        "PR_TITLE_TEST_DECOY_1": "decoy-one-must-not-reach-commitlint",
+        "PR_TITLE_TEST_DECOY_2": "decoy-two-must-not-reach-commitlint",
+    }
+    for name, value in decoys.items():
+        monkeypatch.setenv(name, value)
     secret = "github-token-must-not-reach-commitlint"
 
     _expect_pass(monkeypatch, _no_api_call, title="feat: add a thing", token=secret)
@@ -299,8 +306,9 @@ def test_commitlint_runs_with_an_allowlisted_environment(monkeypatch, capfd, tmp
         line.split("=", 1) for line in capfd.readouterr().out.splitlines() if "=" in line
     )
 
-    assert secret not in received.values()
-    assert received.keys() <= pt.COMMITLINT_ENV_KEYS
+    for name, value in {**decoys, "GITHUB_TOKEN": secret}.items():
+        assert name not in received
+        assert value not in received.values()
     assert "GITHUB_TOKEN" not in pt.COMMITLINT_ENV_KEYS
 
 
