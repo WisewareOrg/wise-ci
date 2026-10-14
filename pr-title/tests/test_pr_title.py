@@ -17,13 +17,12 @@ Test mechanism, copied from check-branch/tests/test_check_branch.py:
 - run the `__main__` guard through `runpy` (`:818`).
 
 The title-case tests run the real commitlint through the script (docs/TESTING.md "Real
-dependencies where possible"), from a temporary, non-git cwd (an autouse fixture below) -- proven
-for every title in scratchpad/prove28/RESULTS.md and matrix_results.json. A must-fail case asserts
-the commitlint exit code is passed through non-zero (`sys.exit(<code>)`, not hardcoded) and that
-the plan's one pinned rule id appears in commitlint's own stdout (`capfd`, which catches a
-subprocess's inherited file descriptors the way `capsys` does not) -- a second rule id commitlint
-also reports for the same title (prove28's evidence) is not asserted away, since the plan pins one
-id per title, not an exhaustive set.
+dependencies where possible"), from a temporary, non-git cwd (an autouse fixture below) -- this
+suite's own run against each title is the proof. A must-fail case asserts the commitlint exit code
+is passed through non-zero (`sys.exit(<code>)`, not hardcoded) and that the plan's one pinned rule
+id appears in commitlint's own stdout (`capfd`, which catches a subprocess's inherited file
+descriptors the way `capsys` does not) -- a second rule id commitlint also reports for the same
+title is not asserted away, since the plan pins one id per title, not an exhaustive set.
 
 Dropped, per the plan: a dedicated test that a broken `.commitlintrc-pr-title.json` fails
 differently from a bad title (decision 10 -- it fails the same way, exit 1 either way, and this
@@ -135,9 +134,9 @@ def _expect_pass(monkeypatch, fake, **env_kwargs):
 
 # ---------------------------------------------------------------------------------------------
 # Title cases: the real commitlint, through the script, from a non-git tmp cwd (autouse fixture).
-# Seeded from the plan's WI1 table, proven in scratchpad/prove28/RESULTS.md and
-# matrix_results.json. The list is a seed, not exhaustive (plan: "Further cases may be added only
-# if they derive from PROC-009 or the shipped configs; anything else is escalated.").
+# Seeded from the plan's WI1 table. The list is a seed, not exhaustive (plan: "Further cases may
+# be added only if they derive from PROC-009 or the shipped configs; anything else is
+# escalated.").
 # ---------------------------------------------------------------------------------------------
 
 MUST_PASS_TITLES = [
@@ -185,8 +184,8 @@ def test_title_fails_commitlint_with_its_rule_id(monkeypatch, capfd, title, rule
 
 
 def test_trailing_newline_on_the_title_makes_no_difference(monkeypatch):
-    """Proven in scratchpad/prove28/RESULTS.md item 2: 'feat: add a thing' and 'feat: add a
-    thing\\n' both exit 0 through commitlint on stdin."""
+    """Plan: 'a trailing newline on the title makes no difference' -- 'feat: add a thing' and
+    'feat: add a thing\\n' both exit 0 through commitlint on stdin."""
     _expect_pass(monkeypatch, _no_api_call, title="feat: add a thing\n")
 
 
