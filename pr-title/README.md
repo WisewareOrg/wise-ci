@@ -43,8 +43,11 @@ wanting that needs its own `edited` trigger.
 The current title is read from the GitHub API, keyed on the triggering event's pull request number
 — never the event payload's own title snapshot, which goes stale the moment the title changes.
 That title is handed to commitlint on stdin; the configs it lints against are resolved from the
-action's own folder, not the consumer's checkout. `setup-node` puts the Node version pinned in
-`action.yml` on `PATH` for the rest of the consumer's job, as a side effect of installing commitlint.
+action's own folder, not the consumer's checkout. commitlint's subprocess gets an allowlisted
+environment (`pr-title.py`'s `COMMITLINT_ENV_KEYS`), not the job's full one, so `GITHUB_TOKEN` and
+anything else the consumer's job carries never reaches it. `setup-node` puts the Node version
+pinned in `action.yml` on `PATH` for the rest of the consumer's job, as a side effect of installing
+commitlint.
 
 ## What this does not catch
 

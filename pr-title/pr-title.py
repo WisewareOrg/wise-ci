@@ -18,6 +18,11 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 COMMITLINT_BIN = SCRIPT_DIR / "node_modules" / ".bin" / "commitlint"
 CONFIG_PATH = SCRIPT_DIR / ".commitlintrc-pr-title.json"
 
+# commitlint's subprocess gets only these, confirmed empirically to be sufficient: the node
+# shebang's own resolution needs PATH, and commitlint's config loader fails without HOME. No
+# secret from the runner's own environment — GITHUB_TOKEN included — reaches it this way.
+COMMITLINT_ENV_KEYS = frozenset({"PATH", "HOME"})
+
 
 def fail(message):
     print(f"pr-title: {message}", file=sys.stderr)
@@ -58,10 +63,12 @@ def main():
     if not title.strip():
         fail("the pull request title is empty")
 
+    commitlint_env = {key: os.environ[key] for key in COMMITLINT_ENV_KEYS if key in os.environ}
     result = subprocess.run(
         [str(COMMITLINT_BIN), "--config", str(CONFIG_PATH)],
         input=title,
         text=True,
+        env=commitlint_env,
     )
     if result.returncode != 0:
         sys.exit(result.returncode)
