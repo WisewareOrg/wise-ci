@@ -67,9 +67,12 @@ gate requires, with no pull request on the consumer side to review it first.
 the above ([`repo-floor/README.md`](repo-floor/README.md)) is `.github`'s own pull requests, which
 read the floor at that pull request's own head commit instead.
 
-**An org admin merges without a pull request.** Adopting the floor's `pull-request` ruleset gives
-an organization admin a `pull_request`-mode bypass of its `pull_request`, `deletion` and
-`non_fast_forward` rules — a bypass `main`'s previous ruleset granted nobody. What covers it:
-`check-branch`, `pr-title` and `repo-floor`, under `process-gates`, stay unbypassable, as do
-`code_scanning` and `required_linear_history`; wise-ci has one maintainer, who already holds that
-admin bypass in practice.
+**An org admin merges a pull request that fails one of `pull-request`'s rules.** Adopting the
+floor's `pull-request` ruleset gives an organization admin a `pull_request`-mode bypass of its
+`pull_request`, `deletion` and `non_fast_forward` rules — a bypass `main`'s previous ruleset
+granted nobody. The bypass applies only while merging a pull request: an admin can merge one that
+fails a rule's own parameters (an unresolved review thread, a merge method
+`allowed_merge_methods` excludes), but it never permits a push to `main` or a deletion outside a
+pull request. What covers it: `check-branch`, `pr-title` and `repo-floor`, under `process-gates`,
+stay unbypassable, as do `code_scanning` and `required_linear_history`; wise-ci has one
+maintainer, who already holds that admin bypass in practice.
