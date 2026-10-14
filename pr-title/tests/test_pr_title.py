@@ -305,6 +305,22 @@ def test_commitlint_runs_with_an_allowlisted_environment(monkeypatch, capfd, tmp
 
 
 # ---------------------------------------------------------------------------------------------
+# package.json: commitlint lands under "dependencies", not "devDependencies" -- a consumer
+# running `npm ci` under NODE_ENV=production or NPM_CONFIG_OMIT=dev must still get it installed.
+# ---------------------------------------------------------------------------------------------
+
+COMMITLINT_PACKAGES = ("@commitlint/cli", "@commitlint/config-conventional")
+
+
+def test_commitlint_packages_are_production_dependencies():
+    package = json.loads((SCRIPT.parent / "package.json").read_text())
+
+    for name in COMMITLINT_PACKAGES:
+        assert name in package.get("dependencies", {})
+        assert name not in package.get("devDependencies", {})
+
+
+# ---------------------------------------------------------------------------------------------
 # api_request itself: its own branches, patching urllib.request.urlopen (not api_request) --
 # mirrors check-branch/tests/test_check_branch.py:739-804 exactly, since pr-title.py mirrors
 # api_request's signature and behaviour unchanged.
