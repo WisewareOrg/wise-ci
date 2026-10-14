@@ -21,10 +21,17 @@ match the live value exactly:
   fails rather than going unchecked.
 
 A ruleset, rule, field or key the floor does not mention is never compared, so a repository may
-carry any of those beyond the floor. A required bypass actor list is never verifiable with a
-workflow token, so every floor-named ruleset found live is reported "bypass not verified" regardless
-of who can actually bypass it. A read failure — a fetch error, a 404, a rate limit, a floor file
-that is empty or malformed — fails the run as "broken", never as a shortfall and never as a pass.
+carry any of those beyond the floor.
+
+A value the floor lists is matched exactly, not as a minimum: a repository requiring one approving
+review where the floor states `0`, or adding a `release/*` pattern to a floor ruleset's `include`,
+falls short. A stricter setting belongs in a ruleset of the repository's own, which the floor never
+compares.
+
+A required bypass actor list is never verifiable with a workflow token, so every floor-named ruleset
+found live is reported "bypass not verified" regardless of who can actually bypass it. A read
+failure — a fetch error, a 404, a rate limit, a floor file that is empty or malformed — fails the
+run as "broken", never as a shortfall and never as a pass.
 
 The floor's location (`WisewareOrg/.github`, `repository-floor.yml`, `main`) is fixed in the
 script, not an input: `WisewareOrg/.github`'s own pull requests are the one exception, reading the
