@@ -29,14 +29,13 @@ environment variable the check reads, such as `GITHUB_ACTIONS`.
 ## The action
 
 A check's `action.yml` calls only its script, preceded at most by a dependency-install step that
-takes no caller input and installs only what wise-ci's own lock pins; any logic lives in the
-script, where the tests reach it.
-For check-eol, which takes no inputs, nothing proves the action turns a failing script into a red
-job — a known gap, accepted. check-branch, the first check to take inputs, closes that gap for
-itself: its workflow's `expected-failure` job runs the action with an input chosen to violate
-PROC-001 and asserts the step's own outcome is `failure`. check-reqs's own `expected-failure` job
-closes the same gap for itself too, seeding a defect onto the minimal tree its `self-check` job
-builds.
+takes no caller input and installs only what wise-ci's own lock pins; any logic lives in the script,
+where the tests reach it. For check-eol, which takes no inputs, nothing proves the action turns a
+failing script into a red job — a known gap, accepted. check-branch, the first check to take inputs,
+closes that gap for itself: its workflow's `expected-failure` job runs the action with an input
+chosen to violate PROC-001 and asserts the step's own outcome is `failure`. check-reqs's own
+`expected-failure` job closes the same gap for itself too, seeding a defect onto the minimal tree
+its `self-check` job builds.
 
 Nothing in this repository exercises repo-floor's install step or its action itself: no workflow
 here calls `./repo-floor` the way check-branch's own `self-check`/`expected-failure` jobs call

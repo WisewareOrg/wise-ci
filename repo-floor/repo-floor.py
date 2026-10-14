@@ -19,8 +19,8 @@ FLOOR_PATH = "repository-floor.yml"
 
 LINK_NEXT_RE = re.compile(r'<([^>]+)>\s*;\s*rel="next"')
 
-# A live key's absence, distinct from a live value of None: exact means exact, so a floor value
-# of null matches only an explicit live null, never a merely absent key.
+# Stands in for a key absent from the live side, so it never equals a floor null
+# (repo-floor/README.md).
 _ABSENT = object()
 
 
