@@ -30,12 +30,13 @@ environment variable the check reads, such as `GITHUB_ACTIONS`.
 
 A check's `action.yml` calls only its script, preceded at most by a dependency-install step that
 takes no caller input and installs only what wise-ci's own lock pins; any logic lives in the script,
-where the tests reach it. For check-eol, which takes no inputs, nothing proves the action turns a
-failing script into a red job — a known gap, accepted. check-branch, the first check to take inputs,
-closes that gap for itself: its workflow's `expected-failure` job runs the action with an input
-chosen to violate PROC-001 and asserts the step's own outcome is `failure`. check-reqs's own
-`expected-failure` job closes the same gap for itself too, seeding a defect onto the minimal tree
-its `self-check` job builds.
+where the tests reach it. An install step may also set up the check's runtime at an exact version
+(repo-floor's uv, pr-title's node) besides installing what the lock pins. For check-eol, which takes
+no inputs, nothing proves the action turns a failing script into a red job — a known gap, accepted.
+check-branch, the first check to take inputs, closes that gap for itself: its workflow's
+`expected-failure` job runs the action with an input chosen to violate PROC-001 and asserts the
+step's own outcome is `failure`. check-reqs's own `expected-failure` job closes the same gap for
+itself too, seeding a defect onto the minimal tree its `self-check` job builds.
 
 Nothing in this repository exercises repo-floor's install step or its action itself: no workflow
 here calls `./repo-floor` the way check-branch's own `self-check`/`expected-failure` jobs call
@@ -99,3 +100,6 @@ source. A local run needs no separate re-derivation step: one `uv run pytest` is
 unscoped, unsuppressed coverage session, so an untested check already shows at 0% and fails it
 directly. CI's own per-check jobs instead leave coverage unscoped but defer the fail-under verdict,
 since their own coverage is only ever partial.
+
+`pr-title/tests` run the real commitlint: `npm --prefix pr-title ci --ignore-scripts` installs it
+and must run before `test` or `test-ci` reach that check.

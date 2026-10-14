@@ -90,22 +90,16 @@ credential; it is not an assertion that the repository holds none.
 
 ## PR title
 
-The PR title — the commit that reaches `main` under squash-merge — is a Conventional Commit, checked
-in the `pr-title` job by commitlint against `.commitlintrc-pr-title.json`, which extends
-`.commitlintrc.json` with `defaultIgnores` off — a `fixup!`/`squash!`/merge subject is refused as a
-title, since the squash discards it rather than carrying it to `main`. commitlint and
-`@commitlint/config-conventional` are pinned in a manifest under `tooling/commitlint/`
-(`package.json` and a committed lockfile), installed with `npm ci` rather than as a repository-root
-dependency. commitlint resolves a configuration's `extends` by walking `node_modules` upward from
-that configuration's own directory, the repository root — never downward into a descendant — so the
-pinned install under `tooling/commitlint/node_modules` is unreachable that way; the step sets
-`NODE_PATH` to it instead. Without `NODE_PATH`, resolution falls back to whatever npx cache or global
-install the machine holds, so a local run can pass on a copy the runner does not have. What it checks
-is attacker-controlled, so it enters the run step only via env/file, never inline into `run:`. On a
-pull request it reads the PR's current title from the GitHub API, not the snapshot the triggering
-event carries, so re-running it after a title fix checks the fixed title. On a push or the wiring
-workflow's weekly run there is no PR, so it checks the head commit's own subject line instead — the
-text that already reached `main`.
+The pull request title — the commit that reaches `main` under squash-merge — is a Conventional
+Commit, stated once in `WisewareOrg/.github`'s `PROCESS.md` (PROC-009) — what it checks, and what it
+does not catch, is [`../pr-title/README.md`](../pr-title/README.md)'s to state. The tool and the
+glue it runs through are a trade study
+([`decisions/0001-pr-title-commitlint-python-handoff.md`](decisions/0001-pr-title-commitlint-python-handoff.md),
+ADR 0001 rev 1). The check runs as a required gate on wise-ci's own pull requests, in
+[`../.github/workflows/pr-title.yml`](../.github/workflows/pr-title.yml)'s `self-check` job, called
+by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)). The same workflow's
+`expected-failure` job passes the action a `title` input that violates PROC-009 and asserts the
+action's own step outcome is `failure` ([`TESTING.md`](TESTING.md) § The action).
 
 ## check-eol
 
@@ -127,7 +121,7 @@ required gate on wise-ci's own pull requests, in
 [`../.github/workflows/check-branch.yml`](../.github/workflows/check-branch.yml)'s `self-check` job,
 called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)); on a push or the
 weekly run there is no pull request to check, so that job's one action step is skipped rather than
-failed (the `checks.yml` `pr-title` job's own step-level guard).
+failed.
 
 ## check-reqs
 
