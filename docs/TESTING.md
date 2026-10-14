@@ -37,11 +37,13 @@ workflow's `expected-failure` job runs the action with an input chosen to violat
 asserts the step's own outcome is `failure`. check-reqs's own `expected-failure` job closes the same
 gap for itself too, seeding a defect onto the minimal tree its `self-check` job builds.
 
-repo-floor carries the same gap as check-eol. Its shortfall logic is covered by its own unit suite
-against a mocked GitHub API, but nothing durably proves the action itself turns a shortfall into a
-red job — a known gap, accepted: seeding one would need a new action input that exists only for
-the test, and repo-floor's floor location and target repository are fixed by design, not something
-a consumer overrides.
+repo-floor's own `expected-failure` job closes the install-step/action half of that gap
+differently: it passes the action an invalid `github-token`, so the read itself breaks, and
+asserts the step's own outcome is `failure` — proving the action turns a failure into a red job
+through the same "broken" path a bad read takes, not through a floor shortfall. The
+shortfall-specific comparison stays covered by its unit suite alone: repo-floor's floor location
+and target repository are fixed by design, not a consumer-overridable input, so no workflow here
+can arrange a live shortfall to seed.
 
 ## In CI
 
