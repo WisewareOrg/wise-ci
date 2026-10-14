@@ -37,15 +37,14 @@ workflow's `expected-failure` job runs the action with an input chosen to violat
 asserts the step's own outcome is `failure`. check-reqs's own `expected-failure` job closes the same
 gap for itself too, seeding a defect onto the minimal tree its `self-check` job builds.
 
-Nothing in this repository exercises repo-floor's install step or its action itself: no workflow
-here calls `./repo-floor` the way check-branch's own `self-check`/`expected-failure` jobs call
-`./check-branch` — a known gap, accepted, closed by wise-ci issue 27 (Adopt the repository floor).
-
 ## In CI
 
-Each check has its own workflow file under `.github/workflows/`, which runs the check's tests and
-runs the check as a gate on wise-ci itself. That gate is the check's integration test. On a clean
-repository it only ever passes, so the failing direction is proven by the tests running the script.
+Each check has its own workflow file under `.github/workflows/`, which runs the check's tests and,
+for check-eol and check-reqs, also runs the check as a gate on wise-ci itself, in that same
+workflow file. That gate is the check's integration test. On a clean repository it only ever
+passes, so the failing direction is proven by the tests running the script. `check-branch`,
+`pr-title` and `repo-floor` are gated instead from `process-gates.yml`, a separate workflow with
+its own top-level job of each check's name, which the wiring workflow does not call.
 
 A check's workflow file runs only when the wiring workflow calls it. The wiring workflow runs on every
 pull request, every push to `main`, and weekly, never only when certain paths change, and calls every

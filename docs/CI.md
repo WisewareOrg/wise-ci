@@ -10,8 +10,8 @@ edit here and a change to the check, not a specification change.
 
 [`../.github/workflows/codeql.yml`](../.github/workflows/codeql.yml)'s `codeql` job runs CodeQL's
 default code-scanning suite over the project's own source. The wiring workflow calls it on every
-pull request, every push to `main`, and weekly (so a dormant branch is still covered) — the one
-trigger for every gate in this repository ([`TESTING.md`](TESTING.md) § In CI).
+pull request, every push to `main`, and weekly (so a dormant branch is still covered)
+([`TESTING.md`](TESTING.md) § In CI).
 
 The CodeQL matrix carries one leg per language of first-party source in the tree; a change that adds
 a language adds its leg to the matrix.
@@ -19,15 +19,27 @@ a language adds its leg to the matrix.
 No `queries:` input: the action's own default is the code-scanning suite, so widening to a named
 suite later is a visible diff rather than a silent one.
 
-**Every check that exists blocks a merge into `main`**, through one required status check: the
-wiring workflow's final job ([`TESTING.md`](TESTING.md)). Every workflow this repository runs is
-called by the wiring workflow, and that job fails if any of them failed — checked against the run's
-own job list, not only its hand-kept `needs:` ([`TESTING.md`](TESTING.md) § In CI) — so adding a
-check, a job or a CodeQL leg needs no change to branch protection.
+**Every check that exists blocks a merge into `main`.** Most do, through one required status
+check: the wiring workflow's final job ([`TESTING.md`](TESTING.md)). Every workflow this repository
+runs other than `process-gates.yml` is called by the wiring workflow, and that job fails if any of
+them failed — checked against the run's own job list, not only its hand-kept `needs:`
+([`TESTING.md`](TESTING.md) § In CI) — so adding a check or a CodeQL leg to the wiring workflow
+needs no change to branch protection. `check-branch`, `pr-title` and `repo-floor` are the exception:
+each is its own required status-check context instead, gated by
+[`../.github/workflows/process-gates.yml`](../.github/workflows/process-gates.yml)'s top-level job
+of the same name, under the `process-gates` ruleset (`WisewareOrg/.github`'s
+`repository-floor.yml`, PROC-011) — adding a fourth such context would need a branch-protection
+change.
 `gh api repos/WisewareOrg/wise-ci/rules/branches/main` reads the live set. The codeql leg fails only on
 an execution error — it is not where a CodeQL finding fails a merge. A finding gates through the
 ruleset's own `code_scanning` rule instead, configured for CodeQL at every alert severity. That rule
 is ruleset configuration rather than a tracked file, so no check here can assert it.
+
+`process-gates.yml`'s three jobs run `uses: ./check-branch`, `./pr-title` and `./repo-floor` — each
+pull request's own copy of the action, not a pinned release — so a pull request that weakens one of
+these checks passes its own weakened copy of the gate it is meant to pass. This holds for every
+gate this repository defines over its own tree; it is accepted so that a pull request fixing a
+broken check can still merge.
 
 This mechanises the security review a solo project has no second reader to perform.
 
@@ -96,8 +108,8 @@ does not catch, is [`../pr-title/README.md`](../pr-title/README.md)'s to state. 
 glue it runs through are a trade study
 ([`decisions/0001-pr-title-commitlint-python-handoff.md`](decisions/0001-pr-title-commitlint-python-handoff.md),
 ADR 0001 rev 1). The check runs as a required gate on wise-ci's own pull requests, in
-[`../.github/workflows/pr-title.yml`](../.github/workflows/pr-title.yml)'s `self-check` job, called
-by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)). The same workflow's
+[`../.github/workflows/process-gates.yml`](../.github/workflows/process-gates.yml)'s `pr-title`
+job. [`../.github/workflows/pr-title.yml`](../.github/workflows/pr-title.yml)'s own
 `expected-failure` job passes the action a `title` input that violates PROC-009 and asserts the
 action's own step outcome is `failure` ([`TESTING.md`](TESTING.md) § The action).
 
@@ -118,10 +130,9 @@ Branch-shape, ticket-linkage and epic-membership rules, stated once in `Wiseware
 `PROCESS.md` (PROC-001 through PROC-008, and PROC-010) — what it checks, and what it does not
 catch, is [`../check-branch/README.md`](../check-branch/README.md)'s to state. The check runs as a
 required gate on wise-ci's own pull requests, in
-[`../.github/workflows/check-branch.yml`](../.github/workflows/check-branch.yml)'s `self-check` job,
-called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)); on a push or the
-weekly run there is no pull request to check, so that job's one action step is skipped rather than
-failed.
+[`../.github/workflows/process-gates.yml`](../.github/workflows/process-gates.yml)'s `check-branch`
+job; `process-gates.yml` triggers on `pull_request` only, so the job never runs outside one, rather
+than running and being skipped.
 
 ## check-reqs
 
@@ -139,9 +150,9 @@ action).
 
 Compares a repository's live rulesets against the floor stated once in `WisewareOrg/.github`'s
 `repository-floor.yml` (PROC-011) — what it checks, and what it does not catch, is
-[`../repo-floor/README.md`](../repo-floor/README.md)'s to state. Only its unit suite runs on
-wise-ci, in [`../.github/workflows/repo-floor.yml`](../.github/workflows/repo-floor.yml)'s `test`
-job, called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)).
-
-**What the gate deliberately lets through.** [`TESTING.md`](TESTING.md) § The action states the
-gap this leaves in repo-floor's own action.
+[`../repo-floor/README.md`](../repo-floor/README.md)'s to state. The check runs as a required gate
+on wise-ci's own pull requests, in
+[`../.github/workflows/process-gates.yml`](../.github/workflows/process-gates.yml)'s `repo-floor`
+job. Its unit suite runs separately, in
+[`../.github/workflows/repo-floor.yml`](../.github/workflows/repo-floor.yml)'s `test` job, called
+by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)).
