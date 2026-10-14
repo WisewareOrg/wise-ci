@@ -37,15 +37,24 @@ workflow's `expected-failure` job runs the action with an input chosen to violat
 asserts the step's own outcome is `failure`. check-reqs's own `expected-failure` job closes the same
 gap for itself too, seeding a defect onto the minimal tree its `self-check` job builds.
 
-Nothing in this repository exercises repo-floor's install step or its action itself: no workflow
-here calls `./repo-floor` the way check-branch's own `self-check`/`expected-failure` jobs call
-`./check-branch` — a known gap, accepted, closed by wise-ci issue 27 (Adopt the repository floor).
+repo-floor's own `expected-failure` job passes the action an invalid `github-token`, so the floor
+fetch itself breaks, and asserts the step's own outcome is `failure` — proving only that the
+action turns a failing run into a red job, no more: a broken install would read the same way,
+the same indistinguishability [`../pr-title/README.md`](../pr-title/README.md) § What this does
+not catch states for pr-title's own `expected-failure` job. The install step itself is proven by
+`process-gates.yml`'s `repo-floor` job passing, which a broken install could not do. The
+shortfall-specific comparison stays covered by its unit suite alone: repo-floor's floor location
+and target repository are fixed by design, not a consumer-overridable input, so no workflow here
+can arrange a live shortfall to seed.
 
 ## In CI
 
-Each check has its own workflow file under `.github/workflows/`, which runs the check's tests and
-runs the check as a gate on wise-ci itself. That gate is the check's integration test. On a clean
-repository it only ever passes, so the failing direction is proven by the tests running the script.
+Each check has its own workflow file under `.github/workflows/`, which runs the check's tests and,
+for check-eol and check-reqs, also runs the check as a gate on wise-ci itself, in that same
+workflow file. That gate is the check's integration test. On a clean repository it only ever
+passes, so the failing direction is proven by the tests running the script. `check-branch`,
+`pr-title` and `repo-floor` are gated instead from `process-gates.yml`, a separate workflow with
+its own top-level job of each check's name, which the wiring workflow does not call.
 
 A check's workflow file runs only when the wiring workflow calls it. The wiring workflow runs on every
 pull request, every push to `main`, and weekly, never only when certain paths change, and calls every

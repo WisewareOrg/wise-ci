@@ -48,3 +48,25 @@ jobs:
           path: .coverage.*
           include-hidden-files: true
           if-no-files-found: error
+
+  # docs/TESTING.md § The action.
+  expected-failure:
+    name: expected-failure
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: repo-floor (an invalid token breaks the read; expected to fail)
+        id: repo-floor
+        continue-on-error: true
+        uses: ./repo-floor
+        with:
+          github-token: invalid
+
+      - name: The previous step must have failed
+        if: steps.repo-floor.outcome != 'failure'
+        run: exit 1

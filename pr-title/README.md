@@ -61,10 +61,11 @@ Consequences).
 
 **An install failure, outside a pull request.** `expected-failure`'s step outcome is `failure`
 whether the seeded title failed lint or `npm ci` itself broke — the two are indistinguishable there,
-so a broken install still reports that job green. On a pull request, `self-check` is what actually
-proves the action's own install step, by running it against a title expected to pass; outside one,
-that step is skipped, and nothing else exercises it — `test`'s own `npm ci` is a direct workflow
-step, not the action's `$GITHUB_ACTION_PATH`-prefixed one.
+so a broken install still reports that job green. On a pull request, wise-ci's own
+`process-gates.yml` `pr-title` job is what actually proves the action's own install step, by
+running it against wise-ci's own pull request title; outside a pull request, `process-gates.yml`
+does not trigger, and nothing else exercises it — `test`'s own `npm ci` is a direct workflow step,
+not the action's `$GITHUB_ACTION_PATH`-prefixed one.
 
 **A `.py` file shipped inside `node_modules`.** `ci.yml`'s per-check `.py`-file sweep would pick
 one up and fail the merged-coverage population guard loudly — not a silent gap, named here because

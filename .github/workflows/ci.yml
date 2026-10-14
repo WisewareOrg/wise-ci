@@ -1,11 +1,7 @@
 name: ci
 
-# The one entry point for every gate this repository has (docs/TESTING.md § In CI): every pull
-# request, with no `paths:` filter — a required check that never starts blocks the merge
-# indefinitely — every push to `main`, and weekly (so a dormant branch is still covered).
-# No `edited`: pr-title reads the pull request's current title from the API on `pull_request`, so
-# re-running it after a title fix checks the fixed title (pr-title/README.md), instead of
-# re-running every check.
+# Every pull request, with no `paths:` filter — a required check that never starts blocks the
+# merge indefinitely — every push to `main`, and weekly (so a dormant branch is still covered).
 on:
   pull_request:
   push:
@@ -24,9 +20,11 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Every job's `name:` equals its id, except the reusable-workflow calls below, whose
-  # own jobs report to branch protection as `<this job> / <their job>` — none of those
-  # composite names is itself required; only `ci` is (docs/CI.md § First-party source scanning).
+  # Every job's `name:` equals its id, except the reusable-workflow calls below, whose own jobs
+  # report to branch protection as `<this job> / <their job>` — none of those composite names is
+  # itself required. `check-branch`, `pr-title` and `repo-floor` are each their own required
+  # status-check context too, but from `process-gates.yml`'s top-level jobs, not from these
+  # reusable-workflow calls (docs/CI.md § First-party source scanning).
   checks:
     name: checks
     permissions:
@@ -71,7 +69,6 @@ jobs:
     name: pr-title
     permissions:
       contents: read
-      pull-requests: read # pr-title.yml's self-check job reads the PR's current title from the API
     uses: ./.github/workflows/pr-title.yml
 
   ci:
@@ -110,7 +107,7 @@ jobs:
             exit 1
           fi
 
-          for name in "check-eol / test" "check-branch / test" "check-branch / self-check" "check-branch / expected-failure" "check-reqs / test" "check-reqs / self-check" "check-reqs / expected-failure" "repo-floor / test" "pr-title / test" "pr-title / self-check" "pr-title / expected-failure"; do
+          for name in "check-eol / test" "check-branch / test" "check-branch / expected-failure" "check-reqs / test" "check-reqs / self-check" "check-reqs / expected-failure" "repo-floor / test" "repo-floor / expected-failure" "pr-title / test" "pr-title / expected-failure"; do
             known="$(jq -s --arg name "$name" '[.[] | select(.name == $name)] | length' "$RUNNER_TEMP/run-jobs.json")"
             if [ "$known" -eq 0 ]; then
               echo "the run's job list is missing $name" >&2
