@@ -269,6 +269,42 @@ def test_api_error_fetching_the_title_fails(monkeypatch):
 
 
 # ---------------------------------------------------------------------------------------------
+# The environment handed to commitlint's subprocess: no secret from the runner's own process may
+# reach it. COMMITLINT_BIN is monkeypatched to a real stub executable (not a mocked
+# subprocess.run) that reports the environment it actually received.
+# ---------------------------------------------------------------------------------------------
+
+
+def test_commitlint_runs_with_an_allowlisted_environment(monkeypatch, capfd, tmp_path):
+    """pr-title.py's own `COMMITLINT_ENV_KEYS` is the allowlist of environment variables passed
+    to commitlint's subprocess; this test reads that constant rather than restating it, so the
+    two can't drift. The stub writes every `key=value` pair it receives to stdout, one per line,
+    captured the way the title-case tests above capture commitlint's own stdout (capfd, for a
+    subprocess's inherited file descriptors)."""
+    stub = tmp_path / "commitlint-stub.py"
+    stub.write_text(
+        "#!/usr/bin/env python3\n"
+        "import os\n"
+        "for k, v in sorted(os.environ.items()):\n"
+        "    print(f'{k}={v}')\n"
+    )
+    stub.chmod(0o755)
+    monkeypatch.setattr(pt, "COMMITLINT_BIN", stub)
+    monkeypatch.setenv("SECRET_X", "decoy-secret-should-not-leak")
+    secret = "github-token-must-not-reach-commitlint"
+
+    _expect_pass(monkeypatch, _no_api_call, title="feat: add a thing", token=secret)
+
+    received = dict(
+        line.split("=", 1) for line in capfd.readouterr().out.splitlines() if "=" in line
+    )
+
+    assert secret not in received.values()
+    assert received.keys() <= pt.COMMITLINT_ENV_KEYS
+    assert "GITHUB_TOKEN" not in pt.COMMITLINT_ENV_KEYS
+
+
+# ---------------------------------------------------------------------------------------------
 # api_request itself: its own branches, patching urllib.request.urlopen (not api_request) --
 # mirrors check-branch/tests/test_check_branch.py:739-804 exactly, since pr-title.py mirrors
 # api_request's signature and behaviour unchanged.
