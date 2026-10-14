@@ -37,10 +37,11 @@ workflow's `expected-failure` job runs the action with an input chosen to violat
 asserts the step's own outcome is `failure`. check-reqs's own `expected-failure` job closes the same
 gap for itself too, seeding a defect onto the minimal tree its `self-check` job builds.
 
-repo-floor carries the same gap as check-eol: it has no `expected-failure` job, so nothing proves
-its action turns a failing script into a red job either. Its `process-gates.yml` job passing
-proves only that wise-ci meets the floor today, not that the action fails closed when a repository
-does not.
+repo-floor carries the same gap as check-eol. Its shortfall logic is covered by its own unit suite
+against a mocked GitHub API, but nothing durably proves the action itself turns a shortfall into a
+red job — a known gap, accepted: seeding one would need a new action input that exists only for
+the test, and repo-floor's floor location and target repository are fixed by design, not something
+a consumer overrides.
 
 ## In CI
 
