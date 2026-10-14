@@ -1,9 +1,8 @@
 """Specifies pr-title/pr-title.py: enforces WisewareOrg/.github PROCESS.md PROC-009 (the pull
 request title, which becomes the commit that reaches the default branch under squash-merge, must
-be a Conventional Commit), by handing the title to the real commitlint on stdin (plan: wise-ci
-issue 28, "Decisions you are approving" 1-4, WI1).
+be a Conventional Commit), by handing the title to the real commitlint on stdin.
 
-Mirrors check-branch/check-branch.py's shape exactly, per the plan's WI1 contract:
+Mirrors check-branch/check-branch.py's shape exactly:
 `api_request(url, token, payload=None)`; a `fail(message)` helper that prints `pr-title: <message>`
 to stderr and calls `sys.exit(1)`; `main()` returning `None` on success, with
 `if __name__ == "__main__": sys.exit(main())`; the API base hardcoded as `https://api.github.com`.
@@ -19,18 +18,17 @@ Test mechanism, copied from check-branch/tests/test_check_branch.py:
 The title-case tests run the real commitlint through the script (docs/TESTING.md "Real
 dependencies where possible"), from a temporary, non-git cwd (an autouse fixture below) -- this
 suite's own run against each title is the proof. A must-fail case asserts the commitlint exit code
-is passed through non-zero (`sys.exit(<code>)`, not hardcoded) and that the plan's one pinned rule
-id appears in commitlint's own stdout (`capfd`, which catches a subprocess's inherited file
+is passed through non-zero (`sys.exit(<code>)`, not hardcoded) and that this suite's one pinned
+rule id appears in commitlint's own stdout (`capfd`, which catches a subprocess's inherited file
 descriptors the way `capsys` does not) -- a second rule id commitlint also reports for the same
-title is not asserted away, since the plan pins one id per title, not an exhaustive set.
+title is not asserted away, since this suite pins one id per title, not an exhaustive set.
 
-Dropped, per the plan: a dedicated test that a broken `.commitlintrc-pr-title.json` fails
-differently from a bad title (decision 10 -- it fails the same way, exit 1 either way, and this
-suite's own rule-id assertions already guard it: a stack trace on stderr carries no rule id on
-stdout, so a must-fail case would fail for the wrong reason instead of passing). The API-error
-case asserts only a non-zero exit, per the plan's own wording ("An API error exits non-zero") --
-unlike the two bullets the plan gives exact message text for, it does not say this path goes
-through `fail()`, so no exit-code-1 or message text is pinned here.
+Dropped: a dedicated test that a broken `.commitlintrc-pr-title.json` fails differently from a bad
+title (it fails the same way, exit 1 either way, and this suite's own rule-id assertions already
+guard it: a stack trace on stderr carries no rule id on stdout, so a must-fail case would fail for
+the wrong reason instead of passing). The API-error case asserts only a non-zero exit, not
+exit-code-1 or message text, since this path going through `fail()` is unstated, unlike the two
+cases below that give exact message text.
 """
 
 import importlib.util
@@ -66,10 +64,9 @@ pt = _load_module()
 
 @pytest.fixture(autouse=True)
 def _non_git_cwd(tmp_path, monkeypatch):
-    """Every case runs from a temporary directory that is not a git repository (plan WI1,
-    ticket-specific criterion 1: "The tests run commitlint from a directory that is not a git
-    repository"), and docs/TESTING.md's "a test gives the same result on any machine": the
-    machine's own git configuration is shut out for every case, not only the title-matrix ones."""
+    """Every case runs from a temporary directory that is not a git repository, per
+    docs/TESTING.md's "a test gives the same result on any machine": the machine's own git
+    configuration is shut out for every case, not only the title-matrix ones."""
     monkeypatch.chdir(tmp_path)
 
 
@@ -89,8 +86,8 @@ def _env(monkeypatch, *, title=None, pr_number=None, token=TOKEN, repository=REP
 class FakeAPI:
     """Stands in for pr-title.py's `api_request`. Dispatches on the URL's own shape -- a
     `.../pulls/<n>` REST endpoint -- rather than a literal URL, so this fake does not also pin how
-    the script builds that URL out of GITHUB_REPOSITORY; that construction is code-monkey's to
-    choose, not a boundary this plan decides. A call this fixture was not given a canned reply for
+    the script builds that URL out of GITHUB_REPOSITORY; that construction is an implementation
+    choice, not a boundary this suite pins. A call this fixture was not given a canned reply for
     raises, so a main() that calls the API in a way a test did not expect fails loudly rather than
     silently returning something plausible."""
 
@@ -134,9 +131,9 @@ def _expect_pass(monkeypatch, fake, **env_kwargs):
 
 # ---------------------------------------------------------------------------------------------
 # Title cases: the real commitlint, through the script, from a non-git tmp cwd (autouse fixture).
-# Seeded from the plan's WI1 table. The list is a seed, not exhaustive (plan: "Further cases may
-# be added only if they derive from PROC-009 or the shipped configs; anything else is
-# escalated.").
+# Seeded from PROC-009 and the shipped commitlint configs. The list is a seed, not exhaustive --
+# further cases are added only if they derive from PROC-009 or the shipped configs; anything else
+# is escalated.
 # ---------------------------------------------------------------------------------------------
 
 MUST_PASS_TITLES = [
@@ -184,8 +181,7 @@ def test_title_fails_commitlint_with_its_rule_id(monkeypatch, capfd, title, rule
 
 
 def test_trailing_newline_on_the_title_makes_no_difference(monkeypatch):
-    """Plan: 'a trailing newline on the title makes no difference' -- 'feat: add a thing' and
-    'feat: add a thing\\n' both exit 0 through commitlint on stdin."""
+    """'feat: add a thing' and 'feat: add a thing\\n' both exit 0 through commitlint on stdin."""
     _expect_pass(monkeypatch, _no_api_call, title="feat: add a thing\n")
 
 
@@ -195,15 +191,15 @@ def test_trailing_newline_on_the_title_makes_no_difference(monkeypatch):
 
 
 def test_title_input_wins_over_the_api(monkeypatch):
-    """Plan: 'the title input wins over the API'. A PR_NUMBER is also present, with the API
-    fixture set to raise on any call -- if main() reached for the API instead of the given
-    title, this test would fail loudly rather than silently passing."""
+    """A PR_NUMBER is also present, with the API fixture set to raise on any call -- if main()
+    reached for the API instead of the given title, this test would fail loudly rather than
+    silently passing."""
     _expect_pass(monkeypatch, _no_api_call, title="feat: add a thing", pr_number="7")
 
 
 def test_pr_number_fetches_the_title_from_the_api_and_passes(monkeypatch):
-    """Plan: 'a PR_NUMBER makes the script fetch repos/{repo}/pulls/{n}, read .title, and use
-    that' -- proven here with a title that then passes commitlint."""
+    """A PR_NUMBER makes the script fetch repos/{repo}/pulls/{n}, read .title, and use that --
+    proven here with a title that then passes commitlint."""
     fake = FakeAPI()
     fake.pull = _pull(title="feat: add a thing")
 
@@ -223,8 +219,6 @@ def test_pr_number_fetches_the_title_from_the_api_and_fails(monkeypatch, capfd):
 
 
 def test_no_pr_number_and_no_title_fails_closed(monkeypatch, capsys):
-    """Plan, exact message: 'with no PR_NUMBER and no title, it exits non-zero with
-    "pr-title: this event carries no pull request; run pr-title on pull_request"'."""
     code = _expect_fail(monkeypatch, _no_api_call, title=None, pr_number=None)
 
     assert code == 1
@@ -234,11 +228,9 @@ def test_no_pr_number_and_no_title_fails_closed(monkeypatch, capsys):
 
 
 def test_whitespace_only_title_input_fails_without_calling_the_api(monkeypatch, capsys):
-    """Plan, exact message: 'an empty or whitespace-only title (from the input...) exits
-    non-zero with "pr-title: the pull request title is empty"'. A whitespace-only TITLE is
-    non-empty as a string, so 'the title input wins over the API' selects it directly -- the API
-    fixture raises on any call, proving the empty-title guard is checked after selection, not by
-    falling through to the API."""
+    """A whitespace-only TITLE is non-empty as a string, so the title-input-wins-over-the-API
+    selection applies directly -- the API fixture raises on any call, proving the empty-title
+    guard is checked after selection, not by falling through to the API."""
     code = _expect_fail(monkeypatch, _no_api_call, title="   ", pr_number="7")
 
     assert code == 1
@@ -246,8 +238,6 @@ def test_whitespace_only_title_input_fails_without_calling_the_api(monkeypatch, 
 
 
 def test_empty_title_from_the_api_fails(monkeypatch, capsys):
-    """Plan, exact message: 'an empty or whitespace-only title (from...the API) exits non-zero
-    with "pr-title: the pull request title is empty"'."""
     fake = FakeAPI()
     fake.pull = _pull(title="")
 
@@ -268,8 +258,8 @@ def test_whitespace_only_title_from_the_api_fails(monkeypatch, capsys):
 
 
 def test_api_error_fetching_the_title_fails(monkeypatch):
-    """Plan: 'an API error exits non-zero' -- no message text or exit-code value is pinned
-    beyond non-zero, unlike the two bullets above that give exact message text."""
+    """No message text or exit-code value is pinned beyond non-zero, unlike the two cases above
+    that give exact message text."""
     fake = FakeAPI()
     fake.pull = (500, None)
 
@@ -280,7 +270,7 @@ def test_api_error_fetching_the_title_fails(monkeypatch):
 
 # ---------------------------------------------------------------------------------------------
 # api_request itself: its own branches, patching urllib.request.urlopen (not api_request) --
-# mirrors check-branch/tests/test_check_branch.py:739-804 exactly, since the plan mirrors
+# mirrors check-branch/tests/test_check_branch.py:739-804 exactly, since pr-title.py mirrors
 # api_request's signature and behaviour unchanged.
 # ---------------------------------------------------------------------------------------------
 
