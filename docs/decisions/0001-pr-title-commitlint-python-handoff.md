@@ -68,9 +68,9 @@ named, not a single catch-all pattern.
   PROC-009 reworded around two separate tools.
 - **JulienKode/pull-request-name-linter-action `v20.5.0`.**
   It runs commitlint, but reads the title straight from `github.context.payload.pull_request.title`
-  (`src/main.ts:26`) — the event's snapshot at trigger time, not a re-read — and when that snapshot
-  carries no title it returns without failing (`src/main.ts:13-14`): it fails open. It takes no title
-  input, and bundles its own commitlint configuration rather than wise-ci's.
+  (`src/main.ts:26,31`) — the event's snapshot at trigger time, not a re-read — and when that
+  snapshot carries no title it returns without failing (`src/main.ts:13-15`): it fails open. It
+  takes no title input, and bundles its own commitlint configuration rather than wise-ci's.
 - **wagoid/commitlint-github-action.** Checks the pull request's commits, not its title.
 - **Shell glue in `action.yml`.** Rejected under the owner's hard rule against shell; its injection
   surface would also move the title out of zizmor's `.github/workflows` input set.
