@@ -5,13 +5,26 @@ Compares a repository's live rulesets against the floor stated once in
 (PROCESS.md PROC-011). **This restates no requirement** — this check is one of the gates that
 enforces it.
 
-Every ruleset the floor names must exist live, under the exact same name, with every field and
-rule the floor lists for it matching the live value exactly. A ruleset, rule, required-status-check
-context, or field the floor does not mention is never compared — extras always pass. A required
-bypass actor list is never verifiable with a workflow token, so every floor-named ruleset found
-live is reported "bypass not verified" regardless of who can actually bypass it. A read failure —
-a fetch error, a 404, a rate limit, a floor file that is empty or malformed — fails the run as
-"broken", never as a shortfall and never as a pass.
+Every ruleset the floor names must exist live under exactly that name, case-sensitive, among every
+ruleset the repository's rulesets endpoint lists, organization rulesets included; two live rulesets
+sharing a floor name are a shortfall ("ambiguous"). Every field and rule the floor lists for it must
+match the live value exactly:
+
+- **Type-strict at every depth** — `0`, `false` and `0.0` are three different values.
+- **A list compares as a set** — order never matters, but an extra or missing element is a
+  shortfall. The one exception is `required_status_checks`' own list of contexts: each floor entry
+  must be present live, and extra live entries pass. An entry matches whole, on `context` and
+  `integration_id` together, so a floor entry without `integration_id` matches only a live entry
+  that also has none.
+- **A floor `null` matches only an explicit live `null`**, never an absent key.
+- **A key the floor lists that is absent live is a shortfall**, so a key misspelled in the floor
+  fails rather than going unchecked.
+
+A ruleset, rule, field or key the floor does not mention is never compared, so a repository may
+carry any of those beyond the floor. A required bypass actor list is never verifiable with a
+workflow token, so every floor-named ruleset found live is reported "bypass not verified" regardless
+of who can actually bypass it. A read failure — a fetch error, a 404, a rate limit, a floor file
+that is empty or malformed — fails the run as "broken", never as a shortfall and never as a pass.
 
 The floor's location (`WisewareOrg/.github`, `repository-floor.yml`, `main`) is fixed in the
 script, not an input: `WisewareOrg/.github`'s own pull requests are the one exception, reading the
@@ -49,3 +62,8 @@ job the floor intends.
 repository's workflow — not by whatever a composite-action step inside it is called. A caller whose
 job wraps this action under a different top-level name produces a different context than the floor
 names, and the live repository then falls short of the floor repo-floor is itself checking.
+
+**A GitHub response of the wrong shape.** A REST response that is valid JSON but the wrong shape
+for its endpoint — an object where a list is expected, or the reverse — crashes repo-floor rather
+than reporting it "broken", though the run still exits non-zero. Accepted: GitHub does not send a
+200 response in that shape.

@@ -3,7 +3,7 @@ name = "wise-ci"
 version = "0"
 requires-python = ">=3.12"
 # repo-floor/repo-floor.py's runtime dependency, installed by its action.yml from the frozen
-# lock (docs/SECURITY.md); Renovate-managed like every other pin in this repository.
+# lock (SECURITY.md); Renovate-managed like every other pin in this repository.
 dependencies = [
   "PyYAML==6.0.3",
 ]

@@ -29,13 +29,11 @@ value from the consumer's environment. What covers it: review asks of every outp
 whether it carries a secret's value ([`CONTRIBUTING.md`](CONTRIBUTING.md), question 7, *Secrets*).
 
 **Attacker-controlled input reaches a shell.** A consumer's pull request supplies its own file names,
-branch names and titles. What covers it: a check's `action.yml` calls only its script, preceded at
-most by a pinned dependency-install step from wise-ci's own lock — repo-floor is the one check with
-that step, and it takes no caller input — and the script handles the input
-([`docs/TESTING.md`](docs/TESTING.md)). zizmor's template-injection audit covers wise-ci's own
-workflows, not a check's `action.yml` ([`docs/CI.md`](docs/CI.md)); keeping `action.yml` to that
-one script call, plus at most the one unparameterised install step, is what keeps the unaudited
-part small.
+branch names and titles. What covers it: a check's `action.yml` holds to the shape
+[`docs/TESTING.md`](docs/TESTING.md) § The action states, and the script handles the input.
+zizmor's template-injection audit covers wise-ci's own workflows, not a check's `action.yml`
+([`docs/CI.md`](docs/CI.md)); keeping `action.yml` to that shape is what keeps the unaudited part
+small.
 
 **wise-ci's own CI is used against it.** What covers it: the only token any workflow uses is GitHub's
 own `GITHUB_TOKEN`, scoped per job, with every grant beyond read explained beside it; the one custom
