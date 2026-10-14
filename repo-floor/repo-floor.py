@@ -34,8 +34,8 @@ def shortfall(ruleset_name, message):
 
 
 def api_get(url, token):
-    """(status, headers, raw body text) for a single-page GitHub REST call. Callers parse the
-    body; this never does, since not every caller wants JSON."""
+    """(status, headers, raw body text) for a single-page GitHub REST call. The body is returned
+    unparsed; each caller decodes it and reports its own decode failure."""
     headers = {"Accept": "application/vnd.github+json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -99,8 +99,10 @@ def validate_floor_shape(floor):
         if name in seen_names:
             broken(f"floor has duplicate ruleset name {name}")
         seen_names.add(name)
+        if "rules" in entry and not isinstance(entry["rules"], list):
+            broken(f"floor ruleset {name}'s rules is not a list")
         seen_types = set()
-        for rule in entry.get("rules") or []:
+        for rule in entry.get("rules", []):
             if not isinstance(rule, dict) or not isinstance(rule.get("type"), str):
                 broken(f"a rule in floor ruleset {name} has no type")
             rule_type = rule["type"]
@@ -149,7 +151,7 @@ def compare_ruleset(name, floor_entry, live):
     for live_rule in live.get("rules") or []:
         live_by_type.setdefault(live_rule.get("type"), []).append(live_rule)
 
-    for rule in floor_entry.get("rules") or []:
+    for rule in floor_entry.get("rules", []):
         rule_type = rule["type"]
         candidates = live_by_type.get(rule_type, [])
         if not candidates:

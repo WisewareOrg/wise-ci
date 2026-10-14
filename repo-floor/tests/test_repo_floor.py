@@ -803,6 +803,10 @@ _SHAPE_FAULTS = {
         "rulesets:\n  - name: x\n    target: branch\n    enforcement: active\n"
         "    rules:\n      - type: deletion\n      - type: deletion\n"
     ),
+    "rules_a_mapping": "rulesets:\n  - name: x\n    enforcement: active\n    rules: {}\n",
+    "rules_false": "rulesets:\n  - name: x\n    enforcement: active\n    rules: false\n",
+    "rules_an_integer": "rulesets:\n  - name: x\n    enforcement: active\n    rules: 5\n",
+    "rules_null": "rulesets:\n  - name: x\n    enforcement: active\n    rules:\n",
 }
 
 
@@ -812,6 +816,11 @@ def test_floor_shape_fault_is_broken(fault):
         rf.validate_floor_shape(yaml.safe_load(_SHAPE_FAULTS[fault]))
 
     assert exc_info.value.code == 1
+
+
+@pytest.mark.parametrize("rules", ["", "    rules: []\n"], ids=["rules_absent", "rules_empty"])
+def test_floor_ruleset_without_rules_is_a_legal_shape(rules):
+    rf.validate_floor_shape(yaml.safe_load(f"rulesets:\n  - name: x\n    enforcement: active\n{rules}"))
 
 
 def test_floor_shape_fault_is_broken_through_the_full_pipeline(monkeypatch, capsys):
