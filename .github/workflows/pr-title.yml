@@ -57,22 +57,6 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
 
-  # pr-title run over its own ticket's pull request: the check's integration test
-  # (docs/TESTING.md § In CI; docs/CI.md § PR title).
-  self-check:
-    name: self-check
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read # reads the PR's current title from the API
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: ./pr-title
-        if: github.event_name == 'pull_request'
-
   # docs/TESTING.md § The action.
   expected-failure:
     name: expected-failure

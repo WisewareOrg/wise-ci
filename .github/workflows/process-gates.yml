@@ -1,0 +1,55 @@
+name: process-gates
+
+# Satisfies the `process-gates` ruleset's required-status-check contexts (`check-branch`,
+# `pr-title`, `repo-floor`): each job is top-level and named for its context, so GitHub reports it
+# bare rather than nested inside `ci`'s reusable-workflow calls (repo-floor/README.md § What this
+# does not catch). No `edited`: pr-title reads the pull request's current title from the API on
+# `pull_request`, so a title fix needs a re-run (pr-title/README.md § Consuming pr-title).
+on:
+  pull_request:
+
+permissions: {}
+
+concurrency:
+  group: process-gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Every job's `name:` equals its id, which here is also the required-status-check context the
+  # `process-gates` ruleset names.
+  check-branch:
+    name: check-branch
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./check-branch
+
+  pr-title:
+    name: pr-title
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read # reads the PR's current title from the API
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./pr-title
+
+  repo-floor:
+    name: repo-floor
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./repo-floor
