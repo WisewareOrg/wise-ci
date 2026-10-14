@@ -1,0 +1,31 @@
+name: pr-title
+description: >-
+  The pull request's title — the commit that reaches the default branch under squash-merge — must
+  be a Conventional Commit per WisewareOrg/.github's PROCESS.md PROC-009.
+inputs:
+  github-token:
+    description: Token for the GitHub REST calls.
+    required: false
+    default: ${{ github.token }}
+  title:
+    description: The title to check, overriding the pull request's current title.
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: 26.11.1
+        package-manager-cache: false
+
+    - shell: bash
+      run: npm --prefix "$GITHUB_ACTION_PATH" ci --ignore-scripts
+
+    - name: pr-title
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        TITLE: ${{ inputs.title }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: python3 "$GITHUB_ACTION_PATH/pr-title.py"

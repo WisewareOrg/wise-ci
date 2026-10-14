@@ -47,6 +47,15 @@ from PyPI inside the consumer's own job, rather than running on the stdlib alone
 the version is `==`-pinned in `pyproject.toml` and `uv.lock`, Renovate-managed like every other pin
 in this repository, and `--frozen` refuses to install anything the lock does not already pin.
 
+**A caller's job downloads Node and installs commitlint at run time.** pr-title's `action.yml` runs
+`setup-node` to install the Node version it pins, then `npm ci --ignore-scripts` to install
+commitlint and `@commitlint/config-conventional` from the npm registry inside the consumer's own
+job. What covers it: the Node version and the npm packages are each pinned exactly (`action.yml`,
+`package.json`, `package-lock.json`), Renovate-managed like every other pin in this repository, and
+`npm ci` refuses to install anything the lockfile does not already pin. commitlint itself runs with
+an allowlisted environment (`pr-title/pr-title.py`'s `COMMITLINT_ENV_KEYS`), so `GITHUB_TOKEN` never
+reaches the npm tree this step installs.
+
 **The floor repo-floor checks against is unpinned.** Unlike every other consumer-facing reference
 in this repository, repo-floor reads its floor at `main`, not a commit
 ([`repo-floor/README.md`](repo-floor/README.md)) — a deliberate consequence of what a floor is for,
