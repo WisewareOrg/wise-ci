@@ -75,4 +75,4 @@ fails a rule's own parameters (an unresolved review thread, a merge method
 `allowed_merge_methods` excludes), but it never permits a push to `main` or a deletion outside a
 pull request. What covers it: `check-branch`, `pr-title` and `repo-floor`, under `process-gates`,
 stay unbypassable, as do `code_scanning` and `required_linear_history`; wise-ci has one
-maintainer, who already holds that admin bypass in practice.
+maintainer, who could already reach the same result by editing or disabling the ruleset itself.
