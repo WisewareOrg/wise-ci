@@ -137,8 +137,7 @@ if problems:
     for problem in problems:
         print("  " + problem, file=sys.stderr)
     sys.exit(1)
-# Names every machinery directory skipped, so a new top-level dot-directory is printed on every
-# passing run (check-docs-index/README.md § What this does not catch).
+# Names every machinery directory skipped (check-docs-index/README.md § What this does not catch).
 print(
     f"every tracked document is claimed: {rows} index row(s), {len(tracked)} document(s).\n"
     f"machinery, claimed by nothing: {' '.join(sorted(machinery)) or 'none'}"

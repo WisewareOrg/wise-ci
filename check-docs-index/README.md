@@ -9,27 +9,31 @@ it reads by name.
 
 ## What it reports
 
-Every finding accumulates into one run rather than short-circuiting, and the run fails if there is
-any:
+Every finding below accumulates into one run rather than short-circuiting, and the run fails if
+there is any. A git call or the read of `docs/README.md` failing outright ends the run at once,
+discarding what was gathered:
 
 - a tracked Markdown file with no row, other than `docs/README.md` itself and anything under a
   top-level dot-directory;
 - an untracked, non-ignored Markdown file, anywhere, dot-directories included — it is outside the
   population the check reads, so it is reported as unreadable rather than passed unread;
 - a table row whose cell count is not three, or whose *Document* cell is not a link whose text is a
-  backticked path — so a placeholder row standing for a family of files, such as
-  `` `<check>/README.md` ``, is reported: the check learns no template syntax, and the index names
-  each real file instead (owner ruling, 2026-10-18);
+  backticked path;
 - an empty *Guarantees* or *Excludes* cell;
 - a row whose link target is not a tracked Markdown file;
 - two rows rendering the same path;
-- a row whose path, resolved from `docs/`, begins with `.` and holds a `/` — one under a
-  top-level dot-directory, or one climbing out of the repository, which reads the same way;
+- a row whose path, resolved from `docs/`, begins with `.` and holds a `/`, reported as indexing a
+  dot-directory;
 - a row rendering a file path that is not a tracked Markdown file, or a directory path (one ending in
   `/`) holding no tracked Markdown file;
 - no table row parsed at all, or no tracked Markdown file at all — the two inputs are sourced
   independently, so a parse that stops matching cannot report an empty index over an empty
   population as success.
+
+**A placeholder row is reported, not learned** (owner ruling, 2026-10-18): a row standing for a
+family of files, such as `` `<check>/README.md` ``, fails as a *Document* cell that is not a
+backticked-path link, or, written as a link, as naming no tracked document. The check carries no
+template syntax; the index names each real file instead.
 
 A row rendering a path with a trailing slash claims every tracked Markdown file beneath it, at any
 depth. Paths in the table are written relative to `docs/`.
@@ -60,11 +64,11 @@ line is read as an index row.
 ## What this does not catch
 
 **A new top-level dot-directory is machinery the moment it exists**, with no edit anywhere. The
-machinery line on every passing run is what makes it visible: a directory appearing there without a
-row in the index is the whole of what this rule lets through unremarked.
+machinery line on every passing run is what makes it visible: it names each top-level
+dot-directory holding a tracked Markdown file that the check skipped.
 
-**Only `*.md` is a document.** The population is git's case-sensitive `'*.md'` pathspec, so a
-Markdown file named `*.MD` or `*.markdown` is outside it: never required to have a row, and never
+**Only `*.md` is a document.** The population is git's `'*.md'` pathspec, so a Markdown file with
+another extension, such as `*.markdown`, is outside it: never required to have a row, and never
 reported.
 
 **A row can name only Markdown.** The tracked set a row's link and rendered path are compared against
