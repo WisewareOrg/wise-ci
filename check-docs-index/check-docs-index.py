@@ -137,8 +137,8 @@ if problems:
     for problem in problems:
         print("  " + problem, file=sys.stderr)
     sys.exit(1)
-# Naming them is what makes check-docs-index/README.md's accepted gap reviewable: a directory
-# appearing here without an index row is the whole of what the rule lets through unremarked.
+# Names every machinery directory skipped, so a new top-level dot-directory is printed on every
+# passing run (check-docs-index/README.md § What this does not catch).
 print(
     f"every tracked document is claimed: {rows} index row(s), {len(tracked)} document(s).\n"
     f"machinery, claimed by nothing: {' '.join(sorted(machinery)) or 'none'}"

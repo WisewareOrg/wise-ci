@@ -17,12 +17,14 @@ any:
 - an untracked, non-ignored Markdown file, anywhere, dot-directories included — it is outside the
   population the check reads, so it is reported as unreadable rather than passed unread;
 - a table row whose cell count is not three, or whose *Document* cell is not a link whose text is a
-  backticked path;
+  backticked path — so a placeholder row standing for a family of files, such as
+  `` `<check>/README.md` ``, is reported: the check learns no template syntax, and the index names
+  each real file instead (owner ruling, 2026-10-18);
 - an empty *Guarantees* or *Excludes* cell;
 - a row whose link target is not a tracked Markdown file;
 - two rows rendering the same path;
-- a row rendering a path that begins with `.` and holds a `/` — one under a top-level
-  dot-directory, or one climbing out of the repository, which reads the same way;
+- a row whose path, resolved from `docs/`, begins with `.` and holds a `/` — one under a
+  top-level dot-directory, or one climbing out of the repository, which reads the same way;
 - a row rendering a file path that is not a tracked Markdown file, or a directory path (one ending in
   `/`) holding no tracked Markdown file;
 - no table row parsed at all, or no tracked Markdown file at all — the two inputs are sourced
@@ -35,7 +37,8 @@ depth. Paths in the table are written relative to `docs/`.
 On success it prints the row count and the count of tracked Markdown files — machinery and the
 index included — and **names every top-level dot-directory it skipped as machinery**. Run outside a
 git repository, it fails on the first git call: git's own message is captured, so what is printed is
-the traceback naming the failed command.
+the traceback naming the failed command. Run where `docs/README.md` does not exist, it fails with a
+traceback naming the missing file.
 
 ## Known rejections
 
@@ -59,6 +62,10 @@ line is read as an index row.
 **A new top-level dot-directory is machinery the moment it exists**, with no edit anywhere. The
 machinery line on every passing run is what makes it visible: a directory appearing there without a
 row in the index is the whole of what this rule lets through unremarked.
+
+**Only `*.md` is a document.** The population is git's case-sensitive `'*.md'` pathspec, so a
+Markdown file named `*.MD` or `*.markdown` is outside it: never required to have a row, and never
+reported.
 
 **A row can name only Markdown.** The tracked set a row's link and rendered path are compared against
 is `git ls-files '*.md'`, so a row for a tracked file of any other kind is reported as naming nothing

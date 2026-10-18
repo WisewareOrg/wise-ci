@@ -176,6 +176,36 @@ MUST_FAIL: list[_Case] = [
         ["docs/decisions-old.md has no row in docs/README.md"],
     ),
     _Case(
+        # Rows are compared by the path they resolve to, not by their rendered text.
+        "two-rows-for-one-file-spelled-differently",
+        {
+            "docs/CI.md": "# CI\n",
+            INDEX: BASE_INDEX + "| [`CI.md`](CI.md) | g | e |\n| [`./CI.md`](CI.md) | g | e |\n",
+        },
+        ["docs/README.md: './CI.md' has two rows — one fact, one canonical home"],
+    ),
+    _Case(
+        # A link resolves to a tracked file, never a directory, whatever the row claims.
+        "row-links-a-directory",
+        {INDEX: _index(ROW_README, "| [`decisions/`](decisions/) | g | e |\n", ROW_ARCHITECTURE)},
+        ["docs/README.md: row 'decisions/' links 'decisions/', which is not a tracked file"],
+    ),
+    _Case(
+        # Only a row whose every cell is dashes is the separator; one dash cell is judged as a row.
+        "row-with-one-dash-cell",
+        {INDEX: BASE_INDEX + "| --- | g | e |\n"},
+        ["docs/README.md: Document cell '---' is not a backticked-path link"],
+    ),
+    _Case(
+        # A subtree row needs a document beneath the directory, not a file sharing its name.
+        "subtree-row-beside-a-same-named-file",
+        {
+            "docs/ghost.md": "# Ghost\n",
+            INDEX: BASE_INDEX + "| [`ghost.md`](ghost.md) | g | e |\n| [`ghost/`](ghost.md) | g | e |\n",
+        },
+        ["docs/README.md: row 'ghost/' claims a directory holding no tracked document"],
+    ),
+    _Case(
         "file-row-names-no-tracked-document",
         {INDEX: BASE_INDEX + "| [`GHOST.md`](../README.md) | g | e |\n"},
         ["docs/README.md: row 'GHOST.md' names no tracked document"],
@@ -313,6 +343,28 @@ def test_must_pass(case: _Case, tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert result.stderr == ""
     assert f"{MACHINERY} none" in result.stdout
+
+
+def test_gitignored_untracked_document_is_outside_the_guard(tmp_path: Path) -> None:
+    """The untracked guard reads what git would let be added: an ignored file is not reported."""
+    repo = _build(tmp_path, {".gitignore": "drafts/\n"})
+    _write(repo, {"docs/drafts/DRAFT.md": "# Draft\n"})
+    # independent confirmation: git itself resolves this path against the ignore rules.
+    assert _git(repo, "check-ignore", "-q", "docs/drafts/DRAFT.md").returncode == 0
+
+    result = _run_check(repo)
+
+    assert result.returncode == 0, result.stderr
+    assert result.stderr == ""
+
+
+def test_missing_index_fails(tmp_path: Path) -> None:
+    repo = _build(tmp_path, {INDEX: None})
+    result = _run_check(repo)
+    assert result.returncode != 0
+    assert "FileNotFoundError" in result.stderr
+    assert "docs/README.md" in result.stderr
+    assert PASSED not in result.stdout
 
 
 def test_success_counts_rows_and_documents(tmp_path: Path) -> None:
