@@ -1,9 +1,8 @@
 # check-docs-index
 
 Fails unless every tracked Markdown file outside a top-level dot-directory is claimed by a row in
-`docs/README.md`'s index table. The design it enforces — what claims a document, and why both the
-claimable set and the machinery set are derived from git — is
-[ADR 0002 rev 1](../docs/decisions/0002-documentation-index-claims-documents.md).
+`docs/README.md`'s index table — the rule wise-ci's own [`docs/README.md`](../docs/README.md)
+states for itself.
 
 Run from the root of the repository it checks. It takes no inputs: `docs/README.md` is the only path
 it reads by name.

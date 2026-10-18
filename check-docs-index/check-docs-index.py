@@ -3,7 +3,7 @@
 docs/README.md's index; one rendered path carries one row; a row names a tracked
 document, or a directory holding one; every row's link resolves to a tracked file;
 and no Guarantees or Excludes cell is empty. A row rendering with a trailing slash
-claims the subtree beneath it. See check-docs-index/README.md and ADR 0002 rev 1.
+claims the subtree beneath it. See check-docs-index/README.md.
 
 No dependencies: Python stdlib only, plain text scanning.
 
@@ -110,7 +110,7 @@ for line in (ROOT / INDEX).read_text(encoding="utf-8").split("\n"):
             problems.append(f"{INDEX}: row '{rendered}' names no tracked document")
 
 # Independently sourced — the git index against the index file — so a parse that stops
-# matching cannot take both to zero at once. See ADR 0002 rev 1.
+# matching cannot take both to zero at once. See check-docs-index/README.md.
 if not rows:
     problems.append(f"{INDEX}: no index row parsed — the table's shape has moved")
 if not tracked:
@@ -121,7 +121,7 @@ for path in sorted(tracked):
     if path == INDEX:
         continue  # The index does not index itself.
     if path.startswith(".") and "/" in path:
-        machinery.add(path[: path.index("/") + 1])  # A top-level dot-directory holds machinery. ADR 0002 rev 1.
+        machinery.add(path[: path.index("/") + 1])  # A top-level dot-directory holds machinery. docs/README.md.
         continue
     if path in file_claims:
         continue
@@ -137,8 +137,8 @@ if problems:
     for problem in problems:
         print("  " + problem, file=sys.stderr)
     sys.exit(1)
-# Naming them is what makes ADR 0002 rev 1's accepted trade reviewable: a directory appearing
-# here without an index row is the whole of what the rule lets through unremarked.
+# Naming them is what makes check-docs-index/README.md's accepted gap reviewable: a directory
+# appearing here without an index row is the whole of what the rule lets through unremarked.
 print(
     f"every tracked document is claimed: {rows} index row(s), {len(tracked)} document(s).\n"
     f"machinery, claimed by nothing: {' '.join(sorted(machinery)) or 'none'}"

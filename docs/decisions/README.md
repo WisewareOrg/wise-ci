@@ -34,7 +34,6 @@ amended, so a number in git history need not mean what it means here.
 | # | Rev | Decided | Decision |
 |---|---|---|---|
 | [0001](0001-pr-title-commitlint-python-handoff.md) | 1 | 2026-10-14 | Check pull-request titles with commitlint, handed the title by a standard-library Python script |
-| [0002](0002-documentation-index-claims-documents.md) | 1 | 2026-10-18 | Claim every tracked document with a documentation-index row, deriving both the documents and the machinery from the repository |
 
 ## Revisions
 

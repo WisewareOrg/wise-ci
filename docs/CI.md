@@ -128,16 +128,13 @@ this leaves in check-eol's own action.
 
 Every tracked Markdown file outside a top-level dot-directory is claimed by a row in
 [`README.md`](README.md)'s index — what it checks, and what it does not catch, is
-[`../check-docs-index/README.md`](../check-docs-index/README.md)'s to state, and the design it
-enforces is a trade study
-([`decisions/0002-documentation-index-claims-documents.md`](decisions/0002-documentation-index-claims-documents.md),
-ADR 0002 rev 1). The check runs as a required gate on wise-ci's own tree, in
+[`../check-docs-index/README.md`](../check-docs-index/README.md)'s to state. The check runs as a required gate on wise-ci's own tree, in
 [`../.github/workflows/check-docs-index.yml`](../.github/workflows/check-docs-index.yml)'s
 `self-check` job, called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)).
 
 **What the gate deliberately lets through.**
 [`../check-docs-index/README.md`](../check-docs-index/README.md) § What this does not catch states
-it, and ADR 0002 rev 1 the trade behind it. [`TESTING.md`](TESTING.md) § The action states the gap
+it. [`TESTING.md`](TESTING.md) § The action states the gap
 this leaves in check-docs-index's own action.
 
 ## check-branch

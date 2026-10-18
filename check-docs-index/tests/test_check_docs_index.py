@@ -330,8 +330,9 @@ def test_dot_directory_document_is_machinery_and_named(tmp_path: Path) -> None:
 
 
 def test_new_dot_directory_passes_and_is_named(tmp_path: Path) -> None:
-    """The accepted trade (ADR 0002 rev 1): a new top-level dot-directory is machinery the moment it
-    exists, with no edit anywhere, and the machinery line is what names it."""
+    """The accepted gap (check-docs-index/README.md § What this does not catch): a new top-level
+    dot-directory is machinery the moment it exists, with no edit anywhere, and the machinery line
+    is what names it."""
     repo = _build(tmp_path, {".github/NOTES.md": "# Notes\n", ".notes/NOTES.md": "# Notes\n"})
     result = _run_check(repo)
     assert result.returncode == 0, result.stderr
