@@ -124,6 +124,22 @@ wise-ci's own tree, in [`../.github/workflows/check-eol.yml`](../.github/workflo
 **What the gate deliberately lets through.** [`TESTING.md`](TESTING.md) § The action states the gap
 this leaves in check-eol's own action.
 
+## check-docs-index
+
+Every tracked Markdown file outside a top-level dot-directory is claimed by a row in
+[`README.md`](README.md)'s index — what it checks, and what it does not catch, is
+[`../check-docs-index/README.md`](../check-docs-index/README.md)'s to state, and the design it
+enforces is a trade study
+([`decisions/0002-documentation-index-claims-documents.md`](decisions/0002-documentation-index-claims-documents.md),
+ADR 0002 rev 1). The check runs as a required gate on wise-ci's own tree, in
+[`../.github/workflows/check-docs-index.yml`](../.github/workflows/check-docs-index.yml)'s
+`self-check` job, called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)).
+
+**What the gate deliberately lets through.** A new top-level dot-directory, which is machinery the
+moment it exists; the check names every machinery directory it skipped on each passing run
+(ADR 0002 rev 1). [`TESTING.md`](TESTING.md) § The action states the gap this leaves in
+check-docs-index's own action.
+
 ## check-branch
 
 Branch-shape, ticket-linkage and epic-membership rules, stated once in `WisewareOrg/.github`'s

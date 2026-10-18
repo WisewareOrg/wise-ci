@@ -1,0 +1,64 @@
+name: check-docs-index
+
+# docs/TESTING.md § In CI: runs only when the wiring workflow (ci.yml) calls it.
+on:
+  workflow_call:
+
+permissions: {}
+
+concurrency:
+  group: check-docs-index-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Every job's `name:` equals its id, for consistency across every workflow in this repository.
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # A verdict moves only when a workflow or a pinned tool does (docs/CI.md § Workflow
+      # supply-chain and privilege audit); Renovate bumps this version natively.
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.1"
+
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: "1.59.0"
+
+      # docs/TESTING.md § In CI.
+      - name: pytest, one-check mode (just test check-docs-index)
+        run: just test check-docs-index
+
+      # docs/TESTING.md § In CI.
+      - name: pytest, under coverage
+        run: just test-ci check-docs-index
+
+      # docs/TESTING.md § In CI.
+      - name: Upload coverage data
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-check-docs-index
+          path: .coverage.*
+          include-hidden-files: true
+          if-no-files-found: error
+
+  # check-docs-index run over wise-ci's own tree: the check's integration test (docs/TESTING.md
+  # § In CI; on a clean repository this only ever passes).
+  self-check:
+    name: self-check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./check-docs-index
