@@ -50,10 +50,10 @@ can arrange a live shortfall to seed.
 
 ## In CI
 
-Each check has its own workflow file under `.github/workflows/`, which runs the check's tests and,
-for check-eol, check-docs-index and check-reqs, also runs the check as a gate on wise-ci itself, in that same
-workflow file. That gate is the check's integration test. On a clean repository it only ever
-passes, so the failing direction is proven by the tests running the script. `check-branch`,
+Each check has its own workflow file under `.github/workflows/`, which runs the check's tests
+and, for check-eol, check-docs-index and check-reqs, also runs the check as a gate on wise-ci
+itself, in that same workflow file. That gate is the check's integration test. On a clean
+repository it only ever passes, so the failing direction is proven by the tests running the script. `check-branch`,
 `pr-title` and `repo-floor` are gated instead from `process-gates.yml`, a separate workflow with
 its own top-level job of each check's name, which the wiring workflow does not call.
 

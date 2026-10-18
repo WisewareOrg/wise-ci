@@ -160,13 +160,20 @@ MUST_FAIL: list[_Case] = [
         },
         [
             "docs/README.md: no index row parsed — the table's shape has moved",
-            "README.md has no row in docs/README.md",
+            "\n  README.md has no row in docs/README.md",
         ],
     ),
     _Case(
         "two-rows-for-one-rendered-path",
         {INDEX: _index(ROW_README, ROW_DECISIONS, ROW_DECISIONS, ROW_ARCHITECTURE)},
         ["docs/README.md: 'decisions/' has two rows — one fact, one canonical home"],
+    ),
+    _Case(
+        # A subtree row claims beneath its directory, not every path sharing its prefix: the claim
+        # keeps its trailing slash through normalisation.
+        "sibling-sharing-a-subtree-rows-prefix",
+        {"docs/decisions-old.md": "# Old\n"},
+        ["docs/decisions-old.md has no row in docs/README.md"],
     ),
     _Case(
         "file-row-names-no-tracked-document",
@@ -269,6 +276,11 @@ MUST_PASS: list[_Case] = [
         {"docs/CI.md": "# CI\n", INDEX: BASE_INDEX + "| [`CI.md`](CI.md) | g | e |\n"},
     ),
     _Case("untracked-file-that-is-not-markdown", {}, untracked={"notes.txt": "scratch\n"}),
+    _Case(
+        # A row may claim a dot-*file* at the root: only a dot-*directory* is machinery.
+        "file-row-for-a-dot-file-at-the-root",
+        {".HIDDEN.md": "# Hidden\n", INDEX: BASE_INDEX + "| [`../.HIDDEN.md`](../.HIDDEN.md) | g | e |\n"},
+    ),
 ]
 
 
@@ -364,3 +376,6 @@ def test_outside_a_repository_fails(tmp_path: Path) -> None:
 
     assert result.returncode != 0
     assert PASSED not in result.stdout
+    # the failure is the git call itself, not a later step tripping over what it left behind.
+    assert "CalledProcessError" in result.stderr
+    assert "'ls-files', '-z', '*.md'" in result.stderr

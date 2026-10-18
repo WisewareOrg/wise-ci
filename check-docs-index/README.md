@@ -22,7 +22,8 @@ any:
 - an empty *Guarantees* or *Excludes* cell;
 - a row whose link target is not a tracked Markdown file;
 - two rows rendering the same path;
-- a row rendering a path under a top-level dot-directory;
+- a row rendering a path that begins with `.` and holds a `/` — one under a top-level
+  dot-directory, or one climbing out of the repository, which reads the same way;
 - a row rendering a file path that is not a tracked Markdown file, or a directory path (one ending in
   `/`) holding no tracked Markdown file;
 - no table row parsed at all, or no tracked Markdown file at all — the two inputs are sourced
@@ -32,8 +33,10 @@ any:
 A row rendering a path with a trailing slash claims every tracked Markdown file beneath it, at any
 depth. Paths in the table are written relative to `docs/`.
 
-On success it prints the row and document counts, and **names every top-level dot-directory it
-skipped as machinery**. Run outside a git repository, it fails with git's own error.
+On success it prints the row count and the count of tracked Markdown files — machinery and the
+index included — and **names every top-level dot-directory it skipped as machinery**. Run outside a
+git repository, it fails on the first git call: git's own message is captured, so what is printed is
+the traceback naming the failed command.
 
 ## Known rejections
 
@@ -48,7 +51,6 @@ how `docs/README.md` may be written.
 | the table indented one to three spaces, which still renders | `no index row parsed — the table's shape has moved` |
 | a *Document* cell whose link text carries no backticks | the cell read as not a backticked-path link |
 | an escaped pipe inside any cell | `a row has 4 cells, …` |
-| a placeholder row standing for a family of files, such as `` `<check>/README.md` `` | the cell read as not a backticked-path link |
 
 So `docs/README.md` holds exactly one table and no fenced example containing one: every `|`-leading
 line is read as an index row.

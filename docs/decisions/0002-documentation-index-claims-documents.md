@@ -1,4 +1,4 @@
-# 0002 — The documentation index claims every tracked document, derived from the repository
+# 0002 — Claim every tracked document with a documentation-index row, derived from the repository
 
 **Status:** accepted
 **Decided:** 2026-10-18 (wise-ci issue 49 owner rulings)
@@ -22,8 +22,8 @@ from, and what is excluded from it and on whose say-so.
 ## Decision
 
 **A row in the documentation index claims a document.** A tracked Markdown file is claimed by a row in
-[`../README.md`](../README.md)'s table, or it is machinery under a top-level dot-directory. Nothing
-else claims a document.
+[`../README.md`](../README.md)'s table, or it is machinery under a top-level dot-directory; the index
+does not index itself. Nothing else claims a document.
 
 **The claimable set is derived from the repository.** `git ls-files '*.md'` is the population, so a
 document added without a row fails. No inventory of documents is maintained by hand.

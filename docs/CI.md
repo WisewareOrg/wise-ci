@@ -135,10 +135,10 @@ ADR 0002 rev 1). The check runs as a required gate on wise-ci's own tree, in
 [`../.github/workflows/check-docs-index.yml`](../.github/workflows/check-docs-index.yml)'s
 `self-check` job, called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)).
 
-**What the gate deliberately lets through.** A new top-level dot-directory, which is machinery the
-moment it exists; the check names every machinery directory it skipped on each passing run
-(ADR 0002 rev 1). [`TESTING.md`](TESTING.md) § The action states the gap this leaves in
-check-docs-index's own action.
+**What the gate deliberately lets through.**
+[`../check-docs-index/README.md`](../check-docs-index/README.md) § What this does not catch states
+it, and ADR 0002 rev 1 the trade behind it. [`TESTING.md`](TESTING.md) § The action states the gap
+this leaves in check-docs-index's own action.
 
 ## check-branch
 
