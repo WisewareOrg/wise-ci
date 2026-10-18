@@ -1,0 +1,8 @@
+name: check-docs-index
+description: Every tracked Markdown file outside a top-level dot-directory has a row in docs/README.md's index, and every row is unique, resolves, and fills both its cells.
+runs:
+  using: composite
+  steps:
+    - name: check-docs-index
+      shell: bash
+      run: python3 "$GITHUB_ACTION_PATH/check-docs-index.py"
