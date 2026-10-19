@@ -47,6 +47,12 @@ jobs:
       contents: read
     uses: ./.github/workflows/check-eol.yml
 
+  check-docs-index:
+    name: check-docs-index
+    permissions:
+      contents: read
+    uses: ./.github/workflows/check-docs-index.yml
+
   check-branch:
     name: check-branch
     permissions:
@@ -73,7 +79,7 @@ jobs:
 
   ci:
     name: ci
-    needs: [checks, codeql, check-eol, check-branch, check-reqs, repo-floor, pr-title]
+    needs: [checks, codeql, check-eol, check-docs-index, check-branch, check-reqs, repo-floor, pr-title]
     if: always()
     runs-on: ubuntu-latest
     permissions:
@@ -107,7 +113,7 @@ jobs:
             exit 1
           fi
 
-          for name in "check-eol / test" "check-branch / test" "check-branch / expected-failure" "check-reqs / test" "check-reqs / self-check" "check-reqs / expected-failure" "repo-floor / test" "repo-floor / expected-failure" "pr-title / test" "pr-title / expected-failure"; do
+          for name in "check-eol / test" "check-docs-index / test" "check-docs-index / self-check" "check-branch / test" "check-branch / expected-failure" "check-reqs / test" "check-reqs / self-check" "check-reqs / expected-failure" "repo-floor / test" "repo-floor / expected-failure" "pr-title / test" "pr-title / expected-failure"; do
             known="$(jq -s --arg name "$name" '[.[] | select(.name == $name)] | length' "$RUNNER_TEMP/run-jobs.json")"
             if [ "$known" -eq 0 ]; then
               echo "the run's job list is missing $name" >&2
@@ -194,7 +200,7 @@ jobs:
             exit 1
           fi
 
-          for file in "check-eol/check-eol.py" "check-branch/check-branch.py" "repo-floor/repo-floor.py" "pr-title/pr-title.py" \
+          for file in "check-eol/check-eol.py" "check-docs-index/check-docs-index.py" "check-branch/check-branch.py" "repo-floor/repo-floor.py" "pr-title/pr-title.py" \
             "check-reqs/check_reqs/__init__.py" "check-reqs/check_reqs/check_headers.py" \
             "check-reqs/check_reqs/check_method_consistency.py" "check-reqs/check_reqs/check_suspect_links.py" \
             "check-reqs/check_reqs/check_text_citations.py" "check-reqs/check_reqs/check_unreviewed.py" \
