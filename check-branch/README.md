@@ -47,32 +47,6 @@ repository churn than the case was worth, in a product repository) and are not b
 multiple sub-issues sharing one integration branch, and nested integration branches. `PROC-007`/
 `PROC-008` as implemented take one parent and one level.
 
-## Rejected alternatives
-
-Carried forward from WiseKiosk's ADR 0006 and ADR 0013, where the alternative is about an
-obligation this check owns — tagged by the PROC ID it bears on; an alternative about PROC-009
-(the PR title) or about where in WiseKiosk's own process convention lived is WiseKiosk's own
-history, not this check's.
-
-- **GitHub-native rulesets** (PROC-001, PROC-010): branch-name and commit-message pattern
-  restrictions are Enterprise-only — a control that would be inert where this repository runs.
-- **Decoupling branch types from issue templates** (PROC-001, PROC-010): rejected because it loses
-  the property that a branch's type names the template its ticket was opened from.
-- **A shape-only check that never resolves the issue** (PROC-003): a typo'd number would pass, and
-  the link the check exists to prove would go unchecked.
-- **Regex over the PR body for a closing keyword** (PROC-006): prose can claim a link the platform
-  never recorded — observed live on a stacked PR carrying the keyword with an empty
-  `closingIssuesReferences`. The check reads GitHub's recorded state, never the text.
-- **CI writing the linkage itself, via a write-scoped token** (PROC-006): gates verify; they do not
-  mutate.
-- **Detecting a bad ticket at issue-creation time, or auditing the whole backlog on a schedule or
-  from every pull request** (PROC-004, PROC-005): GitHub has no required check for issue creation,
-  so every candidate is after-the-fact detection; gating it at the branch's own pull request reaches
-  exactly the change whose ticket is wrong, never an unrelated one.
-- **Deferring the sub-issue gate for want of a second consumer** (PROC-007, PROC-008): rejected —
-  the historical record already held an instance the gate would have caught (a PR merged into an
-  integration branch while its ticket was never that branch's sub-issue).
-
 ## What this does not catch
 
 **A stale verdict.** The check runs once, against the pull request's state at that moment; editing
