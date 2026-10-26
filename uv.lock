@@ -372,17 +372,20 @@ wheels = [
 
 [[package]]
 name = "plantuml-markdown"
-version = "3.11.3"
+version = "3.11.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "certifi" },
+    { name = "charset-normalizer" },
+    { name = "idna" },
     { name = "markdown" },
     { name = "requests" },
     { name = "six" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c6/84/b895ccc22affc8b75c7f33aae67eb3575b58efe7d696e31b01298fefc27b/plantuml_markdown-3.11.3.tar.gz", hash = "sha256:ffb78b5bf9ffc3b7b5bc04893972b673c8ee96f1407f3ea9bc48003bdfa85302", size = 32631, upload-time = "2026-09-26T06:23:26.301Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/49/05/190feb623b10a80f16cb7ee3027659cdd9906288952d260d2f5afcc5988f/plantuml_markdown-3.11.5.tar.gz", hash = "sha256:a7f5ddec5d2dce043837a06ab36ed4278ac6fb34cd50df8a571d1c35615c0714", size = 32839, upload-time = "2026-10-26T19:32:03.305Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8d/6f/b607e6881420b2f6883a02be95509aded9ad1c9ce55a0c31e472ca373742/plantuml_markdown-3.11.3-py3-none-any.whl", hash = "sha256:fa83f4ed94c70d5ec0a06d015058b4bdfcb923535e820af4e20fbe7c493d3cf2", size = 20209, upload-time = "2026-09-26T06:23:24.866Z" },
+    { url = "https://files.pythonhosted.org/packages/6f/89/ffab4c5d7bc2d8409a7fa9411050e0d729665c3ec715c08705b7438f3e31/plantuml_markdown-3.11.5-py3-none-any.whl", hash = "sha256:935c34253bad6fe49910305f2ec1a8862f97c53a6c3800b95ec956f704850ee4", size = 20209, upload-time = "2026-10-26T19:32:01.681Z" },
 ]
 
 [[package]]
