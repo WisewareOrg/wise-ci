@@ -46,6 +46,12 @@ def api_request(url, token, payload=None):
 
 
 def main():
+    branch = os.environ.get("HEAD_REF") or ""
+    if branch.startswith("dependabot/"):
+        print(f"Branch '{branch}' is exempt: Dependabot's own pull requests are not held to "
+              "PROC-009.")
+        return
+
     title = os.environ.get("TITLE") or ""
     pr_number = os.environ.get("PR_NUMBER") or ""
 

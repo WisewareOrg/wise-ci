@@ -234,10 +234,15 @@ def test_renovate_prefixed_branch_is_exempt(monkeypatch):
     _expect_pass(monkeypatch, _no_api_call, head_ref="renovate/x", pr_number="7")
 
 
-def test_dependabot_prefixed_branch_is_not_exempt(monkeypatch, capsys):
-    """PROC-002 names only the default branch and `renovate/*`; a similar-looking prefix from
-    another bot is not exempt and falls through to PROC-001."""
-    code = _expect_fail(monkeypatch, _no_api_call, head_ref="dependabot/x", pr_number="7")
+def test_dependabot_prefixed_branch_is_exempt(monkeypatch):
+    """PROC-002: Dependabot's own naming convention is exempt regardless of shape."""
+    _expect_pass(monkeypatch, _no_api_call, head_ref="dependabot/npm_and_yarn/x", pr_number="7")
+
+
+def test_other_bot_prefixed_branch_is_not_exempt(monkeypatch, capsys):
+    """PROC-002 names only the default branch, `renovate/*` and `dependabot/*`; a similar-looking
+    prefix from another bot is not exempt and falls through to PROC-001."""
+    code = _expect_fail(monkeypatch, _no_api_call, head_ref="snyk/x", pr_number="7")
 
     assert code == 1
     assert "PROC-001" in capsys.readouterr().err

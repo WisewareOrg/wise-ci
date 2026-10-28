@@ -28,4 +28,5 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         TITLE: ${{ inputs.title }}
         PR_NUMBER: ${{ github.event.pull_request.number }}
+        HEAD_REF: ${{ github.event.pull_request.head.ref }}
       run: python3 "$GITHUB_ACTION_PATH/pr-title.py"
