@@ -141,9 +141,9 @@ action.
 ## check-branch
 
 Branch-shape, ticket-linkage and epic-membership rules, stated once in `WisewareOrg/.github`'s
-`PROCESS.md` (PROC-001 through PROC-008, and PROC-010) — what it checks, and what it does not
-catch, is [`../check-branch/README.md`](../check-branch/README.md)'s to state. The check runs as a
-required gate on wise-ci's own pull requests, in
+`PROCESS.md` (PROC-001, PROC-003 through PROC-008, and PROC-010) — what it checks, and what it
+does not catch, is [`../check-branch/README.md`](../check-branch/README.md)'s to state. The check
+runs as a required gate on wise-ci's own pull requests, in
 [`../.github/workflows/process-gates.yml`](../.github/workflows/process-gates.yml)'s `check-branch`
 job; `process-gates.yml` triggers on `pull_request` only, so the job never runs outside one, rather
 than running and being skipped.
