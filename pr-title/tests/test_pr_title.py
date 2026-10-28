@@ -6,7 +6,7 @@ Mirrors check-branch/check-branch.py's shape exactly:
 `api_request(url, token, payload=None)`; a `fail(message)` helper that prints `pr-title: <message>`
 to stderr and calls `sys.exit(1)`; `main()` returning `None` on success, with
 `if __name__ == "__main__": sys.exit(main())`; the API base hardcoded as `https://api.github.com`.
-It reads `TITLE`, `PR_NUMBER`, `GITHUB_TOKEN` and the runner's own `GITHUB_REPOSITORY`.
+It reads `HEAD_REF`, `TITLE`, `PR_NUMBER`, `GITHUB_TOKEN` and the runner's own `GITHUB_REPOSITORY`.
 
 Test mechanism, copied from check-branch/tests/test_check_branch.py:
 - load the script in-process with `importlib` (`:44-55`);
@@ -70,8 +70,9 @@ def _non_git_cwd(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
 
-def _env(monkeypatch, *, title=None, pr_number=None, token=TOKEN, repository=REPO):
+def _env(monkeypatch, *, title=None, pr_number=None, token=TOKEN, repository=REPO, head_ref=None):
     for name, value in (
+        ("HEAD_REF", head_ref),
         ("TITLE", title),
         ("PR_NUMBER", pr_number),
         ("GITHUB_TOKEN", token),
@@ -183,6 +184,30 @@ def test_title_fails_commitlint_with_its_rule_id(monkeypatch, capfd, title, rule
 def test_trailing_newline_on_the_title_makes_no_difference(monkeypatch):
     """'feat: add a thing' and 'feat: add a thing\\n' both exit 0 through commitlint on stdin."""
     _expect_pass(monkeypatch, _no_api_call, title="feat: add a thing\n")
+
+
+# ---------------------------------------------------------------------------------------------
+# PROC-009's exemption: Dependabot's own branches.
+# ---------------------------------------------------------------------------------------------
+
+
+def test_dependabot_branch_is_exempt_without_reading_the_title(monkeypatch, capsys):
+    """The API fixture raises on any call: an exempt branch never fetches its title."""
+    _expect_pass(monkeypatch, _no_api_call, head_ref="dependabot/npm_and_yarn/x", pr_number="7")
+
+    assert "exempt" in capsys.readouterr().out
+
+
+def test_dependabot_branch_is_exempt_even_with_a_failing_title(monkeypatch):
+    _expect_pass(monkeypatch, _no_api_call, head_ref="dependabot/npm_and_yarn/x", title="nope")
+
+
+def test_renovate_branch_is_not_exempt(monkeypatch, capfd):
+    """PROC-009 exempts only `dependabot/*`: Renovate's titles are still checked."""
+    code = _expect_fail(monkeypatch, _no_api_call, head_ref="renovate/x", title="nope")
+
+    assert code != 0
+    assert "[type-empty]" in capfd.readouterr().out
 
 
 # ---------------------------------------------------------------------------------------------

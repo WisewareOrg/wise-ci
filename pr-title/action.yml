@@ -11,6 +11,10 @@ inputs:
     description: The title to check, overriding the pull request's current title.
     required: false
     default: ""
+  branch:
+    description: The head branch the PROC-009 exemption is judged against.
+    required: false
+    default: ${{ github.event.pull_request.head.ref }}
 runs:
   using: composite
   steps:
@@ -28,4 +32,5 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         TITLE: ${{ inputs.title }}
         PR_NUMBER: ${{ github.event.pull_request.number }}
+        HEAD_REF: ${{ inputs.branch }}
       run: python3 "$GITHUB_ACTION_PATH/pr-title.py"

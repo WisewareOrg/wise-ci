@@ -74,6 +74,7 @@ jobs:
         uses: ./pr-title
         with:
           title: "fixup! feat: x"
+          branch: nodashes
 
       - name: The previous step must have failed
         if: steps.pr-title.outcome != 'failure'
