@@ -50,9 +50,9 @@ def main():
     branch = os.environ.get("HEAD_REF") or ""
     default_branch = os.environ.get("DEFAULT_BRANCH", "")
 
-    if branch and (branch == default_branch or branch.startswith("renovate/")):
-        print(f"Branch '{branch}' is exempt: the default branch and Renovate's own branches "
-              "are not work branches.")
+    if branch and (branch == default_branch or branch.startswith(("renovate/", "dependabot/"))):
+        print(f"Branch '{branch}' is exempt: the default branch and the dependency updaters' own "
+              "branches are not work branches.")
         return
 
     if not matches_shape(branch):

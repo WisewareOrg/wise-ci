@@ -24,7 +24,7 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 26.12.0
+          node-version: 26.12.1
           package-manager-cache: false
 
       - name: Install pr-title/, locked
@@ -32,9 +32,9 @@ jobs:
 
       # A verdict moves only when a workflow or a pinned tool does (docs/CI.md § Workflow
       # supply-chain and privilege audit); Renovate bumps this version natively.
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
-          version: "0.13.1"
+          version: "0.13.5"
 
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
         with:
@@ -74,6 +74,7 @@ jobs:
         uses: ./pr-title
         with:
           title: "fixup! feat: x"
+          branch: nodashes
 
       - name: The previous step must have failed
         if: steps.pr-title.outcome != 'failure'
