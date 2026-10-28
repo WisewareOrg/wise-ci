@@ -16,7 +16,8 @@ local lookup.
 See [`action.yml`](action.yml) for each input's description and default. `title` exists for
 `expected-failure` testing: passing it the triggering event's own title snapshot gives up the
 current-title re-read (see [The mechanism](#the-mechanism) below), so a consumer has no reason to
-set it.
+set it. `branch` exists for the same testing: it pins the head branch the exemption is judged
+against, so the job's result does not depend on the branch it runs on.
 
 ## Consuming pr-title
 

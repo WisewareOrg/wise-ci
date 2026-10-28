@@ -110,8 +110,8 @@ glue it runs through are a trade study
 ADR 0001 rev 1). The check runs as a required gate on wise-ci's own pull requests, in
 [`../.github/workflows/process-gates.yml`](../.github/workflows/process-gates.yml)'s `pr-title`
 job. [`../.github/workflows/pr-title.yml`](../.github/workflows/pr-title.yml)'s own
-`expected-failure` job passes the action a `title` input that violates PROC-009 and asserts the
-action's own step outcome is `failure` ([`TESTING.md`](TESTING.md) § The action).
+`expected-failure` job passes the action a `title` input that violates PROC-009 and a non-exempt
+`branch` input, and asserts the action's own step outcome is `failure` ([`TESTING.md`](TESTING.md) § The action).
 
 ## check-eol
 
