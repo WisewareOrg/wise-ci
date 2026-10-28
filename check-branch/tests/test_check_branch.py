@@ -209,17 +209,17 @@ def test_each_builtin_ticket_type_is_an_accepted_shape(monkeypatch, branch_type)
 
 
 # ---------------------------------------------------------------------------------------------
-# PROC-002 (exemptions)
+# PROC-001 (exemptions)
 # ---------------------------------------------------------------------------------------------
 
 
 def test_default_branch_is_exempt_even_when_not_named_main(monkeypatch):
-    """PROC-002: the exemption follows DEFAULT_BRANCH, not a hardcoded 'main'."""
+    """PROC-001: the exemption follows DEFAULT_BRANCH, not a hardcoded 'main'."""
     _expect_pass(monkeypatch, _no_api_call, head_ref="trunk", default_branch="trunk", pr_number="7")
 
 
 def test_main_is_not_exempt_when_default_branch_is_not_main(monkeypatch, capsys):
-    """PROC-002's exemption is tied to DEFAULT_BRANCH alone: 'main' gets no special treatment
+    """PROC-001's exemption is tied to DEFAULT_BRANCH alone: 'main' gets no special treatment
     when the repository's default branch is something else, and falls through to PROC-001."""
     code = _expect_fail(
         monkeypatch, _no_api_call, head_ref="main", default_branch="trunk", pr_number="7"
@@ -230,18 +230,18 @@ def test_main_is_not_exempt_when_default_branch_is_not_main(monkeypatch, capsys)
 
 
 def test_renovate_prefixed_branch_is_exempt(monkeypatch):
-    """PROC-002: Renovate's own naming convention is exempt regardless of shape."""
+    """PROC-001: Renovate's own naming convention is exempt regardless of shape."""
     _expect_pass(monkeypatch, _no_api_call, head_ref="renovate/x", pr_number="7")
 
 
 def test_dependabot_prefixed_branch_is_exempt(monkeypatch):
-    """PROC-002: Dependabot's own naming convention is exempt regardless of shape."""
+    """PROC-001: Dependabot's own naming convention is exempt regardless of shape."""
     _expect_pass(monkeypatch, _no_api_call, head_ref="dependabot/npm_and_yarn/x", pr_number="7")
 
 
 def test_other_bot_prefixed_branch_is_not_exempt(monkeypatch, capsys):
-    """PROC-002 names only the default branch, `renovate/*` and `dependabot/*`; a similar-looking
-    prefix from another bot is not exempt and falls through to PROC-001."""
+    """PROC-001 exempts only the default branch, `renovate/*` and `dependabot/*`; a similar-looking
+    prefix from another bot is not exempt and fails PROC-001's shape."""
     code = _expect_fail(monkeypatch, _no_api_call, head_ref="snyk/x", pr_number="7")
 
     assert code == 1
@@ -709,7 +709,7 @@ def test_missing_head_ref_fails_on_shape_not_as_an_outside_pr_fault(monkeypatch,
 
 
 def test_empty_head_ref_and_default_branch_is_not_exempt(monkeypatch, capsys):
-    """PROC-002/PROC-001, plan's 'outside a pull request: fail closed': when HEAD_REF and
+    """PROC-001, plan's 'outside a pull request: fail closed': when HEAD_REF and
     DEFAULT_BRANCH are both unset (no PR context), the empty branch must not compare equal to
     the empty default branch and be reported exempt -- it falls through to PROC-001's shape
     check like any other non-matching branch."""
