@@ -27,8 +27,9 @@ none of that is part of the filename the row claims. Only `docs/decisions/README
 row-shaped line in another file, or one indented so it no longer opens the line, is not a row at
 all.
 
-On success it prints the ADR count. A git call is never made, so there is nothing for this script to
-fail on outside `docs/decisions/` being unreadable.
+On success it prints the ADR count. A git call is never made: a missing `docs/decisions/`
+directory, or a missing `docs/decisions/README.md` within one that exists, fails with an uncaught
+traceback naming the missing path, rather than a reported problem.
 
 ## What `check-adr-revs.py` reports
 
@@ -65,6 +66,11 @@ A tracked file this cannot decode as text is named and skipped, not failed on by
 it prints the ADR count and the citation count, split by whether each was judged a prose or a link
 citation — and fails if either count is zero, since a scan that stops recognising a whole citation
 form would otherwise report the smaller population it can still see as complete.
+
+A missing `docs/decisions/` directory fails with an uncaught traceback naming it. A missing
+`docs/decisions/README.md` fails the same way, but only once at least one ADR has validated —
+with none, there is nothing to check the index against, and the run instead reports `no ADR
+declared a rev` as an ordinary problem.
 
 ## Known rejections
 
