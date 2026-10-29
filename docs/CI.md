@@ -106,7 +106,7 @@ The pull request title — the commit that reaches `main` under squash-merge —
 Commit, stated once in `WisewareOrg/.github`'s `PROCESS.md` (PROC-009) — what it checks, and what it
 does not catch, is [`../pr-title/README.md`](../pr-title/README.md)'s to state. The tool and the
 glue it runs through are a trade study
-([`decisions/0001-pr-title-commitlint-python-handoff.md`](decisions/0001-pr-title-commitlint-python-handoff.md),
+([ADR 0001 rev 1](decisions/0001-pr-title-commitlint-python-handoff.md),
 ADR 0001 rev 1). The check runs as a required gate on wise-ci's own pull requests, in
 [`../.github/workflows/process-gates.yml`](../.github/workflows/process-gates.yml)'s `pr-title`
 job. [`../.github/workflows/pr-title.yml`](../.github/workflows/pr-title.yml)'s own
@@ -137,6 +137,18 @@ required gate on wise-ci's own tree, in
 [`../check-docs-index/README.md`](../check-docs-index/README.md) § What this does not catch states
 it. [`TESTING.md`](TESTING.md) § The action states the gap this leaves in check-docs-index's own
 action.
+
+## check-adrs
+
+`docs/decisions/` and its index table agree, and every citation of an ADR, anywhere in the tracked
+tree, pins that ADR's current rev — what it checks, and what it does not catch, is
+[`../check-adrs/README.md`](../check-adrs/README.md)'s to state. The check runs as a required gate
+on wise-ci's own tree, in [`../.github/workflows/check-adrs.yml`](../.github/workflows/check-adrs.yml)'s
+`self-check` job, called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)).
+
+**What the gate deliberately lets through.** [`../check-adrs/README.md`](../check-adrs/README.md)
+§ What this does not catch states it. [`TESTING.md`](TESTING.md) § The action states the gap this
+leaves in check-adrs's own action.
 
 ## check-branch
 

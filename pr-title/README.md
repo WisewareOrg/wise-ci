@@ -4,7 +4,7 @@ Checks that the pull request title is a Conventional Commit, stated once in
 [`WisewareOrg/.github`'s `PROCESS.md`](https://github.com/WisewareOrg/.github/blob/main/PROCESS.md)
 (PROC-009). **This restates no requirement** — this check is one of the gates that enforces it. The
 tool and the glue it runs through are a trade study, recorded in
-[`../docs/decisions/0001-pr-title-commitlint-python-handoff.md`](../docs/decisions/0001-pr-title-commitlint-python-handoff.md)
+[ADR 0001 rev 1](../docs/decisions/0001-pr-title-commitlint-python-handoff.md)
 (ADR 0001 rev 1). `scope-case: lower-case` is wise-ci's own addition on top of
 `@commitlint/config-conventional`.
 
