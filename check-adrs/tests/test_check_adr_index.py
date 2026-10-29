@@ -1,5 +1,5 @@
-"""Specifies check-adrs/check-adr-index.py: every reporting path in both directions, seeded from
-WiseKiosk's case file (check-adrs/README.md).
+"""Specifies check-adrs/check-adr-index.py: every reporting path in both directions
+(check-adrs/README.md).
 
 Each case builds docs/decisions/ directly on disk in a temporary directory. The script makes no git
 call, so no git repository is needed except for the one case that depends on that fact (an untracked

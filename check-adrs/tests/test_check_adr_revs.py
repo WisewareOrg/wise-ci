@@ -1,5 +1,5 @@
-"""Specifies check-adrs/check-adr-revs.py: every reporting path in both directions, seeded from
-WiseKiosk's case file (check-adrs/README.md).
+"""Specifies check-adrs/check-adr-revs.py: every reporting path in both directions
+(check-adrs/README.md).
 
 Each case builds a real, isolated git repository in a temporary directory, over a minimal fixture
 ADR tree — two ADRs and one citing document — rather than a copy of a real decisions directory, so a
