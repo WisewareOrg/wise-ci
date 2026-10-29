@@ -78,17 +78,17 @@ def _index(*rows: str) -> str:
     return "# Architecture decision records\n\n| # | Rev | Decided | Decision |\n|---|---|---|---|\n" + "".join(rows)
 
 
-ADR_0001 = "0001-decision.md"
-ADR_0002 = "0002-decision.md"
+FILE_0001 = "0001-decision.md"
+FILE_0002 = "0002-decision.md"
 
 BASE_FILES: dict[str, str] = {
-    "docs/decisions/README.md": _index(_row("0001", 1, ADR_0001), _row("0002", 1, ADR_0002)),
+    "docs/decisions/README.md": _index(_row("0001", 1, FILE_0001), _row("0002", 1, FILE_0002)),
     "docs/decisions/TEMPLATE.md": "# NNNN — Title\n",
-    f"docs/decisions/{ADR_0001}": _adr_text("0001"),
-    f"docs/decisions/{ADR_0002}": _adr_text("0002"),
+    f"docs/decisions/{FILE_0001}": _adr_text("0001"),
+    f"docs/decisions/{FILE_0002}": _adr_text("0002"),
     "CITATIONS.md": (
         f"Prose citation: {_cite('0001', 1)}.\n\n"
-        f"Link citation: {_link('0002', 1, f'docs/decisions/{ADR_0002}')}.\n\n"
+        f"Link citation: {_link('0002', 1, f'docs/decisions/{FILE_0002}')}.\n\n"
         "A link to a non-ADR file: [see also](README.md).\n"
     ),
 }
@@ -191,18 +191,18 @@ MUST_FAIL: list[_Case] = [
     ),
     _Case(
         "link-titled-with-a-bare-number",
-        {"CITATIONS.md": f"Link: [{_cite('0002')}](docs/decisions/{ADR_0002}).\n"},
+        {"CITATIONS.md": f"Link: [{_cite('0002')}](docs/decisions/{FILE_0002}).\n"},
         [f"is titled '{ADR} 0002', expected `{ADR} 0002 rev N`"],
     ),
     _Case(
         "link-title-naming-a-different-adr-than-it-targets",
-        {"CITATIONS.md": f"Link: {_link('0001', 1, f'docs/decisions/{ADR_0002}')}.\n"},
-        [f"link titled {ADR} 0001 targets {ADR_0002}"],
+        {"CITATIONS.md": f"Link: {_link('0001', 1, f'docs/decisions/{FILE_0002}')}.\n"},
+        [f"link titled {ADR} 0001 targets {FILE_0002}"],
     ),
     _Case(
         "ordinary-prose-inside-a-revisions-section",
         {
-            f"docs/decisions/{ADR_0001}": _adr_text(
+            f"docs/decisions/{FILE_0001}": _adr_text(
                 "0001",
                 continuation=f"An ordinary sentence citing {_cite('0002')} without a rev.",
             )
@@ -212,7 +212,7 @@ MUST_FAIL: list[_Case] = [
     _Case(
         "indented-continuation-of-ordinary-prose",
         {
-            f"docs/decisions/{ADR_0001}": _adr_text(
+            f"docs/decisions/{FILE_0001}": _adr_text(
                 "0001",
                 continuation=f"  continued, citing {_cite('0002')} without a rev",
             )
@@ -222,7 +222,7 @@ MUST_FAIL: list[_Case] = [
     _Case(
         "changelog-continuation-naming-a-number-no-adr-carries",
         {
-            f"docs/decisions/{ADR_0001}": _adr_text(
+            f"docs/decisions/{FILE_0001}": _adr_text(
                 "0001",
                 continuation=f"  a continuation pinning {_cite('0009', 1)}, which does not exist",
             )
@@ -231,37 +231,37 @@ MUST_FAIL: list[_Case] = [
     ),
     _Case(
         "unpinned-citation-beside-a-correctly-titled-link",
-        {"CITATIONS.md": f"See {_cite('0001')} and {_link('0001', 1, f'docs/decisions/{ADR_0001}')}.\n"},
+        {"CITATIONS.md": f"See {_cite('0001')} and {_link('0001', 1, f'docs/decisions/{FILE_0001}')}.\n"},
         [f"cites {ADR} 0001 without a rev"],
     ),
     _Case(
         "a-stale-citation-in-an-index-rows-decision-cell",
         {
             "docs/decisions/README.md": _index(
-                _row("0001", 1, ADR_0001),
-                f"| [0002]({ADR_0002}) | 1 | 2026-01-01 | superseded by {_cite('0001', 2)} |\n",
+                _row("0001", 1, FILE_0001),
+                f"| [0002]({FILE_0002}) | 1 | 2026-01-01 | superseded by {_cite('0001', 2)} |\n",
             )
         },
         [f"pins {ADR} 0001 rev 2, current is rev 1"],
     ),
     _Case(
         "index-rev-column-disagreeing-with-the-adrs-head",
-        {"docs/decisions/README.md": _index(_row("0001", 1, ADR_0001), _row("0002", 2, ADR_0002))},
+        {"docs/decisions/README.md": _index(_row("0001", 1, FILE_0001), _row("0002", 2, FILE_0002))},
         ["docs/decisions/README.md row 0002 says rev 2, its head says rev 1"],
     ),
     _Case(
         "adr-head-with-no-rev-line",
-        {f"docs/decisions/{ADR_0001}": _adr_text("0001", no_rev_line=True)},
+        {f"docs/decisions/{FILE_0001}": _adr_text("0001", no_rev_line=True)},
         ["declares 0 `**Rev:** N` lines, expected 1"],
     ),
     _Case(
         "adr-revved-with-no-changelog-line-for-the-new-rev",
         {
-            f"docs/decisions/{ADR_0002}": _adr_text("0002", rev=2, changelog=[1]),
-            "docs/decisions/README.md": _index(_row("0001", 1, ADR_0001), _row("0002", 2, ADR_0002)),
+            f"docs/decisions/{FILE_0002}": _adr_text("0002", rev=2, changelog=[1]),
+            "docs/decisions/README.md": _index(_row("0001", 1, FILE_0001), _row("0002", 2, FILE_0002)),
             "CITATIONS.md": (
                 f"Prose citation: {_cite('0001', 1)}.\n\n"
-                f"Link citation: {_link('0002', 2, f'docs/decisions/{ADR_0002}')}.\n"
+                f"Link citation: {_link('0002', 2, f'docs/decisions/{FILE_0002}')}.\n"
             ),
         },
         ["is at rev 2 but its Revisions section declares [1], expected one line per rev from 1"],
@@ -273,7 +273,7 @@ MUST_FAIL: list[_Case] = [
     ),
     _Case(
         "a-plural-a-hyphen-and-the-wrong-case",
-        {"CITATIONS.md": f"{ADR}s-0001 rev 1, and adr 0001 rev 1.\n"},
+        {"CITATIONS.md": f"{ADR}s-0001 rev 1, and {ADR.lower()} 0001 rev 1.\n"},
         [f"is not a citation this can pin — write `{ADR} 0001 rev N`"],
     ),
     _Case(
@@ -285,9 +285,9 @@ MUST_FAIL: list[_Case] = [
         "a-reference-style-link-and-a-raw-a-href",
         {
             "CITATIONS.md": (
-                f"[ref]: docs/decisions/{ADR_0001}\n\n"
+                f"[ref]: docs/decisions/{FILE_0001}\n\n"
                 f"Reference: [{_cite('0001', 1)}][ref].\n\n"
-                f'Raw: <a href="docs/decisions/{ADR_0002}">{_cite("0002", 1)}</a>.\n'
+                f'Raw: <a href="docs/decisions/{FILE_0002}">{_cite("0002", 1)}</a>.\n'
             )
         },
         [
@@ -297,26 +297,26 @@ MUST_FAIL: list[_Case] = [
     ),
     _Case(
         "a-link-to-an-adr-whose-title-carries-brackets",
-        {"CITATIONS.md": f"[{_cite('0001', 1)} (see [elsewhere])](docs/decisions/{ADR_0001}).\n"},
+        {"CITATIONS.md": f"[{_cite('0001', 1)} (see [elsewhere])](docs/decisions/{FILE_0001}).\n"},
         [f"is titled", "expected"],
     ),
     _Case(
         "a-link-to-an-adr-wrapped-across-two-lines",
-        {"CITATIONS.md": f"See [{_cite('0001', 1)}\n](docs/decisions/{ADR_0001})\n"},
+        {"CITATIONS.md": f"See [{_cite('0001', 1)}\n](docs/decisions/{FILE_0001})\n"},
         ["has no title this can read"],
     ),
     _Case(
         "the-head-format-changed-everywhere-so-nothing-parses",
         {
-            f"docs/decisions/{ADR_0001}": _adr_text("0001", broken_rev_keyword=True),
-            f"docs/decisions/{ADR_0002}": _adr_text("0002", broken_rev_keyword=True),
+            f"docs/decisions/{FILE_0001}": _adr_text("0001", broken_rev_keyword=True),
+            f"docs/decisions/{FILE_0002}": _adr_text("0002", broken_rev_keyword=True),
             "CITATIONS.md": "no citations here\n",
         },
         ["no ADR declared a rev — the head format or this parser is wrong"],
     ),
     _Case(
         "the-prose-citation-spelling-drifted-so-none-is-recognised",
-        {"CITATIONS.md": f"Link only: {_link('0002', 1, f'docs/decisions/{ADR_0002}')}.\n"},
+        {"CITATIONS.md": f"Link only: {_link('0002', 1, f'docs/decisions/{FILE_0002}')}.\n"},
         ["no prose citation was judged"],
     ),
     _Case(
@@ -327,11 +327,11 @@ MUST_FAIL: list[_Case] = [
     _Case(
         "an-adr-revved-with-one-citation-left-behind",
         {
-            f"docs/decisions/{ADR_0002}": _adr_text("0002", rev=2),
-            "docs/decisions/README.md": _index(_row("0001", 1, ADR_0001), _row("0002", 2, ADR_0002)),
+            f"docs/decisions/{FILE_0002}": _adr_text("0002", rev=2),
+            "docs/decisions/README.md": _index(_row("0001", 1, FILE_0001), _row("0002", 2, FILE_0002)),
             "CITATIONS.md": (
                 f"Prose citation: {_cite('0001', 1)}.\n\n"
-                f"Link citation, left behind: {_link('0002', 1, f'docs/decisions/{ADR_0002}')}.\n"
+                f"Link citation, left behind: {_link('0002', 1, f'docs/decisions/{FILE_0002}')}.\n"
             ),
         },
         [f"pins {ADR} 0002 rev 1, current is rev 2"],
@@ -348,17 +348,17 @@ MUST_FAIL: list[_Case] = [
     ),
     _Case(
         "an-adr-titling-itself-a-number-its-filename-does-not-carry",
-        {f"docs/decisions/{ADR_0002}": _adr_text("0002", title_number="0009")},
+        {f"docs/decisions/{FILE_0002}": _adr_text("0002", title_number="0009")},
         ["titles itself 0009, but its filename and every citation of it say 0002"],
     ),
     _Case(
         "a-title-number-of-the-wrong-digit-count",
-        {f"docs/decisions/{ADR_0002}": _adr_text("0002").replace("# 0002", "# 002")},
+        {f"docs/decisions/{FILE_0002}": _adr_text("0002").replace("# 0002", "# 002")},
         ["titles itself 002, but its filename and every citation of it say 0002"],
     ),
     _Case(
         "an-adr-with-no-title-line",
-        {f"docs/decisions/{ADR_0002}": _adr_text("0002", no_title=True)},
+        {f"docs/decisions/{FILE_0002}": _adr_text("0002", no_title=True)},
         ["opens with no `# NNNN …` line"],
     ),
     _Case(
@@ -379,24 +379,24 @@ MUST_PASS: list[_Case] = [
     _Case(
         "an-adr-revved-with-everything-moved-with-it",
         {
-            f"docs/decisions/{ADR_0002}": _adr_text("0002", rev=2),
-            "docs/decisions/README.md": _index(_row("0001", 1, ADR_0001), _row("0002", 2, ADR_0002)),
+            f"docs/decisions/{FILE_0002}": _adr_text("0002", rev=2),
+            "docs/decisions/README.md": _index(_row("0001", 1, FILE_0001), _row("0002", 2, FILE_0002)),
             "CITATIONS.md": (
                 f"Prose citation: {_cite('0001', 1)}.\n\n"
-                f"Link citation: {_link('0002', 2, f'docs/decisions/{ADR_0002}')}.\n"
+                f"Link citation: {_link('0002', 2, f'docs/decisions/{FILE_0002}')}.\n"
             ),
         },
     ),
     _Case(
         "a-changelog-line-pinning-a-rev-that-is-not-current",
         {
-            f"docs/decisions/{ADR_0001}": _adr_text("0001", rev=2),
-            "docs/decisions/README.md": _index(_row("0001", 2, ADR_0001), _row("0002", 1, ADR_0002)),
+            f"docs/decisions/{FILE_0001}": _adr_text("0001", rev=2),
+            "docs/decisions/README.md": _index(_row("0001", 2, FILE_0001), _row("0002", 1, FILE_0002)),
             "CITATIONS.md": (
                 f"Prose citation: {_cite('0001', 2)}.\n\n"
-                f"Link citation: {_link('0002', 1, f'docs/decisions/{ADR_0002}')}.\n"
+                f"Link citation: {_link('0002', 1, f'docs/decisions/{FILE_0002}')}.\n"
             ),
-            f"docs/decisions/{ADR_0002}": _adr_text("0002", rev=1).replace(
+            f"docs/decisions/{FILE_0002}": _adr_text("0002", rev=1).replace(
                 "first written (#1 ticket).",
                 f"first written (#1 ticket), superseding {_cite('0001', 1)}.",
             ),
@@ -404,19 +404,19 @@ MUST_PASS: list[_Case] = [
     ),
     _Case(
         "a-title-spelled-with-a-hyphen-rather-than-an-em-dash",
-        {f"docs/decisions/{ADR_0002}": _adr_text("0002").replace("— Decision", "- Decision")},
+        {f"docs/decisions/{FILE_0002}": _adr_text("0002").replace("— Decision", "- Decision")},
     ),
     _Case(
         "a-title-whose-text-differs-from-its-index-rows-decision-cell",
-        {f"docs/decisions/{ADR_0002}": _adr_text("0002").replace("Decision", "Something else entirely")},
+        {f"docs/decisions/{FILE_0002}": _adr_text("0002").replace("Decision", "Something else entirely")},
     ),
     _Case(
         "a-blank-line-before-the-title",
-        {f"docs/decisions/{ADR_0001}": _adr_text("0001", blank_lead=True)},
+        {f"docs/decisions/{FILE_0001}": _adr_text("0001", blank_lead=True)},
     ),
     _Case(
         "a-utf-8-bom-before-the-title",
-        {f"docs/decisions/{ADR_0001}": _adr_text("0001", bom=True)},
+        {f"docs/decisions/{FILE_0001}": _adr_text("0001", bom=True)},
     ),
     _Case(
         "an-untracked-file-once-tracked",
@@ -445,15 +445,15 @@ def test_a_changelog_entry_pinning_a_stale_rev_is_exempt_from_currency(tmp_path:
     repo = _build(
         tmp_path,
         {
-            f"docs/decisions/{ADR_0002}": _adr_text("0002", rev=2)
+            f"docs/decisions/{FILE_0002}": _adr_text("0002", rev=2)
             + f"\n  a continuation pinning the superseded {_cite('0001', 1)}\n"
         },
     )
     result = _run_check(repo)
-    assert result.returncode != 0, result.stdout  # the rev-2 head/index/citation move is incomplete
-    # above alone; this test only pins that a *changelog* pin of the un-revved ADR 0001 is not
-    # itself flagged as stale.
-    assert "pins ADR 0001" not in result.stderr
+    assert result.returncode != 0, result.stdout  # the rev-2 move above is incomplete on its own;
+    # this test only pins that a changelog pin of the un-revved ADR this appends is not itself
+    # flagged as stale.
+    assert f"pins {_cite('0001')}" not in result.stderr
 
 
 def test_a_directory_or_dangling_symlink_named_like_an_adr_is_not_readable(tmp_path: Path) -> None:
@@ -505,26 +505,26 @@ def test_a_citation_of_a_colliding_number_is_left_unjudged(tmp_path: Path) -> No
     result = _run_check(repo)
     assert result.returncode == 1
     assert "both carry number 0001" in result.stderr
-    assert "pins ADR 0001" not in result.stderr
+    assert f"pins {_cite('0001')}" not in result.stderr
 
 
 def test_an_adr_carrying_no_index_row_is_still_judged_for_citations(tmp_path: Path) -> None:
     repo = _build(
         tmp_path,
         {
-            "docs/decisions/README.md": _index(_row("0002", 1, ADR_0002)),
-            "CITATIONS.md": f"Prose citation: {_cite('0001', 1)}.\n\nLink: {_link('0002', 1, f'docs/decisions/{ADR_0002}')}.\n",
+            "docs/decisions/README.md": _index(_row("0002", 1, FILE_0002)),
+            "CITATIONS.md": f"Prose citation: {_cite('0001', 1)}.\n\nLink: {_link('0002', 1, f'docs/decisions/{FILE_0002}')}.\n",
         },
     )
     result = _run_check(repo)
     assert result.returncode == 1
-    assert "ADR 0001 rev 1 has no row in docs/decisions/README.md" in result.stderr
+    assert f"{_cite('0001', 1)} has no row in docs/decisions/README.md" in result.stderr
 
 
 def test_index_rev_cell_not_a_number(tmp_path: Path) -> None:
     repo = _build(
         tmp_path,
-        {"docs/decisions/README.md": _index(_row("0001", 1, ADR_0001), _row("0002", "N/A", ADR_0002))},
+        {"docs/decisions/README.md": _index(_row("0001", 1, FILE_0001), _row("0002", "N/A", FILE_0002))},
     )
     result = _run_check(repo)
     assert result.returncode == 1

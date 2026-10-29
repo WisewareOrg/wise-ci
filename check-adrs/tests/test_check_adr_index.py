@@ -18,8 +18,8 @@ import pytest
 
 SCRIPT = Path(__file__).resolve().parents[1] / "check-adr-index.py"
 
-ADR_0001 = "0001-alpha.md"
-ADR_0002 = "0002-beta.md"
+FILE_0001 = "0001-alpha.md"
+FILE_0002 = "0002-beta.md"
 HEADER = "# Architecture decision records\n\n| # | Rev | Decided | Decision |\n|---|---|---|---|\n"
 
 
@@ -32,10 +32,10 @@ def _index(*rows: str) -> str:
 
 
 BASE_FILES: dict[str, str] = {
-    "docs/decisions/README.md": _index(_row("0001", ADR_0001), _row("0002", ADR_0002)),
+    "docs/decisions/README.md": _index(_row("0001", FILE_0001), _row("0002", FILE_0002)),
     "docs/decisions/TEMPLATE.md": "# NNNN — Title\n",
-    f"docs/decisions/{ADR_0001}": "# 0001 — Alpha\n",
-    f"docs/decisions/{ADR_0002}": "# 0002 — Beta\n",
+    f"docs/decisions/{FILE_0001}": "# 0001 — Alpha\n",
+    f"docs/decisions/{FILE_0002}": "# 0002 — Beta\n",
 }
 
 FAILED = "check-adr-index: the decisions directory and its index disagree"
@@ -86,12 +86,12 @@ MUST_FAIL: list[_Case] = [
     ),
     _Case(
         "row-naming-no-file",
-        {"docs/decisions/README.md": _index(_row("0001", ADR_0001), _row("0002", ADR_0002), _row("0003", "0003-ghost.md"))},
+        {"docs/decisions/README.md": _index(_row("0001", FILE_0001), _row("0002", FILE_0002), _row("0003", "0003-ghost.md"))},
         ["docs/decisions/README.md row 0003 names no ADR file"],
     ),
     _Case(
         "row-linking-the-wrong-filename",
-        {f"docs/decisions/{ADR_0002}": None, "docs/decisions/0002-renamed.md": "# 0002 — Beta\n"},
+        {f"docs/decisions/{FILE_0002}": None, "docs/decisions/0002-renamed.md": "# 0002 — Beta\n"},
         ["docs/decisions/README.md row 0002 links '0002-beta.md', but the file is '0002-renamed.md'"],
     ),
     _Case(
@@ -101,15 +101,15 @@ MUST_FAIL: list[_Case] = [
     ),
     _Case(
         "two-rows-for-one-number",
-        {"docs/decisions/README.md": _index(_row("0001", ADR_0001), _row("0002", ADR_0002), _row("0002", ADR_0002))},
+        {"docs/decisions/README.md": _index(_row("0001", FILE_0001), _row("0002", FILE_0002), _row("0002", FILE_0002))},
         ["docs/decisions/README.md has two rows for number 0002"],
     ),
     _Case(
         "numbering-not-contiguous-from-0001",
         {
-            f"docs/decisions/{ADR_0001}": None,
+            f"docs/decisions/{FILE_0001}": None,
             "docs/decisions/0000-alpha.md": "# 0000 — Alpha\n",
-            "docs/decisions/README.md": _index(_row("0000", "0000-alpha.md"), _row("0002", ADR_0002)),
+            "docs/decisions/README.md": _index(_row("0000", "0000-alpha.md"), _row("0002", FILE_0002)),
         },
         ["ADR numbering is not contiguous from 0001: expected 0001, found 0000"],
     ),
@@ -150,7 +150,7 @@ MUST_PASS: list[_Case] = [
         {
             "docs/decisions/0003-gamma.md": "# 0003 — Gamma\n",
             "docs/decisions/README.md": _index(
-                _row("0001", ADR_0001), _row("0002", ADR_0002), _row("0003", "0003-gamma.md")
+                _row("0001", FILE_0001), _row("0002", FILE_0002), _row("0003", "0003-gamma.md")
             ),
         },
     ),
@@ -165,27 +165,27 @@ MUST_PASS: list[_Case] = [
     ),
     _Case(
         "row-target-titled",
-        {"docs/decisions/README.md": _index(f'| [0001]({ADR_0001} "Alpha") | 1 | 2026-01-01 | Decision 0001 |\n', _row("0002", ADR_0002))},
+        {"docs/decisions/README.md": _index(f'| [0001]({FILE_0001} "Alpha") | 1 | 2026-01-01 | Decision 0001 |\n', _row("0002", FILE_0002))},
     ),
     _Case(
         "row-target-angle-bracketed",
-        {"docs/decisions/README.md": _index(f"| [0001](<{ADR_0001}>) | 1 | 2026-01-01 | Decision 0001 |\n", _row("0002", ADR_0002))},
+        {"docs/decisions/README.md": _index(f"| [0001](<{FILE_0001}>) | 1 | 2026-01-01 | Decision 0001 |\n", _row("0002", FILE_0002))},
     ),
     _Case(
         "row-target-leading-dot-slash",
-        {"docs/decisions/README.md": _index(f"| [0001](./{ADR_0001}) | 1 | 2026-01-01 | Decision 0001 |\n", _row("0002", ADR_0002))},
+        {"docs/decisions/README.md": _index(f"| [0001](./{FILE_0001}) | 1 | 2026-01-01 | Decision 0001 |\n", _row("0002", FILE_0002))},
     ),
     _Case(
         "row-target-with-anchor",
-        {"docs/decisions/README.md": _index(f"| [0001]({ADR_0001}#context) | 1 | 2026-01-01 | Decision 0001 |\n", _row("0002", ADR_0002))},
+        {"docs/decisions/README.md": _index(f"| [0001]({FILE_0001}#context) | 1 | 2026-01-01 | Decision 0001 |\n", _row("0002", FILE_0002))},
     ),
     _Case(
         "a-4-space-indented-example-row",
-        {"docs/decisions/README.md": _index(_row("0001", ADR_0001), _row("0002", ADR_0002)) + "    | [0009](0009-nope.md) | 1 | 2026-01-01 | x |\n"},
+        {"docs/decisions/README.md": _index(_row("0001", FILE_0001), _row("0002", FILE_0002)) + "    " + _row("0009", "0009-nope.md")},
     ),
     _Case(
         "a-row-in-a-markdown-file-outside-decisions",
-        {"docs/OTHER.md": "| [0009](0009-nope.md) | 1 | 2026-01-01 | x |\n"},
+        {"docs/OTHER.md": _row("0009", "0009-nope.md")},
     ),
 ]
 
@@ -237,7 +237,7 @@ def test_fenced_code_block_row_is_read_as_a_real_row(tmp_path: Path) -> None:
     repo = _build(
         tmp_path,
         {
-            "docs/decisions/README.md": _index(_row("0001", ADR_0001), _row("0002", ADR_0002))
+            "docs/decisions/README.md": _index(_row("0001", FILE_0001), _row("0002", FILE_0002))
             + "\n```\n"
             + _row("0009", "0009-example.md")
             + "```\n"
