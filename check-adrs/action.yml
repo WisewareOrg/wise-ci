@@ -1,0 +1,13 @@
+name: check-adrs
+description: The docs/decisions/ directory and its index table agree, and every citation of an ADR pins that ADR's current rev.
+runs:
+  using: composite
+  steps:
+    - name: check-adr-index
+      shell: bash
+      run: python3 "$GITHUB_ACTION_PATH/check-adr-index.py"
+
+    - name: check-adr-revs
+      if: ${{ !cancelled() }}
+      shell: bash
+      run: python3 "$GITHUB_ACTION_PATH/check-adr-revs.py"
