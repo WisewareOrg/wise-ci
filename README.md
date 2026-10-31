@@ -10,8 +10,10 @@ also a uv workspace member whose console script the action runs.
 - uses: WisewareOrg/wise-ci/<check>@<sha>
 ```
 
-A check with a local form (`check-branch`, `check-docs-index`, `check-adrs`, `check-eol`,
-`check-reqs`) is also a uv dev dependency at the same commit:
+That action's own `setup-uv` step puts its pinned `uv` (and its env and problem matchers) on
+`PATH` for the rest of the consumer's job, not only for that one step.
+
+Every check with a local form is also a uv dev dependency at the same commit:
 
 ```toml
 [dependency-groups]
@@ -25,13 +27,17 @@ run with a recipe invoking `uv run --locked <check>`, with that check's own argu
 environment — see the check's own README § Run locally. `pr-title` and `repo-floor` have no local
 form: neither a pull-request title nor a repository ruleset exists locally, so each stays CI-only.
 
-Every package and runtime a check installs is pinned inside wise-ci: `uv` itself, by the action's
-own `setup-uv` step, and every Python package, by `uv.lock`. `git` and the Python interpreter come
-from the runner (`pyproject.toml`'s `python-preference = "only-system"`). A consumer therefore pins
-only wise-ci's own commit, written twice — the `uses:` sha and the dev dependency's `rev` — both
-naming the same commit. wise-renovate's `wise-ci` group moves both in one pull request, so it is
-one version even though it is written twice: the live wise-renovate config disables its
-`github-actions` manager for wise-ci and bumps it instead through a custom manager in that group.
+In CI, the action resolves against wise-ci's own `uv.lock`, so every package a check installs
+there is pinned exactly as that lock says, and `uv` itself is pinned by the action's own
+`setup-uv` step. Locally, a git dependency's own lock is not read: only a check's `==`-pinned
+packages carry a pin into the consumer's own resolution, and anything else resolves fresh there,
+with whichever `uv` the consumer's own job or machine runs. `git` and the Python interpreter come
+from the runner either way (`pyproject.toml`'s `python-preference = "only-system"`). A consumer
+pins only wise-ci's own commit, written twice — the `uses:` sha and the dev dependency's `rev` —
+both naming the same commit, moved together: wise-renovate's `wise-ci` group moves both in one
+pull request, so it is one version even though it is written twice. The live wise-renovate config
+disables its `github-actions` manager for wise-ci and bumps it instead through a custom manager in
+that group.
 
 ## Versioning
 
