@@ -10,8 +10,8 @@ also a uv workspace member whose console script the action runs.
 - uses: WisewareOrg/wise-ci/<check>@<sha>
 ```
 
-That action's own `setup-uv` step puts its pinned `uv` (and its env and problem matchers) on
-`PATH` for the rest of the consumer's job, not only for that one step.
+That action's own `setup-uv` step adds its pinned `uv` to `PATH`, sets its environment variables
+and registers its problem matchers for the rest of the consumer's job, not only for that one step.
 
 Every check with a local form is also a uv dev dependency at the same commit:
 

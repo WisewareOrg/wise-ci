@@ -46,7 +46,7 @@ action with a runtime dependency: its step runs `setup-uv` and `uv run --frozen`
 from PyPI inside the consumer's own job, rather than running on the stdlib alone. Every check with
 a local form runs a pinned `setup-uv` step too, then `uv run --locked` against wise-ci's own
 lockfile to run their own package — check-reqs additionally installing Doorstop and PyYAML, the
-other four stdlib-only. What covers it: every package every one of these actions installs is
+others stdlib-only. What covers it: every package every one of these actions installs is
 pinned to an exact version in `uv.lock` (repo-floor's PyYAML in the root `pyproject.toml` and
 check-reqs's Doorstop in `check-reqs/pyproject.toml` are also `==`-pinned),
 Renovate-managed like every other pin in this repository, and `--locked`/`--frozen` each refuse to
