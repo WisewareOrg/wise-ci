@@ -1,6 +1,6 @@
 """Specifies check-adrs/check_adrs/__init__.py: the orchestrator that runs
 check_adr_index.main() then check_adr_revs.main() even if the first half failed or crashed, and
-exits 1 if either half failed (check-adrs/README.md; plan decision 3). The two halves' own
+exits 1 if either half failed (check-adrs/README.md). The two halves' own
 reporting paths are specified by test_check_adr_index.py and test_check_adr_revs.py; this file
 specifies only what the orchestrator adds (nothing) and removes (a second Actions step).
 
@@ -111,9 +111,9 @@ INDEX_PASSED = "and its index agree:"
 REVS_FAILED_HEADER = "problem(s):"
 REVS_PASSED = "every one pinning the current rev"
 
-# The exact stderr each half prints, unchanged by the move into a package (plan: "Printed text
-# unchanged"). Verified directly against check_adrs/check_adr_index.py and
-# check_adrs/check_adr_revs.py run over this exact fixture, not assumed.
+# The exact stderr each half prints, unchanged by the move into a package. Verified directly
+# against check_adrs/check_adr_index.py and check_adrs/check_adr_revs.py run over this exact
+# fixture, not assumed.
 INDEX_BLOCK = (
     f"{INDEX_FAILED} (1):\n"
     "  ADR numbering is not contiguous from 0001: expected 0003, found 0004\n"
@@ -203,11 +203,11 @@ def test_both_halves_passing_exits_0(tmp_path: Path) -> None:
 
 
 def test_each_halfs_failure_text_appears_verbatim_with_no_added_prefix(tmp_path: Path) -> None:
-    """The orchestrator prints nothing of its own (plan decision 3): stderr is exactly the index
-    half's block followed by the revs half's block (the plan's call order), byte for byte -- a
-    wrong implementation that prepended a label (e.g. "check-adrs: "), merged the two counts, or
-    added a blank line between them would still satisfy a substring-only check but fails this
-    exact-equality one."""
+    """The orchestrator prints nothing of its own (check-adrs/README.md): stderr is exactly the
+    index half's block followed by the revs half's block (index runs before revs), byte for
+    byte -- a wrong implementation that prepended a label (e.g. "check-adrs: "), merged the two
+    counts, or added a blank line between them would still satisfy a substring-only check but
+    fails this exact-equality one."""
     repo = _build(tmp_path, BOTH_BROKEN)
 
     result = _run_check(repo)
@@ -217,14 +217,39 @@ def test_each_halfs_failure_text_appears_verbatim_with_no_added_prefix(tmp_path:
     assert result.stderr == INDEX_BLOCK + REVS_BLOCK
 
 
+def test_merged_stream_preserves_output_order(tmp_path: Path) -> None:
+    """Pins the stdout flush in _run_half (check_adrs/__init__.py): Python block-buffers stdout
+    when it is a pipe while leaving stderr unbuffered, so without the flush a later half's
+    stderr can print before an earlier half's stdout once both streams are merged into one file
+    descriptor -- the way a CI log viewer merges an Actions step's combined output. Builds the
+    index-pass/revs-fail fixture and runs the installed check-adrs with stderr redirected into
+    stdout, so both halves' output lands in one ordered stream, then asserts the index half's
+    pass line appears before the revs half's failure header in that merged text."""
+    repo = _build(tmp_path, REVS_ONLY_BROKEN)
+
+    result = subprocess.run(
+        [str(SCRIPT)],
+        cwd=repo,
+        env=_env(),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+
+    assert result.returncode == 1
+    assert INDEX_PASSED in result.stdout
+    assert REVS_FAILED_HEADER in result.stdout
+    assert result.stdout.index(INDEX_PASSED) < result.stdout.index(REVS_FAILED_HEADER)
+
+
 def test_a_crash_in_the_index_half_still_runs_the_revs_half(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
 ) -> None:
     """No filesystem fixture crashes only one half (a missing docs/decisions crashes both), so
     this is in-process: check_adr_index.main is monkeypatched to raise, and check_adrs.main()
     must still call check_adr_revs.main() (monkeypatched to record), return 1, and print the
-    traceback to stderr -- the same text Python prints for an uncaught exception (plan
-    decision 3: `traceback.print_exc()`)."""
+    traceback to stderr -- the same text Python prints for an uncaught exception
+    (`traceback.print_exc()`)."""
 
     def _boom() -> int:
         raise RuntimeError("index half exploded")
@@ -245,3 +270,34 @@ def test_a_crash_in_the_index_half_still_runs_the_revs_half(
     captured = capsys.readouterr()
     assert "Traceback" in captured.err
     assert "RuntimeError: index half exploded" in captured.err
+
+
+def test_a_crash_in_the_revs_half_still_runs_the_index_half(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    """The mirror of test_a_crash_in_the_index_half_still_runs_the_revs_half above, roles
+    swapped: check_adr_revs.main is monkeypatched to raise, and check_adrs.main() must still
+    call check_adr_index.main() (monkeypatched to record), return 1, and print the traceback to
+    stderr. check-adrs/README.md documents this resilience for the revs half ("always runs,
+    even if the index half failed or crashed"); the orchestrator applies the same handling to
+    both halves, so the reverse direction needs its own test too."""
+
+    def _boom() -> int:
+        raise RuntimeError("revs half exploded")
+
+    index_calls: list[bool] = []
+
+    def _record_index() -> int:
+        index_calls.append(True)
+        return 0
+
+    monkeypatch.setattr(check_adrs.check_adr_index, "main", _record_index)
+    monkeypatch.setattr(check_adrs.check_adr_revs, "main", _boom)
+
+    result = check_adrs.main()
+
+    assert result == 1
+    assert index_calls == [True]
+    captured = capsys.readouterr()
+    assert "Traceback" in captured.err
+    assert "RuntimeError: revs half exploded" in captured.err

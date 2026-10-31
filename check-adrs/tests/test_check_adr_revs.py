@@ -574,9 +574,9 @@ def test_index_rev_cell_not_a_number(
 
 
 def test_outside_a_repository_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Converted per the plan's WI-4 item: in-process, the uncaught CalledProcessError
-    tracked()/untracked() raise when git itself fails (no repository) is asserted directly with
-    pytest.raises, rather than read back from a subprocess's stderr traceback text."""
+    """In-process: the uncaught CalledProcessError tracked()/untracked() raise when git itself
+    fails (no repository) is asserted directly with pytest.raises, rather than read back from a
+    subprocess's stderr traceback text."""
     plain = tmp_path / "not-a-repo"
     plain.mkdir()
     monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))
