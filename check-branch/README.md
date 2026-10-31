@@ -30,8 +30,7 @@ everything from the environment:
 - `GITHUB_TOKEN` — a token that can read the pull request and its linked issue.
 - `GITHUB_REPOSITORY` — `owner/repo`.
 
-No recipe is given here: a consumer derives these five from its own pull-request context, the way
-WiseKiosk's local recipe does.
+No recipe is given here: a consumer derives these five from its own pull-request context.
 
 ## History
 

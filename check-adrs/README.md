@@ -56,7 +56,7 @@ than silently unscanned. Every other finding accumulates into one run:
 - an ADR cited as a reference-style link or a raw `<a href>`, neither of which can carry a title to
   pin a rev to;
 - a citation spelled with a plural, a hyphen, an underscore, a hash, a doubled space, the wrong
-  case, or too few digits — recognised deliberately wider than the one accepted form, so each is
+  case, or too few digits — recognised wider than the one accepted form, so each is
   reported rather than passed over.
 
 **A changelog line is exempt from currency, not from form.** A line in a *Revisions* section
