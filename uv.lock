@@ -4,6 +4,7 @@ requires-python = ">=3.12"
 
 [manifest]
 members = [
+    "check-branch",
     "check-reqs",
     "wise-ci",
 ]
@@ -156,6 +157,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/03/cf/4c66866fa9e2b1c78e3c911516d1de497a677b7ac60f1eceda74ce777ca3/charset_normalizer-3.5.2-cp37-abi3-win_arm64.whl", hash = "sha256:40ab6bffa02ae10a0581e6c198be7d2d8ca5c2a0c64e4ed3465d766df457573e", size = 294363, upload-time = "2026-09-30T04:38:51.312Z" },
     { url = "https://files.pythonhosted.org/packages/fc/ad/d07d7862a62ffa6d79d68074d14823243dd235a77c45262acbf6adeb28bf/charset_normalizer-3.5.2-py3-none-any.whl", hash = "sha256:b6b751274acb69d77b3323d6b7dbaa3c7fdfc1eb829b7eb61d262f32e1af9685", size = 68872, upload-time = "2026-09-30T04:39:21.828Z" },
 ]
+
+[[package]]
+name = "check-branch"
+version = "0"
+source = { editable = "check-branch" }
 
 [[package]]
 name = "check-reqs"
@@ -556,6 +562,7 @@ dependencies = [
 
 [package.dev-dependencies]
 test = [
+    { name = "check-branch" },
     { name = "check-reqs" },
     { name = "coverage" },
     { name = "pytest" },
@@ -567,6 +574,7 @@ requires-dist = [{ name = "pyyaml", specifier = "==6.0.3" }]
 
 [package.metadata.requires-dev]
 test = [
+    { name = "check-branch", editable = "check-branch" },
     { name = "check-reqs", editable = "check-reqs" },
     { name = "coverage", specifier = ">=7.10" },
     { name = "pytest" },

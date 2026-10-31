@@ -15,9 +15,10 @@ python-downloads = "never"
 python-preference = "only-system"
 
 [tool.uv.workspace]
-members = ["check-reqs"]
+members = ["check-branch", "check-reqs"]
 
 [tool.uv.sources]
+check-branch = { workspace = true }
 check-reqs = { workspace = true }
 
 [dependency-groups]
@@ -25,6 +26,7 @@ test = [
   "pytest",
   "coverage>=7.10",
   "pytest-cov>=7.1.0",
+  "check-branch",
   "check-reqs",
 ]
 

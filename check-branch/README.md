@@ -18,6 +18,21 @@ call it makes reads data a public repository exposes to an unauthenticated or re
 private consumer additionally needs `issues: read` and `pull-requests: read`. See
 [`../README.md`](../README.md) § Consuming a check for how to reference this action.
 
+## Run locally
+
+Install the distribution as described in [`../README.md`](../README.md) § Consuming a check. This
+check runs only inside a pull request and needs a token that can read it; it takes no argv, reading
+everything from the environment:
+
+- `HEAD_REF` — the branch name to check.
+- `PR_NUMBER` — the pull request number.
+- `DEFAULT_BRANCH` — the repository's default branch name.
+- `GITHUB_TOKEN` — a token that can read the pull request and its linked issue.
+- `GITHUB_REPOSITORY` — `owner/repo`.
+
+No recipe is given here: a consumer derives these five from its own pull-request context, the way
+WiseKiosk's local recipe does today.
+
 ## History
 
 **The branch types are built in, not a `types` input.** PROC-010 fixes the ticket-type set; a

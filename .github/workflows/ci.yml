@@ -206,7 +206,8 @@ jobs:
             exit 1
           fi
 
-          for file in "check-eol/check-eol.py" "check-docs-index/check-docs-index.py" "check-adrs/check-adr-index.py" "check-adrs/check-adr-revs.py" "check-branch/check-branch.py" "repo-floor/repo-floor.py" "pr-title/pr-title.py" \
+          for file in "check-eol/check-eol.py" "check-docs-index/check-docs-index.py" "check-adrs/check-adr-index.py" "check-adrs/check-adr-revs.py" "repo-floor/repo-floor.py" "pr-title/pr-title.py" \
+            "check-branch/check_branch/__init__.py" \
             "check-reqs/check_reqs/__init__.py" "check-reqs/check_reqs/check_headers.py" \
             "check-reqs/check_reqs/check_method_consistency.py" "check-reqs/check_reqs/check_suspect_links.py" \
             "check-reqs/check_reqs/check_text_citations.py" "check-reqs/check_reqs/check_unreviewed.py" \
