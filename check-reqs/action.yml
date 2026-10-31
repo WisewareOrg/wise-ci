@@ -4,7 +4,7 @@ description: >-
   fingerprint Doorstop itself did not write, every parent link resolves and matches what it was
   reviewed against (inactive items included), every verification method is recognised and no
   more or less decidable than its children support, no item's `text` cites another item by
-  identifier, and every header is well-formed. Requires `uv` on PATH.
+  identifier, and every header is well-formed.
 inputs:
   root:
     description: The directory holding the sys/srs/tst Doorstop documents, resolved against the working directory.
@@ -13,6 +13,11 @@ inputs:
 runs:
   using: composite
   steps:
+    - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      with:
+        version: "0.13.6"
+        enable-cache: false
+
     - name: check-reqs
       shell: bash
       env:

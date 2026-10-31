@@ -41,11 +41,15 @@ credential, the `GITLEAKS_LICENSE` key gitleaks-action requires of an organizati
 to the repository or its secrets, and the workflows themselves are audited
 ([`docs/CI.md`](docs/CI.md)).
 
-**A caller's job fetches a package at run time.** repo-floor's `action.yml` is wise-ci's first
+**A caller's job fetches a package at run time.** repo-floor's `action.yml` was wise-ci's first
 action with a runtime dependency: its step runs `setup-uv` and `uv run --frozen` to install PyYAML
-from PyPI inside the consumer's own job, rather than running on the stdlib alone. What covers it:
-the version is `==`-pinned in `pyproject.toml` and `uv.lock`, Renovate-managed like every other pin
-in this repository, and `--frozen` refuses to install anything the lock does not already pin.
+from PyPI inside the consumer's own job, rather than running on the stdlib alone. check-reqs,
+check-branch, check-eol, check-docs-index and check-adrs each run a pinned `setup-uv` step too,
+then `uv run --locked` against wise-ci's own lockfile to run their own package — check-reqs
+additionally installing Doorstop and PyYAML, the other four stdlib-only. What covers it: every
+version is `==`-pinned in `pyproject.toml` and `uv.lock`, Renovate-managed like every other pin in
+this repository, and `--locked`/`--frozen` each refuse to run or install anything the lock does not
+already pin.
 
 **A caller's job downloads Node and installs commitlint at run time.** pr-title's `action.yml` runs
 `setup-node` to install the Node version it pins, then `npm ci --ignore-scripts` to install
