@@ -1,10 +1,13 @@
-"""Specifies check-adrs/check-adr-revs.py: every reporting path in both directions
+"""Specifies check-adrs/check_adrs/check_adr_revs.py: every reporting path in both directions
 (check-adrs/README.md).
 
 Each case builds a real, isolated git repository in a temporary directory, over a minimal fixture
 ADR tree — two ADRs and one citing document — rather than a copy of a real decisions directory, so a
-case states its own premise. The real script runs against it as a subprocess (docs/TESTING.md "Real
-dependencies where possible").
+case states its own premise. This half cannot be isolated from check-adr-index by subprocessing the
+installed check-adrs script (that runs both halves), so it is run in-process instead: one shared
+import of check_adrs.check_adr_revs, `monkeypatch.chdir` into each fixture, then `main()` called
+directly and its return value and `capsys` output asserted; an exception the half does not catch
+(outside a git repository) is asserted with `pytest.raises` instead of read back from stderr text.
 
 No case spells a live citation (`ADR` followed by digits) as a literal string: every one is built at
 runtime from separate parts, so this file's own text never reads as a citation when wise-ci's
@@ -13,14 +16,13 @@ check-adrs gates wise-ci's own tree.
 
 import os
 import subprocess
-import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
 import pytest
 
-SCRIPT = Path(__file__).resolve().parents[1] / "check-adr-revs.py"
+import check_adrs.check_adr_revs as check_adr_revs
 
 ADR = "ADR"
 
@@ -149,13 +151,35 @@ def _build(
     return repo
 
 
-def _run_check(repo: Path) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        [sys.executable, str(SCRIPT)], cwd=repo, env=_env(), capture_output=True, text=True
-    )
+@dataclass(frozen=True)
+class _Result:
+    """Mirrors subprocess.CompletedProcess's three fields read below, so converting the call site
+    is the only change every test needed -- not a rewrite of what each one asserts."""
+
+    returncode: int
+    stdout: str
+    stderr: str
 
 
-def _assert_failed(result: subprocess.CompletedProcess, reports: list[str]) -> None:
+def _run_check(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> _Result:
+    # The script's own internal git calls (tracked/untracked) pass no env of their own, so they
+    # inherit this process's environment -- in-process, that is the real os.environ, not a
+    # subprocess's. _ISOLATION is applied the same way the fixture-building _git() calls get it,
+    # so a case gives the same result on any machine and in CI (docs/TESTING.md), unchanged by
+    # moving the invocation in-process.
+    for key in [k for k in os.environ if k.startswith("GIT_")]:
+        monkeypatch.delenv(key, raising=False)
+    for key, value in _ISOLATION.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.chdir(repo)
+    returncode = check_adr_revs.main()
+    captured = capsys.readouterr()
+    return _Result(returncode, captured.out, captured.err)
+
+
+def _assert_failed(result: _Result, reports: list[str]) -> None:
     assert result.returncode == 1, result.stdout
     assert FAILED_HEADER in result.stderr
     for report in reports:
@@ -163,7 +187,7 @@ def _assert_failed(result: subprocess.CompletedProcess, reports: list[str]) -> N
     assert PASSED not in result.stdout
 
 
-def _assert_passed(result: subprocess.CompletedProcess) -> None:
+def _assert_passed(result: _Result) -> None:
     assert result.returncode == 0, result.stderr
     assert result.stderr == ""
     assert PASSED in result.stdout
@@ -426,20 +450,26 @@ MUST_PASS: list[_Case] = [
 
 
 @pytest.mark.parametrize("case", MUST_FAIL, ids=lambda c: c.id)
-def test_must_fail(case: _Case, tmp_path: Path) -> None:
+def test_must_fail(
+    case: _Case, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
     repo = _build(tmp_path, case.overrides, case.untracked, case.extra)
-    result = _run_check(repo)
+    result = _run_check(repo, monkeypatch, capsys)
     _assert_failed(result, case.reports)
 
 
 @pytest.mark.parametrize("case", MUST_PASS, ids=lambda c: c.id)
-def test_must_pass(case: _Case, tmp_path: Path) -> None:
+def test_must_pass(
+    case: _Case, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
     repo = _build(tmp_path, case.overrides, case.untracked, case.extra)
-    result = _run_check(repo)
+    result = _run_check(repo, monkeypatch, capsys)
     _assert_passed(result)
 
 
-def test_a_changelog_entry_pinning_a_stale_rev_is_exempt_from_currency(tmp_path: Path) -> None:
+def test_a_changelog_entry_pinning_a_stale_rev_is_exempt_from_currency(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
     """The exemption drops staleness, not form: the pin still has to be canonical and still has to
     carry a rev."""
     repo = _build(
@@ -449,23 +479,27 @@ def test_a_changelog_entry_pinning_a_stale_rev_is_exempt_from_currency(tmp_path:
             + f"\n  a continuation pinning the superseded {_cite('0001', 1)}\n"
         },
     )
-    result = _run_check(repo)
+    result = _run_check(repo, monkeypatch, capsys)
     assert result.returncode != 0, result.stdout  # the rev-2 move above is incomplete on its own;
     # this test only pins that a changelog pin of the un-revved ADR this appends is not itself
     # flagged as stale.
     assert f"pins {_cite('0001')}" not in result.stderr
 
 
-def test_a_directory_or_dangling_symlink_named_like_an_adr_is_not_readable(tmp_path: Path) -> None:
+def test_a_directory_or_dangling_symlink_named_like_an_adr_is_not_readable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
     repo = _build(tmp_path, {})
     (repo / "docs/decisions/0003-notreal.md").mkdir()
     (repo / "docs/decisions/0003-notreal.md/inside.txt").write_text("x\n", encoding="utf-8")
-    result = _run_check(repo)
+    result = _run_check(repo, monkeypatch, capsys)
     assert result.returncode == 1
     assert "docs/decisions/0003-notreal.md is not a readable file" in result.stderr
 
 
-def test_a_tracked_dangling_symlink_fails_on_the_read(tmp_path: Path) -> None:
+def test_a_tracked_dangling_symlink_fails_on_the_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
     repo = _build(tmp_path, {})
     link = repo / "ghost-link.md"
     link.symlink_to(repo / "does-not-exist.md")
@@ -474,12 +508,14 @@ def test_a_tracked_dangling_symlink_fails_on_the_read(tmp_path: Path) -> None:
     commit = _git(repo, "-c", "commit.gpgsign=false", "commit", "-q", "-m", "dangling symlink")
     assert commit.returncode == 0, commit.stderr
 
-    result = _run_check(repo)
+    result = _run_check(repo, monkeypatch, capsys)
     assert result.returncode == 1
     assert "ghost-link.md:" in result.stderr
 
 
-def test_a_tracked_binary_file_is_reported_as_not_scanned_but_does_not_fail_alone(tmp_path: Path) -> None:
+def test_a_tracked_binary_file_is_reported_as_not_scanned_but_does_not_fail_alone(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
     repo = _build(tmp_path, {})
     (repo / "binary.md").write_bytes(b"\xff\xfe\x00\x01")
     add = _git(repo, "add", "-A")
@@ -487,12 +523,14 @@ def test_a_tracked_binary_file_is_reported_as_not_scanned_but_does_not_fail_alon
     commit = _git(repo, "-c", "commit.gpgsign=false", "commit", "-q", "-m", "binary file")
     assert commit.returncode == 0, commit.stderr
 
-    result = _run_check(repo)
+    result = _run_check(repo, monkeypatch, capsys)
     assert result.returncode == 0, result.stderr
     assert "not scanned, not decodable as text: binary.md" in result.stderr
 
 
-def test_a_citation_of_a_colliding_number_is_left_unjudged(tmp_path: Path) -> None:
+def test_a_citation_of_a_colliding_number_is_left_unjudged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
     """A citation of a colliding number is left unjudged, and the run fails on the collision
     itself, not a manufactured rev disagreement."""
     repo = _build(
@@ -502,13 +540,15 @@ def test_a_citation_of_a_colliding_number_is_left_unjudged(tmp_path: Path) -> No
             "CITATIONS.md": f"Prose citation: {_cite('0001', 1)}.\n",
         },
     )
-    result = _run_check(repo)
+    result = _run_check(repo, monkeypatch, capsys)
     assert result.returncode == 1
     assert "both carry number 0001" in result.stderr
     assert f"pins {_cite('0001')}" not in result.stderr
 
 
-def test_an_adr_carrying_no_index_row_is_still_judged_for_citations(tmp_path: Path) -> None:
+def test_an_adr_carrying_no_index_row_is_still_judged_for_citations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
     repo = _build(
         tmp_path,
         {
@@ -516,34 +556,37 @@ def test_an_adr_carrying_no_index_row_is_still_judged_for_citations(tmp_path: Pa
             "CITATIONS.md": f"Prose citation: {_cite('0001', 1)}.\n\nLink: {_link('0002', 1, f'docs/decisions/{FILE_0002}')}.\n",
         },
     )
-    result = _run_check(repo)
+    result = _run_check(repo, monkeypatch, capsys)
     assert result.returncode == 1
     assert f"{_cite('0001', 1)} has no row in docs/decisions/README.md" in result.stderr
 
 
-def test_index_rev_cell_not_a_number(tmp_path: Path) -> None:
+def test_index_rev_cell_not_a_number(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
     repo = _build(
         tmp_path,
         {"docs/decisions/README.md": _index(_row("0001", 1, FILE_0001), _row("0002", "N/A", FILE_0002))},
     )
-    result = _run_check(repo)
+    result = _run_check(repo, monkeypatch, capsys)
     assert result.returncode == 1
     assert "has rev cell 'N/A', not a number" in result.stderr
 
 
-def test_outside_a_repository_fails(tmp_path: Path) -> None:
+def test_outside_a_repository_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Converted per the plan's WI-4 item: in-process, the uncaught CalledProcessError
+    tracked()/untracked() raise when git itself fails (no repository) is asserted directly with
+    pytest.raises, rather than read back from a subprocess's stderr traceback text."""
     plain = tmp_path / "not-a-repo"
     plain.mkdir()
-    env = _env(GIT_CEILING_DIRECTORIES=str(tmp_path))
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))
+    monkeypatch.chdir(plain)
+    # independent confirmation: the same git invocation the script makes, run directly.
     probe = subprocess.run(
         ["git", "ls-files", "--others", "--exclude-standard", "-z"],
-        cwd=plain, env=env, capture_output=True, text=True,
+        cwd=plain, capture_output=True, text=True,
     )
     assert probe.returncode != 0
 
-    result = subprocess.run(
-        [sys.executable, str(SCRIPT)], cwd=plain, env=env, capture_output=True, text=True
-    )
-    assert result.returncode != 0
-    assert PASSED not in result.stdout
-    assert "CalledProcessError" in result.stderr
+    with pytest.raises(subprocess.CalledProcessError):
+        check_adr_revs.main()

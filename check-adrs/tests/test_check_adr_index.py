@@ -1,22 +1,24 @@
-"""Specifies check-adrs/check-adr-index.py: every reporting path in both directions
+"""Specifies check-adrs/check_adrs/check_adr_index.py: every reporting path in both directions
 (check-adrs/README.md).
 
 Each case builds docs/decisions/ directly on disk in a temporary directory. The script makes no git
 call, so no git repository is needed except for the one case that depends on that fact (an untracked
-ADR file is still judged). The real script runs against it as a subprocess (docs/TESTING.md "Real
-dependencies where possible").
+ADR file is still judged). This half cannot be isolated from check-adr-revs by subprocessing the
+installed check-adrs script (that runs both halves), so it is run in-process instead: one shared
+import of check_adrs.check_adr_index, `monkeypatch.chdir` into each fixture, then `main()` called
+directly and its return value and `capsys` output asserted (docs/TESTING.md "Real dependencies
+where possible" still holds -- only the process boundary moves, not the fixture).
 """
 
 import os
 import subprocess
-import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
 import pytest
 
-SCRIPT = Path(__file__).resolve().parents[1] / "check-adr-index.py"
+import check_adrs.check_adr_index as check_adr_index
 
 FILE_0001 = "0001-alpha.md"
 FILE_0002 = "0002-beta.md"
@@ -64,10 +66,23 @@ def _build(
     return repo
 
 
-def _run_check(repo: Path) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        [sys.executable, str(SCRIPT)], cwd=repo, capture_output=True, text=True
-    )
+@dataclass(frozen=True)
+class _Result:
+    """Mirrors subprocess.CompletedProcess's three fields read below, so converting the call site
+    is the only change every test needed -- not a rewrite of what each one asserts."""
+
+    returncode: int
+    stdout: str
+    stderr: str
+
+
+def _run_check(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> _Result:
+    monkeypatch.chdir(repo)
+    returncode = check_adr_index.main()
+    captured = capsys.readouterr()
+    return _Result(returncode, captured.out, captured.err)
 
 
 @dataclass(frozen=True)
@@ -191,9 +206,11 @@ MUST_PASS: list[_Case] = [
 
 
 @pytest.mark.parametrize("case", MUST_FAIL, ids=lambda c: c.id)
-def test_must_fail(case: _Case, tmp_path: Path) -> None:
+def test_must_fail(
+    case: _Case, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
     repo = _build(tmp_path, case.overrides, case.extra)
-    result = _run_check(repo)
+    result = _run_check(repo, monkeypatch, capsys)
     assert result.returncode == 1
     assert FAILED in result.stderr
     for report in case.reports:
@@ -202,15 +219,19 @@ def test_must_fail(case: _Case, tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("case", MUST_PASS, ids=lambda c: c.id)
-def test_must_pass(case: _Case, tmp_path: Path) -> None:
+def test_must_pass(
+    case: _Case, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
     repo = _build(tmp_path, case.overrides, case.extra)
-    result = _run_check(repo)
+    result = _run_check(repo, monkeypatch, capsys)
     assert result.returncode == 0, result.stderr
     assert result.stderr == ""
     assert PASSED in result.stdout
 
 
-def test_an_untracked_adr_file_with_no_row_is_still_judged(tmp_path: Path) -> None:
+def test_an_untracked_adr_file_with_no_row_is_still_judged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
     """The population is the directory, os.listdir reports it like any other entry — unlike
     check-docs-index, no untracked guard is needed here (check-adrs/README.md)."""
     repo = _build(tmp_path, {})
@@ -226,12 +247,14 @@ def test_an_untracked_adr_file_with_no_row_is_still_judged(tmp_path: Path) -> No
     )
     assert "?? docs/decisions/0003-untracked.md" in status.stdout
 
-    result = _run_check(repo)
+    result = _run_check(repo, monkeypatch, capsys)
     assert result.returncode == 1
     assert "docs/decisions/0003-untracked.md has no row in docs/decisions/README.md" in result.stderr
 
 
-def test_fenced_code_block_row_is_read_as_a_real_row(tmp_path: Path) -> None:
+def test_fenced_code_block_row_is_read_as_a_real_row(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
     """Known rejection (check-adrs/README.md): there is no fence blanking, so an illustrative
     example table in docs/decisions/README.md is read like any other row."""
     repo = _build(
@@ -243,16 +266,18 @@ def test_fenced_code_block_row_is_read_as_a_real_row(tmp_path: Path) -> None:
             + "```\n"
         },
     )
-    result = _run_check(repo)
+    result = _run_check(repo, monkeypatch, capsys)
     assert result.returncode == 1
     assert "docs/decisions/README.md row 0009 names no ADR file" in result.stderr
 
 
-def test_uppercase_extension_is_invisible_rather_than_rejected(tmp_path: Path) -> None:
+def test_uppercase_extension_is_invisible_rather_than_rejected(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
     """Known gap (check-adrs/README.md): name.endswith(".md") is case-sensitive, so an ADR named
     with an uppercase extension is skipped rather than caught."""
     repo = _build(tmp_path, {})
     (repo / "docs/decisions/0003-upper.MD").write_text("# 0003 — Upper\n", encoding="utf-8")
-    result = _run_check(repo)
+    result = _run_check(repo, monkeypatch, capsys)
     assert result.returncode == 0, result.stderr
     assert PASSED in result.stdout
