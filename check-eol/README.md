@@ -20,3 +20,15 @@ failed or unreadable population enumeration is not an empty population and must 
 attribute both exempts the file from CRLF→LF normalisation when it is added *and* excludes it from
 the search, so genuinely CRLF-terminated text commits and survives a fresh clone unseen. The LF
 invariant holds for files git treats as text, and `.gitattributes` decides which those are.
+
+## Run locally
+
+Install the distribution as described in [`../README.md`](../README.md) § Consuming a check, then
+run it from the repository root:
+
+```sh
+uv run --locked check-eol
+```
+
+No arguments and no environment variables. The check reads `GITHUB_ACTIONS` itself to decide
+whether to annotate a finding (`::error::`) or print it plainly; neither form changes the outcome.
