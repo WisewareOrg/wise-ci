@@ -2,18 +2,18 @@
 request title, which becomes the commit that reaches the default branch under squash-merge, must
 be a Conventional Commit), by handing the title to the real commitlint on stdin.
 
-Mirrors check-branch/check-branch.py's shape exactly:
+Mirrors check-branch/check_branch/__init__.py's shape exactly:
 `api_request(url, token, payload=None)`; a `fail(message)` helper that prints `pr-title: <message>`
 to stderr and calls `sys.exit(1)`; `main()` returning `None` on success, with
 `if __name__ == "__main__": sys.exit(main())`; the API base hardcoded as `https://api.github.com`.
 It reads `HEAD_REF`, `TITLE`, `PR_NUMBER`, `GITHUB_TOKEN` and the runner's own `GITHUB_REPOSITORY`.
 
 Test mechanism, copied from check-branch/tests/test_check_branch.py:
-- load the script in-process with `importlib` (`:44-55`);
+- load the script in-process with `importlib` (`:51-62`);
 - fake the API with a `FakeAPI` matched by URL shape and installed with
-  `monkeypatch.setattr(..., "api_request", ...)` (`:73-103`, `:152`);
-- test the HTTP branches of `api_request` through a patched `urlopen` (`:739-804`);
-- run the `__main__` guard through `runpy` (`:818`).
+  `monkeypatch.setattr(..., "api_request", ...)` (`:80-110`, `:159`);
+- test the HTTP branches of `api_request` through a patched `urlopen` (`:746-811`);
+- run the `__main__` guard through `runpy` (`:825`).
 
 The title-case tests run the real commitlint through the script (docs/TESTING.md "Real
 dependencies where possible"), from a temporary, non-git cwd (an autouse fixture below) -- this
@@ -355,7 +355,7 @@ def test_commitlint_packages_are_production_dependencies():
 
 # ---------------------------------------------------------------------------------------------
 # api_request itself: its own branches, patching urllib.request.urlopen (not api_request) --
-# mirrors check-branch/tests/test_check_branch.py:739-804 exactly, since pr-title.py mirrors
+# mirrors check-branch/tests/test_check_branch.py:746-811 exactly, since pr-title.py mirrors
 # api_request's signature and behaviour unchanged.
 # ---------------------------------------------------------------------------------------------
 
