@@ -111,9 +111,9 @@ INDEX_PASSED = "and its index agree:"
 REVS_FAILED_HEADER = "problem(s):"
 REVS_PASSED = "every one pinning the current rev"
 
-# The exact stderr each half prints today against BOTH_BROKEN, unchanged by the move into a
-# package (plan: "Printed text unchanged"). Verified directly against today's check-adr-index.py
-# and check-adr-revs.py run as scripts over this exact fixture, not assumed.
+# The exact stderr each half prints, unchanged by the move into a package (plan: "Printed text
+# unchanged"). Verified directly against check_adrs/check_adr_index.py and
+# check_adrs/check_adr_revs.py run over this exact fixture, not assumed.
 INDEX_BLOCK = (
     f"{INDEX_FAILED} (1):\n"
     "  ADR numbering is not contiguous from 0001: expected 0003, found 0004\n"
@@ -223,7 +223,7 @@ def test_a_crash_in_the_index_half_still_runs_the_revs_half(
     """No filesystem fixture crashes only one half (a missing docs/decisions crashes both), so
     this is in-process: check_adr_index.main is monkeypatched to raise, and check_adrs.main()
     must still call check_adr_revs.main() (monkeypatched to record), return 1, and print the
-    traceback to stderr -- the same text Python prints for an uncaught exception today (plan
+    traceback to stderr -- the same text Python prints for an uncaught exception (plan
     decision 3: `traceback.print_exc()`)."""
 
     def _boom() -> int:

@@ -821,8 +821,8 @@ def test_api_request_never_prints_the_token(monkeypatch, capsys):
 
 
 def test_dunder_main_guard_runs_main_and_exits(monkeypatch):
-    """Runs the module directly with `runpy`, the only way left to exercise the
-    `if __name__ == "__main__":` line itself now that the action invokes the installed
+    """Runs the module directly with `runpy`, the only way to exercise the
+    `if __name__ == "__main__":` line itself, since the action invokes the installed
     `check-branch` console script rather than `python3`-ing the module file. Uses a scenario
     that fails before any API call (missing PR_NUMBER) so it needs no `api_request` patch of its
     own module-fresh run."""
@@ -845,9 +845,9 @@ def test_dunder_main_guard_runs_main_and_exits(monkeypatch):
 def test_installed_script_exempts_branch_equal_to_default():
     """The packaged action runs `check-branch` (the installed console script). On the exempt
     path -- HEAD_REF equal to DEFAULT_BRANCH -- it must exit 0 and print the same exemption text
-    check-branch.py prints today (check-branch/check-branch.py:54-56, unchanged by the move),
-    the same text the in-process test_default_branch_is_exempt_even_when_not_named_main above
-    proves the module reaches for its own exempt case."""
+    the module prints (check-branch/check_branch/__init__.py:54-56), the same text the
+    in-process test_default_branch_is_exempt_even_when_not_named_main above proves the module
+    reaches for its own exempt case."""
     env = dict(os.environ)
     env["HEAD_REF"] = DEFAULT_BRANCH
     env["DEFAULT_BRANCH"] = DEFAULT_BRANCH
