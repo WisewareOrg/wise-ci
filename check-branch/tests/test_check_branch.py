@@ -1,4 +1,4 @@
-"""Specifies check-branch/check-branch.py: the organization process stated once in
+"""Specifies check-branch/check_branch/__init__.py: the organization process stated once in
 WisewareOrg/.github PROCESS.md (PROC-001-008, PROC-010), ported from
 WiseKiosk's scripts/check-branch.py with the behaviour changes and env contract pinned by the
 issue-6 plan ("Decisions you are approving") and the owner's 2026-10-03/04 carry comment:
@@ -24,8 +24,11 @@ the ported script, so none has a test here.
 
 import importlib.util
 import json
+import os
 import re
 import runpy
+import subprocess
+import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -33,7 +36,11 @@ from typing import Any
 
 import pytest
 
-SCRIPT = Path(__file__).resolve().parents[1] / "check-branch.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "check_branch" / "__init__.py"
+# The installed console script `action.yml` runs, as a subprocess -- the same form check-reqs's
+# tests use (template: check-reqs/tests/test_check_reqs.py), unlike SCRIPT above, which the
+# in-process tests below import directly and which runpy also executes for the `__main__` guard.
+INSTALLED_SCRIPT = Path(sys.executable).with_name("check-branch")
 GRAPHQL_URL = "https://api.github.com/graphql"
 
 REPO = "WisewareOrg/wise-ci"
@@ -71,7 +78,7 @@ def _env(monkeypatch, *, head_ref=None, pr_number=None, default_branch=DEFAULT_B
 
 
 class FakeAPI:
-    """Stands in for check-branch.py's `api_request`. Dispatches on the URL's own shape -- an
+    """Stands in for check_branch's `api_request`. Dispatches on the URL's own shape -- an
     `.../issues/<n>` or `.../pulls/<n>` REST endpoint, or the fixed GraphQL endpoint -- rather
     than a literal URL, so this fake does not also pin how the script builds that URL out of
     GITHUB_REPOSITORY; that construction is code-monkey's to choose; it is not a boundary this
@@ -814,12 +821,43 @@ def test_api_request_never_prints_the_token(monkeypatch, capsys):
 
 
 def test_dunder_main_guard_runs_main_and_exits(monkeypatch):
-    """Runs the script the way the action does (`python3 check-branch.py`), to cover the
-    `if __name__ == "__main__":` line itself. Uses a scenario that fails before any API call
-    (missing PR_NUMBER) so it needs no `api_request` patch of its own module-fresh run."""
+    """Runs the module directly with `runpy`, the only way left to exercise the
+    `if __name__ == "__main__":` line itself now that the action invokes the installed
+    `check-branch` console script rather than `python3`-ing the module file. Uses a scenario
+    that fails before any API call (missing PR_NUMBER) so it needs no `api_request` patch of its
+    own module-fresh run."""
     _env(monkeypatch, head_ref="task_42-sample_name", pr_number=None)
 
     with pytest.raises(SystemExit) as exc_info:
         runpy.run_path(str(SCRIPT), run_name="__main__")
 
     assert exc_info.value.code == 1
+
+
+# ---------------------------------------------------------------------------------------------
+# Entry point: the installed `check-branch` console script `action.yml` runs, exercised as a
+# subprocess -- the form check-eol, check-docs-index and check-adrs's tests use (template:
+# check-reqs/tests). Only the exempt path is covered this way: it is the one path that makes no
+# GitHub API call, so a real subprocess needs no fake injected into a module it cannot import.
+# ---------------------------------------------------------------------------------------------
+
+
+def test_installed_script_exempts_branch_equal_to_default():
+    """The packaged action runs `check-branch` (the installed console script). On the exempt
+    path -- HEAD_REF equal to DEFAULT_BRANCH -- it must exit 0 and print the same exemption text
+    check-branch.py prints today (check-branch/check-branch.py:54-56, unchanged by the move),
+    the same text the in-process test_default_branch_is_exempt_even_when_not_named_main above
+    proves the module reaches for its own exempt case."""
+    env = dict(os.environ)
+    env["HEAD_REF"] = DEFAULT_BRANCH
+    env["DEFAULT_BRANCH"] = DEFAULT_BRANCH
+    for name in ("PR_NUMBER", "GITHUB_TOKEN", "GITHUB_REPOSITORY"):
+        env.pop(name, None)
+
+    result = subprocess.run([str(INSTALLED_SCRIPT)], env=env, capture_output=True, text=True)
+
+    assert result.returncode == 0
+    assert (
+        f"Branch '{DEFAULT_BRANCH}' is exempt: the default branch and the dependency updaters' "
+        "own branches are not work branches."
+    ) in result.stdout
