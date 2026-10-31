@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Every citation of an ADR pins that ADR's current rev.
 
 An ADR is a versioned document (`docs/decisions/README.md`): merged text is revisable, and a
@@ -21,8 +20,9 @@ cannot scan:
   smaller than the directory. The directory read above is what lets this see an entry no commit has
   yet introduced.
 - Each ADR's *Revisions* section carries one changelog line per rev, numbered 1 to that head rev.
-- No two files carry one number. Uniqueness is `check-adrs/check-adr-index.py`'s to enforce; it is
-  reported here because a number two documents carry has no one rev to hold a citation of it to.
+- No two files carry one number. Uniqueness is the index half's (`check_adrs/check_adr_index.py`)
+  to enforce; it is reported here because a number two documents carry has no one rev to hold a
+  citation of it to.
 - Every `ADR NNNN` in prose is followed by `rev M`, and M is that ADR's current rev.
 - Every markdown link resolving to an ADR file is titled `ADR NNNN rev M` likewise. The link rule is
   what the prose rule cannot reach: a citation spelled `[NNNN](NNNN-slug.md)` names no ADR in prose
@@ -34,7 +34,8 @@ cannot scan:
 That an ADR's rev was raised for a good reason, and that a citation pinning the current rev still
 means what the ADR says, is decided by nothing here.
 
-Whether every index row has a file, and numbering is contiguous, is `check-adrs/check-adr-index.py`.
+Whether every index row has a file, and numbering is contiguous, is the index half's
+(`check_adrs/check_adr_index.py`).
 An ADR carrying no row is reported here as well, because the table assertion above is then the thing
 with nothing to compare. It is not that such an ADR goes unjudged: the rev is read from the head, so
 the title, changelog, collision and citation rules all still hold it, and deleting the table check
@@ -47,10 +48,6 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-
-ROOT = Path.cwd()
-DECISIONS = ROOT / "docs" / "decisions"
-INDEX = DECISIONS / "README.md"
 
 ADR_FILE = re.compile(r"^(\d{4})-[a-z0-9-]+\.md$")
 HEAD_REV = re.compile(r"^\*\*Rev:\*\* *(\d+) *$", re.M)
@@ -86,20 +83,20 @@ def fail(problems):
     return 1
 
 
-def tracked():
+def tracked(root):
     """Every tracked path, from git rather than a walk — the set CI is asked to judge."""
     listing = subprocess.run(
-        ["git", "ls-files", "-z"], cwd=ROOT, capture_output=True, check=True
+        ["git", "ls-files", "-z"], cwd=root, capture_output=True, check=True
     ).stdout
-    return [ROOT / name.decode() for name in listing.split(b"\0") if name]
+    return [root / name.decode() for name in listing.split(b"\0") if name]
 
 
-def untracked():
+def untracked(root):
     """Untracked, non-ignored paths — outside the citation scan's population, so reported rather
     than silently unscanned."""
     listing = subprocess.run(
         ["git", "ls-files", "--others", "--exclude-standard", "-z"],
-        cwd=ROOT, capture_output=True, check=True,
+        cwd=root, capture_output=True, check=True,
     ).stdout
     return [name.decode() for name in listing.split(b"\0") if name]
 
@@ -145,10 +142,10 @@ def changelog_revs(text):
     return found
 
 
-def current_revs(problems):
+def current_revs(decisions, problems):
     """Each ADR's number and the rev its own head declares, and the numbers carried by two files."""
     revs, carriers, collided = {}, {}, set()
-    for path in sorted(DECISIONS.iterdir()):
+    for path in sorted(decisions.iterdir()):
         match = ADR_FILE.match(path.name)
         if not match:
             if path.name not in NOT_AN_ADR:
@@ -210,10 +207,10 @@ def current_revs(problems):
     return revs, collided
 
 
-def check_index(revs, problems):
+def check_index(index, revs, problems):
     """The index table's rev column repeats the head, and is checked against it."""
     rows = {}
-    for line in INDEX.read_text(encoding="utf-8").split("\n"):
+    for line in index.read_text(encoding="utf-8").split("\n"):
         row = INDEX_ROW.match(line)
         if row:
             number = re.search(r"\[(\d{4})\]", row.group(1)).group(1)
@@ -232,7 +229,7 @@ def check_index(revs, problems):
             )
 
 
-def readable(path, text):
+def readable(path, text, decisions, index):
     """The text of each line to judge, with the two exemptions applied.
 
     A **changelog line**, and any indented line continuing it, records what a rev did at the moment
@@ -251,7 +248,7 @@ def readable(path, text):
             in_revisions, in_entry = heading.group(1) == "Revisions", False
             yield number, line, False
             continue
-        if in_revisions and path.parent == DECISIONS:
+        if in_revisions and path.parent == decisions:
             if CHANGELOG.match(line):
                 in_entry = True
                 yield number, line, True
@@ -260,26 +257,26 @@ def readable(path, text):
                 yield number, line, True
                 continue
             in_entry = False
-        row = INDEX_ROW.match(line) if path == INDEX else None
+        row = INDEX_ROW.match(line) if path == index else None
         yield number, row.group(2) if row else line, False
 
 
-def check_citations(revs, collided, problems):
+def check_citations(root, decisions, index, revs, collided, problems):
     unreadable, judged = [], {"prose": 0, "link": 0}
-    for path in tracked():
+    for path in tracked(root):
         try:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             # Not a skip the count hides: a file whose bytes are not text cannot carry a citation in
             # the form the rule defines, and every one of them is named on the way past.
-            unreadable.append(path.relative_to(ROOT))
+            unreadable.append(path.relative_to(root))
             continue
         except OSError as error:
-            problems.append(f"{path.relative_to(ROOT)}: {error}")
+            problems.append(f"{path.relative_to(root)}: {error}")
             continue
 
-        where = str(path.relative_to(ROOT))
-        for number, line, historical in readable(path, text):
+        where = str(path.relative_to(root))
+        for number, line, historical in readable(path, text, decisions, index):
             titles = []
             for title, span, name in adr_links(line):
                 match = ADR_FILE.match(name)
@@ -376,21 +373,21 @@ def judge(revs, collided, where, number, cited, pinned, context, historical=Fals
     return []
 
 
-def main():
+def main() -> int:
+    root = Path.cwd()
+    decisions = root / "docs" / "decisions"
+    index = decisions / "README.md"
+
     problems = [
         f"{name}: untracked, so the citation scan cannot read it — git add or gitignore it"
-        for name in untracked()
+        for name in untracked(root)
     ]
-    revs, collided = current_revs(problems)
+    revs, collided = current_revs(decisions, problems)
     judged = 0
     if revs:
-        check_index(revs, problems)
-        judged = check_citations(revs, collided, problems)
+        check_index(index, revs, problems)
+        judged = check_citations(root, decisions, index, revs, collided, problems)
     if problems:
         return fail(sorted(problems))
     print(f"{len(revs)} ADRs; {judged} citations, every one pinning the current rev")
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

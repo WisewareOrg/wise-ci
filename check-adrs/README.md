@@ -1,13 +1,15 @@
 # check-adrs
 
-Two scripts, run as one check: `check-adr-index.py` fails unless `docs/decisions/` and its index
-table in `docs/decisions/README.md` agree; `check-adr-revs.py` fails unless every citation of an
-ADR, anywhere in the tracked tree, pins that ADR's current rev.
+One console script running two halves, as one Actions step: the index half fails unless
+`docs/decisions/` and its index table in `docs/decisions/README.md` agree; the revs half fails
+unless every citation of an ADR, anywhere in the tracked tree, pins that ADR's current rev. The
+revs half always runs, even if the index half failed or crashed; the check exits 1 if either half
+failed, and prints nothing of its own beyond each half's own output.
 
 Run from the root of the repository it checks. It takes no inputs: `docs/decisions/` and the
-tracked tree are the only paths either script reads by name.
+tracked tree are the only paths either half reads by name.
 
-## What `check-adr-index.py` reports
+## What the index half ([`check_adrs/check_adr_index.py`](check_adrs/check_adr_index.py)) reports
 
 Read from `docs/decisions/`'s own directory listing, not git's tracked set — an ADR file the
 listing reports is judged whether or not it has been `git add`ed. `README.md` and `TEMPLATE.md` are
@@ -31,12 +33,12 @@ On success it prints the ADR count. A git call is never made: a missing `docs/de
 directory, or a missing `docs/decisions/README.md` within one that exists, fails with an uncaught
 traceback naming the missing path, rather than a reported problem.
 
-## What `check-adr-revs.py` reports
+## What the revs half ([`check_adrs/check_adr_revs.py`](check_adrs/check_adr_revs.py)) reports
 
-The ADR set is read from `docs/decisions/` directly, the same as `check-adr-index.py`, so an
-uncommitted ADR is judged; the citation scan reads the tracked set instead (`git ls-files`), and
-fails outright on any untracked, non-ignored path — it is outside what the scan can read, and is
-reported rather than silently unscanned. Every other finding accumulates into one run:
+The ADR set is read from `docs/decisions/` directly, the same as the index half, so an uncommitted
+ADR is judged; the citation scan reads the tracked set instead (`git ls-files`), and fails outright
+on any untracked, non-ignored path — it is outside what the scan can read, and is reported rather
+than silently unscanned. Every other finding accumulates into one run:
 
 - an ADR entry not named `NNNN-<lowercase-slug>.md`, one that is a directory or dangling symlink, or
   one with no `**Rev:** N` head line (or more than one);
@@ -74,33 +76,44 @@ declared a rev` as an ordinary problem.
 
 ## Known rejections
 
-Legal input each script refuses. Each fails closed, so neither lets a defect through:
+Legal input each half refuses. Each fails closed, so neither lets a defect through:
 
-| Script | Input | Reported as |
+| Half | Input | Reported as |
 |---|---|---|
-| `check-adr-index.py` | a row inside a fenced code block | a real row — there is no fence blanking, so `docs/decisions/README.md` may not carry a fenced example table |
-| `check-adr-revs.py` | an illustrative example spelling a live ADR number | a stale citation — write an example as `NNNN`, never a real number |
+| index | a row inside a fenced code block | a real row — there is no fence blanking, so `docs/decisions/README.md` may not carry a fenced example table |
+| revs | an illustrative example spelling a live ADR number | a stale citation — write an example as `NNNN`, never a real number |
 
 ## What this does not catch
 
-**`check-adr-index.py`'s `.md` match is case-sensitive.** An ADR file named with an uppercase
-extension is invisible to the directory scan rather than rejected by the naming rule.
+**The index half's `.md` match is case-sensitive.** An ADR file named with an uppercase extension
+is invisible to the directory scan rather than rejected by the naming rule.
 
-**Only ADRs, the index and the template may live in `docs/decisions/`.** `check-adr-revs.py` reports
+**Only ADRs, the index and the template may live in `docs/decisions/`.** The revs half reports
 every other entry — a subdirectory, a non-Markdown asset, a dotfile — as unreadable-numbered, which
-narrows what the directory may hold; `check-adr-index.py` reports only entries matching the ADR
-naming pattern, so a stray without that shape passes it unseen. An untracked stray fails
-`check-adr-revs.py`'s untracked guard either way.
+narrows what the directory may hold; the index half reports only entries matching the ADR naming
+pattern, so a stray without that shape passes it unseen. An untracked stray fails the revs half's
+untracked guard either way.
 
-**An H1 indented up to three spaces is legal CommonMark and is rejected.** `check-adr-revs.py`
-matches an ADR's title from the first character of the first non-blank line; an indented opening
-line is read as carrying no title at all.
+**An H1 indented up to three spaces is legal CommonMark and is rejected.** The revs half matches an
+ADR's title from the first character of the first non-blank line; an indented opening line is read
+as carrying no title at all.
 
-**A title number is read as a token, not a number.** `check-adr-revs.py` takes the first
+**A title number is read as a token, not a number.** The revs half takes the first
 whitespace-delimited token after `# ` as the title's number; a title running the number into its
 text is reported as titling itself that whole token, not as separately malformed.
 
-**A citation split by a line wrap right after `ADR` or `rev` is invisible.** `check-adr-revs.py`
-matches a citation within one line; a line ending in the bare keyword and the next opening with the
-number or the rev carries the citation across neither line, so the pin goes unchecked until the
-lines are joined.
+**A citation split by a line wrap right after `ADR` or `rev` is invisible.** The revs half matches a
+citation within one line; a line ending in the bare keyword and the next opening with the number or
+the rev carries the citation across neither line, so the pin goes unchecked until the lines are
+joined.
+
+## Run locally
+
+Install the distribution as described in [`../README.md`](../README.md) § Consuming a check, then
+run it from the root of the repository it checks:
+
+```sh
+uv run --locked check-adrs
+```
+
+No arguments and no environment variables.
