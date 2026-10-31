@@ -16,9 +16,9 @@ def _run_half(half_main) -> bool:
     traceback is printed to stderr — the same text Python prints for one left uncaught — and
     counts as a failure.
 
-    stdout is flushed before returning: the two halves now share one process, and Python
-    block-buffers stdout when it is a pipe (as it is in an Actions step) while leaving stderr
-    unbuffered, so without this a later half's stderr can print before an earlier half's stdout.
+    stdout is flushed before returning: both halves share one process, and Python block-buffers
+    stdout on a pipe but not stderr, so a later half's stderr could otherwise print before an
+    earlier half's stdout.
     """
     try:
         return half_main() != 0

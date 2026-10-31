@@ -30,8 +30,9 @@ row-shaped line in another file, or one indented so it no longer opens the line,
 all.
 
 On success it prints the ADR count. A git call is never made: a missing `docs/decisions/`
-directory, or a missing `docs/decisions/README.md` within one that exists, fails with an uncaught
-traceback naming the missing path, rather than a reported problem.
+directory, or a missing `docs/decisions/README.md` within one that exists, fails: the exception
+propagates out of the index half, and the packaged script reprints its traceback (the same text
+Python prints for one left uncaught), naming the missing path, rather than a reported problem.
 
 ## What the revs half ([`check_adrs/check_adr_revs.py`](check_adrs/check_adr_revs.py)) reports
 
@@ -69,10 +70,11 @@ it prints the ADR count and the citation count, split by whether each was judged
 citation — and fails if either count is zero, since a scan that stops recognising a whole citation
 form would otherwise report the smaller population it can still see as complete.
 
-A missing `docs/decisions/` directory fails with an uncaught traceback naming it. A missing
-`docs/decisions/README.md` fails the same way, but only once at least one ADR has validated —
-with none, there is nothing to check the index against, and the run instead reports `no ADR
-declared a rev` as an ordinary problem.
+A missing `docs/decisions/` directory fails the same way the index half's own missing directory
+does: the exception propagates out of the revs half, and the packaged script reprints its
+traceback, naming it. A missing `docs/decisions/README.md` fails the same way, but only once at
+least one ADR has validated — with none, there is nothing to check the index against, and the run
+instead reports `no ADR declared a rev` as an ordinary problem.
 
 ## Known rejections
 
