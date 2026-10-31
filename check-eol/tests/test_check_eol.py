@@ -1,11 +1,12 @@
-"""Specifies check-eol/check-eol.py: tracked CRLF in various shapes, the untracked-file guard, both
-git-failure branches, the GITHUB_ACTIONS annotation pair, a CRLF blob forced past git's own
-add-time normalisation, and the binary-attribute gap and its `-text` boundary
+"""Specifies check-eol/check_eol/__init__.py: tracked CRLF in various shapes, the untracked-file
+guard, both git-failure branches, the GITHUB_ACTIONS annotation pair, a CRLF blob forced past
+git's own add-time normalisation, and the binary-attribute gap and its `-text` boundary
 (check-eol/README.md).
 
-Each case builds a real, isolated git repository in a temporary directory and runs the real script
-against it as a subprocess (docs/TESTING.md "Real dependencies where possible"). Nothing defective is
-committed to this repository; every defective input is created on the fly.
+Each case builds a real, isolated git repository in a temporary directory and runs the installed
+`check-eol` console script against it as a subprocess (docs/TESTING.md "Real dependencies where
+possible"). Nothing defective is committed to this repository; every defective input is created on
+the fly.
 """
 
 import os
@@ -17,7 +18,7 @@ from typing import Callable
 
 import pytest
 
-SCRIPT = Path(__file__).resolve().parents[1] / "check-eol.py"
+SCRIPT = Path(sys.executable).with_name("check-eol")
 
 UNTRACKED_MSG = "untracked, so this check cannot search them — git add or gitignore each."
 CRLF_PLAIN = "CRLF found in the files above; the repo is LF-only (.gitattributes)."
@@ -102,7 +103,7 @@ def _write_untracked(repo: Path, files: dict[str, bytes]) -> None:
 def _run_check(repo: Path, *, github_actions: bool = False) -> subprocess.CompletedProcess:
     overrides = {"GITHUB_ACTIONS": "true"} if github_actions else {}
     return subprocess.run(
-        [sys.executable, str(SCRIPT)],
+        [str(SCRIPT)],
         cwd=repo,
         env=_env(**overrides),
         capture_output=True,
@@ -282,9 +283,7 @@ def test_outside_a_repository_fails_with_gits_status(tmp_path: Path) -> None:
     )
     assert probe.returncode != 0
 
-    result = subprocess.run(
-        [sys.executable, str(SCRIPT)], cwd=plain, env=env, capture_output=True, text=True
-    )
+    result = subprocess.run([str(SCRIPT)], cwd=plain, env=env, capture_output=True, text=True)
 
     assert result.returncode == probe.returncode
     assert result.stdout == ""
