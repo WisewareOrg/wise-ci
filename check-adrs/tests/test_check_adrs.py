@@ -5,8 +5,8 @@ the main() that runs them in sequence and exits 1 if either found a problem
 
 Every case runs the installed `check-adrs` console script as a subprocess, against a real git
 repository built fresh in a temporary directory (docs/TESTING.md "Real dependencies where
-possible"), the same pattern check-eol/tests/test_check_eol.py uses. The two checks now run inside
-one process, not two isolated ones, so a fixture exercising one check's reporting paths must also
+possible"), the same pattern check-eol/tests/test_check_eol.py uses. The two checks run inside one
+process, not two isolated ones, so a fixture exercising one check's reporting paths must also
 leave the other check clean -- both revs_check()'s own untracked-file guard and its rule that every
 entry in docs/decisions/ must be an ADR, the index, or the template apply to every fixture here,
 index-only cases included. `BASE_FILES` is built to satisfy both checks at once, and every override
@@ -16,7 +16,7 @@ Two of the original index-only cases cannot be transplanted whole: an uppercase 
 a stray non-ADR file/subdirectory in docs/decisions/ are both invisible to index_check() but are
 both rejected outright by revs_check()'s stricter "every entry is an ADR, the index, or the
 template" rule. Those two keep their original assertion -- index_check()'s own pass message still
-appears in stdout -- but the process now exits 1 overall, because revs_check() independently, and
+appears in stdout -- but the process exits 1 overall, because revs_check() independently, and
 correctly, rejects the same stray entry. See
 test_an_uppercase_extension_is_invisible_to_index_check_but_rejected_by_revs_check and
 test_a_stray_non_adr_entry_is_invisible_to_index_check_but_rejected_by_revs_check below.
@@ -411,9 +411,9 @@ def test_an_uppercase_extension_is_invisible_to_index_check_but_rejected_by_revs
     still reports no problem (its pass message appears below). revs_check()'s own ADR-naming
     pattern is equally case-sensitive but carries no such exemption -- it reports any
     docs/decisions/ entry that is not README.md, TEMPLATE.md, or NNNN-<lowercase-slug>.md -- so the
-    merged script now exits 1 overall for a reason index_check() does not share. Both facts hold at
-    once: this is not a case a shared fixture can make exit 0, since the two checks disagree by
-    design on what docs/decisions/ may hold."""
+    script exits 1 overall for a reason index_check() does not share. Both facts hold at once: this
+    is not a case a shared fixture can make exit 0, since the two checks disagree by design on what
+    docs/decisions/ may hold."""
     repo = _build(tmp_path, {})
     (repo / "docs/decisions/0003-upper.MD").write_text("# 0003 — Upper\n", encoding="utf-8")
     add = _git(repo, "add", "-A")
