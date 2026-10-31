@@ -47,9 +47,10 @@ from PyPI inside the consumer's own job, rather than running on the stdlib alone
 check-branch, check-eol, check-docs-index and check-adrs each run a pinned `setup-uv` step too,
 then `uv run --locked` against wise-ci's own lockfile to run their own package — check-reqs
 additionally installing Doorstop and PyYAML, the other four stdlib-only. What covers it: every
-version is `==`-pinned in `pyproject.toml` and `uv.lock`, Renovate-managed like every other pin in
-this repository, and `--locked`/`--frozen` each refuse to run or install anything the lock does not
-already pin.
+package every one of these actions installs is pinned to an exact version in `uv.lock`
+(repo-floor's PyYAML and check-reqs's Doorstop are also `==`-pinned in their own `pyproject.toml`),
+Renovate-managed like every other pin in this repository, and `--locked`/`--frozen` each refuse to
+install anything the lock does not already pin.
 
 **A caller's job downloads Node and installs commitlint at run time.** pr-title's `action.yml` runs
 `setup-node` to install the Node version it pins, then `npm ci --ignore-scripts` to install
