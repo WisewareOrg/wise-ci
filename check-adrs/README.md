@@ -1,15 +1,16 @@
 # check-adrs
 
-One console script running two halves, as one Actions step: the index half fails unless
-`docs/decisions/` and its index table in `docs/decisions/README.md` agree; the revs half fails
-unless every citation of an ADR, anywhere in the tracked tree, pins that ADR's current rev. The
-revs half always runs, even if the index half failed or crashed; the check exits 1 if either half
-failed, and prints nothing of its own beyond each half's own output.
+One console script, one Actions step, two checks: the index check fails unless `docs/decisions/`
+and its index table in `docs/decisions/README.md` agree; the revs check fails unless every
+citation of an ADR, anywhere in the tracked tree, pins that ADR's current rev. The index check runs
+first; the revs check runs after it, whether or not the index check found a problem. The script
+exits 1 if either check found a problem, and prints nothing of its own beyond each check's own
+output.
 
 Run from the root of the repository it checks. It takes no inputs: `docs/decisions/` and the
-tracked tree are the only paths either half reads by name.
+tracked tree are the only paths either check reads by name.
 
-## What the index half ([`check_adrs/check_adr_index.py`](check_adrs/check_adr_index.py)) reports
+## What the index check ([`check_adrs/__init__.py`](check_adrs/__init__.py)'s `index_check()`) reports
 
 Read from `docs/decisions/`'s own directory listing, not git's tracked set — an ADR file the
 listing reports is judged whether or not it has been `git add`ed. `README.md` and `TEMPLATE.md` are
@@ -30,13 +31,13 @@ row-shaped line in another file, or one indented so it no longer opens the line,
 all.
 
 On success it prints the ADR count. A git call is never made: a missing `docs/decisions/`
-directory, or a missing `docs/decisions/README.md` within one that exists, fails: the exception
-propagates out of the index half, and the packaged script reprints its traceback (the same text
-Python prints for one left uncaught), naming the missing path, rather than a reported problem.
+directory, or a missing `docs/decisions/README.md` within one that exists, fails here, before the
+revs check gets a chance to run — the exception propagates out of the script uncaught, the same
+traceback Python prints for one left to crash on its own, naming the missing path.
 
-## What the revs half ([`check_adrs/check_adr_revs.py`](check_adrs/check_adr_revs.py)) reports
+## What the revs check ([`check_adrs/__init__.py`](check_adrs/__init__.py)'s `revs_check()`) reports
 
-The ADR set is read from `docs/decisions/` directly, the same as the index half, so an uncommitted
+The ADR set is read from `docs/decisions/` directly, the same as the index check, so an uncommitted
 ADR is judged; the citation scan reads the tracked set instead (`git ls-files`), and fails outright
 on any untracked, non-ignored path — it is outside what the scan can read, and is reported rather
 than silently unscanned. Every other finding accumulates into one run:
@@ -70,43 +71,46 @@ it prints the ADR count and the citation count, split by whether each was judged
 citation — and fails if either count is zero, since a scan that stops recognising a whole citation
 form would otherwise report the smaller population it can still see as complete.
 
-A missing `docs/decisions/` directory fails the same way the index half's own missing directory
-does: the exception propagates out of the revs half, and the packaged script reprints its
-traceback, naming it. A missing `docs/decisions/README.md` fails the same way, but only once at
-least one ADR has validated — with none, there is nothing to check the index against, and the run
-instead reports `no ADR declared a rev` as an ordinary problem.
+A missing `docs/decisions/` directory or `docs/decisions/README.md` never reaches the revs check at
+all: the index check reads both first and crashes on either, uncaught, before the revs check is
+called. With both paths present and at least one ADR validated, a revs-check problem the index
+check does not also catch — a stale or malformed citation, a rev mismatch — is reported as an
+ordinary problem rather than a crash; with no ADR at all, the run instead reports
+`no ADR declared a rev`.
 
 ## Known rejections
 
-Legal input each half refuses. Each fails closed, so neither lets a defect through:
+Legal input each check refuses. Each fails closed, so neither lets a defect through:
 
-| Half | Input | Reported as |
+| Check | Input | Reported as |
 |---|---|---|
 | index | a row inside a fenced code block | a real row — there is no fence blanking, so `docs/decisions/README.md` may not carry a fenced example table |
 | revs | an illustrative example spelling a live ADR number | a stale citation — write an example as `NNNN`, never a real number |
 
 ## What this does not catch
 
-**The index half's `.md` match is case-sensitive.** An ADR file named with an uppercase extension
-is invisible to the directory scan rather than rejected by the naming rule.
+**The index check's `.md` match is case-sensitive.** An ADR file named with an uppercase extension
+is invisible to the directory scan rather than rejected by the naming rule. The revs check's own
+naming pattern is equally case-sensitive but carries no such exemption, so the same file still fails
+the run overall, just on the revs check's report rather than the index check's.
 
-**Only ADRs, the index and the template may live in `docs/decisions/`.** The revs half reports
+**Only ADRs, the index and the template may live in `docs/decisions/`.** The revs check reports
 every other entry — a subdirectory, a non-Markdown asset, a dotfile — as unreadable-numbered, which
-narrows what the directory may hold; the index half reports only entries matching the ADR naming
-pattern, so a stray without that shape passes it unseen. An untracked stray fails the revs half's
-untracked guard either way.
+narrows what the directory may hold; the index check reports only entries matching the ADR naming
+pattern, so a stray without that shape passes it unseen (but still fails the run overall, on the
+revs check's report). An untracked stray fails the revs check's untracked guard either way.
 
-**An H1 indented up to three spaces is legal CommonMark and is rejected.** The revs half matches an
+**An H1 indented up to three spaces is legal CommonMark and is rejected.** The revs check matches an
 ADR's title from the first character of the first non-blank line; an indented opening line is read
 as carrying no title at all.
 
-**A title number is read as a token, not a number.** The revs half takes the first
+**A title number is read as a token, not a number.** The revs check takes the first
 whitespace-delimited token after `# ` as the title's number; a title running the number into its
 text is reported as titling itself that whole token, not as separately malformed.
 
-**A citation split by a line wrap right after `ADR` or `rev` is invisible.** The revs half matches a
-citation within one line; a line ending in the bare keyword and the next opening with the number or
-the rev carries the citation across neither line, so the pin goes unchecked until the lines are
+**A citation split by a line wrap right after `ADR` or `rev` is invisible.** The revs check matches
+a citation within one line; a line ending in the bare keyword and the next opening with the number
+or the rev carries the citation across neither line, so the pin goes unchecked until the lines are
 joined.
 
 ## Run locally
