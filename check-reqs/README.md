@@ -7,7 +7,8 @@ the gate a repository runs over its own Doorstop requirements tree.
 ## Inputs
 
 See [`action.yml`](action.yml) for `root`'s description and default. The action sets up its own
-`uv`; a consumer installs the distribution instead (see [Run locally](#run-locally) below).
+`uv`. To run the check outside CI, a consumer also installs the distribution (see
+[Run locally](#run-locally) below).
 
 ## Stages, in order
 
