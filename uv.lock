@@ -5,6 +5,7 @@ requires-python = ">=3.12"
 [manifest]
 members = [
     "check-branch",
+    "check-docs-index",
     "check-eol",
     "check-reqs",
     "wise-ci",
@@ -163,6 +164,11 @@ wheels = [
 name = "check-branch"
 version = "0"
 source = { editable = "check-branch" }
+
+[[package]]
+name = "check-docs-index"
+version = "0"
+source = { editable = "check-docs-index" }
 
 [[package]]
 name = "check-eol"
@@ -569,6 +575,7 @@ dependencies = [
 [package.dev-dependencies]
 test = [
     { name = "check-branch" },
+    { name = "check-docs-index" },
     { name = "check-eol" },
     { name = "check-reqs" },
     { name = "coverage" },
@@ -582,6 +589,7 @@ requires-dist = [{ name = "pyyaml", specifier = "==6.0.3" }]
 [package.metadata.requires-dev]
 test = [
     { name = "check-branch", editable = "check-branch" },
+    { name = "check-docs-index", editable = "check-docs-index" },
     { name = "check-eol", editable = "check-eol" },
     { name = "check-reqs", editable = "check-reqs" },
     { name = "coverage", specifier = ">=7.10" },

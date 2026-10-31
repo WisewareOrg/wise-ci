@@ -3,6 +3,11 @@ description: Every tracked Markdown file outside a top-level dot-directory has a
 runs:
   using: composite
   steps:
+    - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      with:
+        version: "0.13.6"
+        enable-cache: false
+
     - name: check-docs-index
       shell: bash
-      run: python3 "$GITHUB_ACTION_PATH/check-docs-index.py"
+      run: uv run --locked --project "$GITHUB_ACTION_PATH/.." --package check-docs-index check-docs-index

@@ -15,10 +15,11 @@ python-downloads = "never"
 python-preference = "only-system"
 
 [tool.uv.workspace]
-members = ["check-branch", "check-eol", "check-reqs"]
+members = ["check-branch", "check-docs-index", "check-eol", "check-reqs"]
 
 [tool.uv.sources]
 check-branch = { workspace = true }
+check-docs-index = { workspace = true }
 check-eol = { workspace = true }
 check-reqs = { workspace = true }
 
@@ -28,6 +29,7 @@ test = [
   "coverage>=7.10",
   "pytest-cov>=7.1.0",
   "check-branch",
+  "check-docs-index",
   "check-eol",
   "check-reqs",
 ]
