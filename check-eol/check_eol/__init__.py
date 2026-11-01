@@ -59,7 +59,3 @@ def main():
         return 1
     print("No CRLF line endings in the tracked tree; no untracked file left unsearched.")
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

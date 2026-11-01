@@ -6,9 +6,9 @@ the gate a repository runs over its own Doorstop requirements tree.
 
 ## Inputs
 
-See [`action.yml`](action.yml) for `root`'s description and default. The action requires `uv` on
-`PATH`; it exists for wise-ci's own self-check and convention — a consumer installs the
-distribution instead (see [Consuming check-reqs](#consuming-check-reqs) below).
+See [`action.yml`](action.yml) for `root`'s description and default. The action sets up its own
+`uv`. To run the check outside CI, a consumer also installs the distribution (see
+[Run locally](#run-locally) below).
 
 ## Stages, in order
 
@@ -154,22 +154,14 @@ accepted as given. The Doorstop project root is always the working directory, ne
 `references[].path` and `Item._hash_reference` resolve against it — so a consumer runs `check-reqs`
 from its repository root, exactly as it would run bare `doorstop` there today.
 
-## Consuming check-reqs
+## Run locally
 
-Add the distribution at a pinned commit, with the version as a comment (as any other dependency
-pinned against this repository — see [`../README.md`](../README.md) § Consuming a check for the
-convention this follows):
-
-```sh
-uv add --group dev "check-reqs @ git+https://github.com/WisewareOrg/wise-ci@<sha>#subdirectory=check-reqs" # vX.Y.Z
-```
-
-or the equivalent pip spelling in a requirements file. This check owns the Doorstop pin; a consumer
-takes Doorstop from it and pins no second copy. Run it from the repository root, behind the
-consumer's own `just check-reqs` recipe:
+Install the distribution as described in [`../README.md`](../README.md) § Consuming a check. This
+check owns the Doorstop pin; a consumer takes Doorstop from it and pins no second copy. Run it from
+the repository root:
 
 ```sh
-check-reqs --root docs/requirements
+uv run --locked check-reqs --root docs/requirements
 ```
 
 The `tst` document's `item_validator` extension stays a one-line shim at

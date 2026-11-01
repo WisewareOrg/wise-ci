@@ -41,11 +41,15 @@ credential, the `GITLEAKS_LICENSE` key gitleaks-action requires of an organizati
 to the repository or its secrets, and the workflows themselves are audited
 ([`docs/CI.md`](docs/CI.md)).
 
-**A caller's job fetches a package at run time.** repo-floor's `action.yml` is wise-ci's first
-action with a runtime dependency: its step runs `setup-uv` and `uv run --frozen` to install PyYAML
-from PyPI inside the consumer's own job, rather than running on the stdlib alone. What covers it:
-the version is `==`-pinned in `pyproject.toml` and `uv.lock`, Renovate-managed like every other pin
-in this repository, and `--frozen` refuses to install anything the lock does not already pin.
+**A caller's job fetches a package at run time.** repo-floor's `action.yml` runs `setup-uv` and
+`uv run --frozen` to install PyYAML from PyPI inside the consumer's own job. Every check with
+a local form runs a pinned `setup-uv` step too, then `uv run --locked` against wise-ci's own
+lockfile to run their own package — check-reqs additionally installing Doorstop and PyYAML, the
+others stdlib-only. What covers it: every package every one of these actions installs is
+pinned to an exact version in `uv.lock` (repo-floor's PyYAML in the root `pyproject.toml` and
+check-reqs's Doorstop in `check-reqs/pyproject.toml` are also `==`-pinned),
+Renovate-managed like every other pin in this repository, and `--locked`/`--frozen` each refuse to
+install anything the lock does not already pin.
 
 **A caller's job downloads Node and installs commitlint at run time.** pr-title's `action.yml` runs
 `setup-node` to install the Node version it pins, then `npm ci --ignore-scripts` to install
@@ -56,10 +60,9 @@ job. What covers it: the Node version and the npm packages are each pinned exact
 an allowlisted environment (`pr-title/pr-title.py`'s `COMMITLINT_ENV_KEYS`), so `GITHUB_TOKEN` never
 reaches the npm tree this step installs.
 
-**The floor repo-floor checks against is unpinned.** Unlike every other consumer-facing reference
-in this repository, repo-floor reads its floor at `main`, not a commit
-([`repo-floor/README.md`](repo-floor/README.md)) — a deliberate consequence of what a floor is for,
-not an oversight. What this means: `.github`'s own merge rights gate every repository that adopts
+**The floor repo-floor checks against is unpinned.** repo-floor reads its floor at `main`, not a
+commit ([`repo-floor/README.md`](repo-floor/README.md)). What this means: `.github`'s own merge
+rights gate every repository that adopts
 repo-floor, since whoever can merge a floor change there changes what every adopting repository's
 gate requires, with no pull request on the consumer side to review it first.
 
@@ -69,8 +72,7 @@ read the floor at that pull request's own head commit instead.
 
 **An org admin merges a pull request that fails one of `pull-request`'s rules.** Adopting the
 floor's `pull-request` ruleset gives an organization admin a `pull_request`-mode bypass of its
-`pull_request`, `deletion` and `non_fast_forward` rules — a bypass `main`'s previous ruleset
-granted nobody. The bypass applies only while merging a pull request: an admin can merge one that
+`pull_request`, `deletion` and `non_fast_forward` rules. The bypass applies only while merging a pull request: an admin can merge one that
 fails a rule's own parameters (an unresolved review thread, a merge method
 `allowed_merge_methods` excludes), but it never permits a push to `main` or a deletion outside a
 pull request. What covers it: `check-branch`, `pr-title` and `repo-floor`, under `process-gates`,

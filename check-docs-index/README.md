@@ -77,3 +77,14 @@ tracked.
 
 **Whether a row's cells are true** — that a document holds what its *Guarantees* cell says, and none
 of what its *Excludes* cell says — is a reviewer's judgement, not this check's.
+
+## Run locally
+
+Install the distribution as described in [`../README.md`](../README.md) § Consuming a check, then
+run it from the root of the repository it checks:
+
+```sh
+uv run --locked check-docs-index
+```
+
+No arguments and no environment variables.

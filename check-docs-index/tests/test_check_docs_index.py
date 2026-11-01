@@ -1,12 +1,12 @@
-"""Specifies check-docs-index/check-docs-index.py: every reporting path in both directions, the
-untracked-file guard, the machinery line, git failing outright, and the legal Markdown the check
-refuses (check-docs-index/README.md).
+"""Specifies check-docs-index/check_docs_index/__init__.py: every reporting path in both
+directions, the untracked-file guard, the machinery line, git failing outright, and the legal
+Markdown the check refuses (check-docs-index/README.md).
 
 Each case builds a real, isolated git repository in a temporary directory, over a minimal fixture
 index — three rows over `README.md`, `decisions/` and `architecture/` — rather than a copy of a real
-documentation set, so a case states its own premise. The real script runs against it as a subprocess
-(docs/TESTING.md "Real dependencies where possible"). Nothing defective is committed to this
-repository; every defective input is created on the fly.
+documentation set, so a case states its own premise. The installed `check-docs-index` console
+script runs against it as a subprocess (docs/TESTING.md "Real dependencies where possible").
+Nothing defective is committed to this repository; every defective input is created on the fly.
 """
 
 import os
@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-SCRIPT = Path(__file__).resolve().parents[1] / "check-docs-index.py"
+SCRIPT = Path(sys.executable).with_name("check-docs-index")
 
 INDEX = "docs/README.md"
 HEADER = "| Document | Guarantees | Excludes |\n|---|---|---|\n"
@@ -105,9 +105,7 @@ def _build(
 
 
 def _run_check(repo: Path) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        [sys.executable, str(SCRIPT)], cwd=repo, env=_env(), capture_output=True, text=True
-    )
+    return subprocess.run([str(SCRIPT)], cwd=repo, env=_env(), capture_output=True, text=True)
 
 
 @dataclass(frozen=True)
@@ -423,9 +421,7 @@ def test_outside_a_repository_fails(tmp_path: Path) -> None:
     )
     assert probe.returncode != 0
 
-    result = subprocess.run(
-        [sys.executable, str(SCRIPT)], cwd=plain, env=env, capture_output=True, text=True
-    )
+    result = subprocess.run([str(SCRIPT)], cwd=plain, env=env, capture_output=True, text=True)
 
     assert result.returncode != 0
     assert PASSED not in result.stdout

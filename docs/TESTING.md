@@ -33,10 +33,13 @@ no caller input: installing only what wise-ci's own lock pins, setting up the ch
 exact version, or both; any logic lives in the script, where the tests reach it. For check-eol,
 which takes no inputs, nothing proves the action turns a failing script into a red job — a known
 gap, accepted; check-docs-index and check-adrs, which take none either, carry the same one.
-check-branch, the first check to take inputs, closes that gap for itself: its workflow's
-`expected-failure` job runs the action with an input chosen to violate PROC-001 and asserts the
-step's own outcome is `failure`. check-reqs's own `expected-failure` job closes the same gap for
-itself too, seeding a defect onto the minimal tree its `self-check` job builds.
+check-branch, which takes inputs, runs its workflow's `expected-failure` job with an
+input chosen to violate PROC-001 and asserts the step's own outcome is `failure` — but shares
+repo-floor's recorded condition below: a broken uv setup would read the same way, so
+`process-gates.yml`'s `check-branch` job passing, which a broken setup could not do, is what
+proves the setup instead. check-reqs's own `expected-failure` job seeds a defect onto the minimal
+tree its `self-check` job builds, and shares the same condition: a broken uv setup also fails it,
+so that same `self-check` job's own passing run is what proves the setup.
 
 repo-floor's own `expected-failure` job passes the action an invalid `github-token`, so the floor
 fetch itself breaks, and asserts the step's own outcome is `failure` — proving only that the
