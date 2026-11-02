@@ -115,6 +115,9 @@ INDEX_PASSED = "and its index agree:"
 REVS_FAILED_HEADER = "problem(s):"
 REVS_PASSED = "every one pinning the current rev"
 
+INDEX_HEADER = "check-adrs: check_adr_index"
+REVS_HEADER = "check-adrs: check_adr_revs"
+
 _ISOLATION = {"GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1"}
 _IDENTITY = {
     "GIT_AUTHOR_NAME": "check-adrs tests",
@@ -191,12 +194,16 @@ def _assert_index_failed(result: subprocess.CompletedProcess, reports: list[str]
     for report in reports:
         assert report in result.stderr
     assert INDEX_PASSED not in result.stdout
+    assert INDEX_HEADER in result.stdout
+    assert REVS_HEADER in result.stdout
 
 
 def _assert_index_passed(result: subprocess.CompletedProcess) -> None:
     assert result.returncode == 0, result.stderr
     assert result.stderr == ""
     assert INDEX_PASSED in result.stdout
+    assert INDEX_HEADER in result.stdout
+    assert REVS_HEADER in result.stdout
 
 
 def _assert_revs_failed(result: subprocess.CompletedProcess, reports: list[str]) -> None:
@@ -205,12 +212,16 @@ def _assert_revs_failed(result: subprocess.CompletedProcess, reports: list[str])
     for report in reports:
         assert report in result.stderr
     assert REVS_PASSED not in result.stdout
+    assert INDEX_HEADER in result.stdout
+    assert REVS_HEADER in result.stdout
 
 
 def _assert_revs_passed(result: subprocess.CompletedProcess) -> None:
     assert result.returncode == 0, result.stderr
     assert result.stderr == ""
     assert REVS_PASSED in result.stdout
+    assert INDEX_HEADER in result.stdout
+    assert REVS_HEADER in result.stdout
 
 
 # ---------------------------------------------------------------------------------------------
@@ -807,11 +818,11 @@ def test_index_rev_cell_not_a_number(tmp_path: Path) -> None:
 
 
 def test_outside_a_repository_fails(tmp_path: Path) -> None:
-    """Without the old orchestrator's try/except, main() no longer isolates revs_check() from a
-    crash: index_check() needs no git repository at all and still passes (its pass message appears
-    below), but revs_check()'s own `git ls-files` call then fails outright with no repository to
-    search, and that CalledProcessError propagates straight out of the console script -- the same
-    uncaught-exception traceback Python prints for any script left to crash on its own."""
+    """The dispatcher isolates no stage from a crash: check_adr_index needs no git repository at
+    all and still passes (its pass message and header appear below), but check_adr_revs's own
+    `git ls-files` call then fails outright with no repository to search, and that
+    CalledProcessError propagates straight out of the console script -- the same uncaught-exception
+    traceback Python prints for any script left to crash on its own."""
     repo = tmp_path / "repo"
     repo.mkdir()
     _write(
@@ -833,6 +844,8 @@ def test_outside_a_repository_fails(tmp_path: Path) -> None:
     result = subprocess.run([str(SCRIPT)], cwd=repo, env=env, capture_output=True, text=True)
 
     assert INDEX_PASSED in result.stdout
+    assert INDEX_HEADER in result.stdout
+    assert REVS_HEADER in result.stdout
     assert result.returncode != 0
     assert "Traceback" in result.stderr
     assert "CalledProcessError" in result.stderr
