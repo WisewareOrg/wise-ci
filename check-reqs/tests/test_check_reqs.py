@@ -1,7 +1,8 @@
-"""Specifies check_reqs's runner: the fixed stage order and stop (check_unreviewed,
-check_suspect_links, doorstop, check_method_consistency, check_text_citations, check_headers,
-report_proposed), `--root` resolution, and the req_sha_item_validator hook -- seeded from every row
-of WiseKiosk's scripts/cases/the-requirements-tree-checks.md and scripts/cases/report-proposed-py.md
+"""Specifies check_reqs's runner: the fixed stage order (check_unreviewed, check_suspect_links,
+doorstop, check_method_consistency, check_text_citations, check_headers, report_proposed), every
+stage run regardless of an earlier failure, `not judged -- <reason>` where a precondition failed,
+`--root` resolution, and the req_sha_item_validator hook -- seeded from every row of WiseKiosk's
+scripts/cases/the-requirements-tree-checks.md and scripts/cases/report-proposed-py.md
 (check-reqs/README.md).
 
 Each case builds a fresh minimal tree (`minimal_tree.build`) inside a real, isolated git repository
@@ -144,6 +145,16 @@ def _stage_header(stage: str) -> str:
     return f"check-reqs: {stage}"
 
 
+# The three reasons a precondition leaves a later stage un-run under run-every-stage. Each is
+# printed by the dispatcher itself, on stdout, immediately after that stage's own header.
+_CHECK_UNREVIEWED_FAILED = "check_unreviewed failed"
+_TREE_DID_NOT_LOAD = "the requirements tree did not load"
+
+
+def _not_judged(stage: str, reason: str) -> str:
+    return f"{_stage_header(stage)}\nnot judged — {reason}"
+
+
 def _no_traceback(result: subprocess.CompletedProcess) -> None:
     assert "Traceback" not in result.stdout
     assert "Traceback" not in result.stderr
@@ -174,16 +185,17 @@ def _seed(editor: Callable[[Path], None]) -> Callable[[Path], Path]:
 
 
 def _must_fail_at(stage: str, *, has: str | tuple = ()) -> Callable:
-    idx = STAGES.index(stage)
+    assert stage in STAGES
     needles = (has,) if isinstance(has, str) else has
 
     def check(result: subprocess.CompletedProcess) -> None:
         assert result.returncode != 0
         combined = result.stdout + result.stderr
-        for s in STAGES[: idx + 1]:
-            assert _stage_header(s) in combined
-        for s in STAGES[idx + 1 :]:
-            assert _stage_header(s) not in combined
+        # Every stage's header prints regardless of an earlier failure (run-every-stage): a later
+        # stage is either judged -- and prints its own pass or fail content -- or not judged, never
+        # silently skipped the way stop-at-first left it.
+        for s in STAGES:
+            assert _stage_header(s) in result.stdout
         for needle in needles:
             assert needle in combined
         _no_traceback(result)
@@ -206,7 +218,9 @@ def _check_unstamped_link_outside_root_passes_stage_two_then_fails_at_doorstop(
 ) -> None:
     """Stage 1 never walks outside `root`, so it passes; stage 2 walks from the working directory,
     finds the unstamped link, and silently skips it (its own pass line prints); stage 3 then fails
-    on the same outside-root document, whose only item being inactive leaves it with none."""
+    on the same outside-root document, whose only item being inactive leaves it with none. Nothing
+    here is gated -- check_unreviewed passed, and root's own tree still loads -- so every later
+    stage still runs."""
     combined = result.stdout + result.stderr
     assert result.returncode != 0
     assert _stage_header("check_unreviewed") in combined
@@ -214,7 +228,8 @@ def _check_unstamped_link_outside_root_passes_stage_two_then_fails_at_doorstop(
     assert "Every inactive item's links resolve and match the parents they were reviewed against." in combined
     assert _stage_header("doorstop") in combined
     for s in STAGES[3:]:
-        assert _stage_header(s) not in combined
+        assert _stage_header(s) in result.stdout
+    assert "not judged" not in combined
     _no_traceback(result)
     _no_wisekiosk_reference(combined)
 
@@ -305,6 +320,21 @@ def _cu_fourth_tier_and_nested_pass(repo: Path) -> None:
         verification_justification="Proves a nested document is accepted.",
         parent_uid="SYS001",
     )
+
+
+def _cu_silo_removed_leaves_doorstop_stages_not_judged(result: subprocess.CompletedProcess) -> None:
+    """check_unreviewed fails on the missing silo. The dispatcher gates doorstop on that failure,
+    and check_suspect_links/check_text_citations/check_headers on the tree failing to load, rather
+    than letting any of them reach doorstop.build() over a tree with an unplaced document."""
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0
+    assert "holds no document — missing, renamed, or deleted." in combined
+    assert _not_judged("doorstop", _CHECK_UNREVIEWED_FAILED) in result.stdout
+    for stage in ("check_suspect_links", "check_text_citations", "check_headers"):
+        assert _not_judged(stage, _TREE_DID_NOT_LOAD) in result.stdout
+    assert combined.count("not judged") == 4
+    _no_traceback(result)
+    _no_wisekiosk_reference(combined)
 
 
 def _cu_venv_doorstop_yml_pass(repo: Path) -> None:
@@ -408,7 +438,7 @@ CASES: list[_Case] = [
     _Case("cu-link-stamp-copied-by-hand", _seed(lambda r: _delete_key(r / SRS1, "reviewed")),
           _must_fail_at("check_unreviewed", has=("carry no review fingerprint", "SRS001"))),
     _Case("cu-silo-removed", _seed(_cu_silo_removed),
-          _must_fail_at("check_unreviewed", has="holds no document — missing, renamed, or deleted.")),
+          _cu_silo_removed_leaves_doorstop_stages_not_judged),
     _Case("cu-silo-renamed", _seed(_cu_silo_renamed),
           _must_fail_at("check_unreviewed", has="holds no document — missing, renamed, or deleted.")),
     # The carried-over breakdown only ever names SYS/SRS/TST-prefixed UIDs (the fixed tuple in
@@ -552,12 +582,15 @@ def test_missing_root_fails_at_check_unreviewed_with_the_resolved_path(tmp_path:
 
     combined = result.stdout + result.stderr
     assert result.returncode != 0
-    assert _stage_header("check_unreviewed") in combined
-    for stage in STAGES[1:]:
-        assert _stage_header(stage) not in combined
+    for stage in STAGES:
+        assert _stage_header(stage) in result.stdout
     resolved = repo / "docs/requirements"
     for silo in ("sys", "srs", "tst"):
         assert f"{resolved / silo}/ holds no document — missing, renamed, or deleted." in combined
+    assert _not_judged("doorstop", _CHECK_UNREVIEWED_FAILED) in result.stdout
+    for stage in ("check_suspect_links", "check_text_citations", "check_headers"):
+        assert _not_judged(stage, _TREE_DID_NOT_LOAD) in result.stdout
+    assert combined.count("not judged") == 4
     _no_traceback(result)
 
 
@@ -599,8 +632,8 @@ def test_req_sha_item_validator_no_sha_recorded_backstopped_by_doorstop_itself(t
     _must_fail_at("doorstop", has="unreviewed changes")(result)
 
 
-# -- Order: check_unreviewed runs before Doorstop ever validates, so its own stop -- and a clean
-# pass -- leave every item file byte-identical.
+# -- Order: check_unreviewed runs before Doorstop ever validates, so its own failure -- gating
+# doorstop rather than letting it run -- and a clean pass both leave every item file byte-identical.
 # -------------------------------------------------------------------------------------------------
 
 
@@ -609,6 +642,9 @@ def _item_bytes(repo: Path) -> dict[str, bytes]:
 
 
 def test_failing_at_check_unreviewed_leaves_the_tree_byte_identical(tmp_path: Path) -> None:
+    """check_unreviewed fails on a plain unreviewed item, not a missing or empty document, so the
+    tree still loads: only doorstop is gated (on check_unreviewed's own failure), and every other
+    stage runs and judges normally."""
     repo = _repo(tmp_path)
     _delete_key(repo / SYS1, "reviewed")
     before = _item_bytes(repo)
@@ -616,6 +652,9 @@ def test_failing_at_check_unreviewed_leaves_the_tree_byte_identical(tmp_path: Pa
     result = _run_check(repo, "--root", "docs/requirements")
 
     _must_fail_at("check_unreviewed")(result)
+    combined = result.stdout + result.stderr
+    assert _not_judged("doorstop", _CHECK_UNREVIEWED_FAILED) in result.stdout
+    assert combined.count("not judged") == 1
     assert _item_bytes(repo) == before
 
 
@@ -646,6 +685,30 @@ def test_suspect_links_passes_for_an_active_parent_mutation_which_doorstop_then_
     assert "Every inactive item's links resolve and match the parents they were reviewed against." in combined
     assert _stage_header("doorstop") in combined
     for stage in STAGES[3:]:
-        assert _stage_header(stage) not in combined
+        assert _stage_header(stage) in result.stdout
+    assert "not judged" not in combined
+    _no_traceback(result)
+    _no_wisekiosk_reference(combined)
+
+
+def test_two_independent_failures_in_one_run_are_both_reported(tmp_path: Path) -> None:
+    """check_method_consistency fails on SYS001, check_headers fails on TST001 -- two unrelated
+    items, neither failure a precondition for the other -- and run-every-stage reports both in one
+    run rather than hiding the second behind the first."""
+    repo = _repo(tmp_path)
+    _reviewed_edit(repo, repo / SYS1, "SYS001", clears=("SRS001",), **{"verification-justification": ""})
+    _set_fields(repo / TST1, header="")
+
+    result = _run_check(repo, "--root", "docs/requirements")
+
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0
+    for stage in STAGES:
+        assert _stage_header(stage) in result.stdout
+    assert "carry no verification-justification" in combined
+    assert "SYS001" in combined
+    assert "has no header" in combined
+    assert "TST001" in combined
+    assert "not judged" not in combined
     _no_traceback(result)
     _no_wisekiosk_reference(combined)
