@@ -168,7 +168,9 @@ carries no requirements tree of its own, so the check runs as a required gate ov
 minimal tree built on the fly, in
 [`../.github/workflows/check-reqs.yml`](../.github/workflows/check-reqs.yml)'s `self-check` job,
 called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)) — that job proves
-the action, not any content here. The same workflow's `expected-failure` job seeds a defect onto
+the action, not any content here; `check_citations`' own Markdown-citation path stays vacuous
+against wise-ci's own tracked Markdown for the same reason, and is proven instead by the test
+suite. The same workflow's `expected-failure` job seeds a defect onto
 that tree and asserts the action's own step outcome is `failure` ([`TESTING.md`](TESTING.md) § The
 action).
 

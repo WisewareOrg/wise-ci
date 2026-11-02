@@ -4,7 +4,8 @@ description: >-
   fingerprint Doorstop itself did not write, every parent link resolves and matches what it was
   reviewed against (inactive items included), every verification method is recognised and no
   more or less decidable than its children support, no item's `text` cites another item by
-  identifier, and every header is well-formed.
+  identifier, every header is well-formed, and every `SYS`/`SRS`/`TST` citation elsewhere in the
+  repository names a real item and carries its header.
 inputs:
   root:
     description: The directory holding the sys/srs/tst Doorstop documents, resolved against the working directory.
