@@ -12,9 +12,19 @@ See [`action.yml`](action.yml) for `root`'s description and default. The action 
 
 ## Stages, in order
 
-Seven stages run in a fixed order and stop at the first that fails, each preceded by its own
-`check-reqs: <stage>` header. `--root` is the directory holding `sys`/`srs`/`tst`; the Doorstop
-project root is always the working directory (see [The `root` input](#the-root-input-and-the-project-root) below).
+Seven stages run in a fixed order, every one of them every run, each preceded by its own
+`check-reqs: <stage>` header. The run fails if any stage failed. A stage whose precondition failed
+prints `not judged — <reason>` instead of running it, and still fails the run:
+
+- `doorstop` is not judged when `check_unreviewed` itself failed — Doorstop writes review stamps,
+  so running it over a tree `check_unreviewed` has not cleared would stamp a review nobody
+  performed.
+- `check_suspect_links`, `check_text_citations` and `check_headers` are not judged when the
+  requirements tree did not load — each calls `doorstop.build()` directly, which crashes on a
+  missing or empty document the same way `check_unreviewed` itself reports as a finding.
+
+`--root` is the directory holding `sys`/`srs`/`tst`; the Doorstop project root is always the
+working directory (see [The `root` input](#the-root-input-and-the-project-root) below).
 
 ### `check_unreviewed`
 
@@ -22,11 +32,11 @@ Runs first because Doorstop writes. The first time it validates a tree, Doorstop
 fingerprint into any item whose `reviewed` value is absent, and into any link carrying no stamp —
 whether or not a person looked, and `--no-reformat` does not stop it. An item authored in one commit
 would otherwise read as reviewed by whoever next ran the gate, which is the one thing the
-fingerprint exists to prove. This stage fails first and stops the gate before Doorstop's own
-validation can stamp anything. `reviewed: true` is the same defect declared by hand: Doorstop reads
-it as "matching, hash to follow" and fills the hash in unprompted the next time it validates. Clear
-either by reading the item against its parent and running `doorstop review <uid>`, deliberately,
-never by re-running the gate.
+fingerprint exists to prove. This stage's own failure leaves `doorstop` not judged, so Doorstop's
+own validation never runs over a tree this has not cleared. `reviewed: true` is the same defect
+declared by hand: Doorstop reads it as "matching, hash to follow" and fills the hash in unprompted
+the next time it validates. Clear either by reading the item against its parent and running
+`doorstop review <uid>`, deliberately, never by re-running the gate.
 
 A link counts as unreviewed when its own stamp is absent, or when the item holding it is: a stamp is
 a digest of the parent's content, so nothing reading the tree tells a copied one from an earned one.
@@ -53,7 +63,7 @@ Doorstop's own validation: every `SYS` need has a child `SRS`, every `SRS` has a
 promotes Doorstop's own suspect/unreviewed/orphan/unresolved-reference warnings to errors, so the
 run actually blocks; plain `doorstop` only warns. `--no-reformat` stops Doorstop rewriting item
 files on a passing run — it does not stop it writing a missing stamp, which is why
-`check_unreviewed` runs first.
+`check_unreviewed` runs first and `doorstop` is not judged when it fails.
 
 ### `check_method_consistency`
 
@@ -136,14 +146,16 @@ file. A consumer's own gate runs the checks the tree references.
   correctness by anything that reaches inactive items: `doorstop --error-all` skips inactive items
   entirely, and `check_suspect_links` scopes itself to link staleness. A stale stamp on an inactive
   item's own text or attributes passes every stage here.
-- `report_proposed` prints `0 of 0` for a tier with no items, and exits 0 — visible only through its
-  own population figure, since `check_unreviewed` fails that state before `report_proposed` ever
-  runs in the fixed order.
+- `report_proposed` prints `0 of 0` for a tier with no items, and exits 0 — indistinguishable on its
+  own from a tier that is healthy and simply has nothing proposed. Nothing gates it on
+  `check_unreviewed`, which fails that same state (`yielded no item`) in the same run, so the
+  ambiguity is `report_proposed`'s own, not a hidden one.
 - `check_unreviewed`, `check_method_consistency`, and `report_proposed` read only `root`; the
   `doorstop` stage and the Doorstop-library stages read every document under the working directory.
   A document outside `root` is invisible to the first three — its review freshness,
   verification-justification coverage, and backlog count are never checked — even though its links
-  and headers still are, by whichever of the other stages reaches it first.
+  and headers still are, by every one of the other stages, since every stage runs regardless of an
+  earlier one's result.
 - A mis-spelled status is listed by `report_proposed` as outside the vocabulary; nothing here gates
   it, for any tier.
 

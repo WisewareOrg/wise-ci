@@ -44,6 +44,15 @@ def _load(root: Path):
     return unreviewed, unstamped, counts
 
 
+def tree_loads(root: Path) -> bool:
+    """True when every required silo below `root` yielded at least one item -- the precondition
+    the stages that call `doorstop.build()` need before they can walk the tree without crashing."""
+    _, _, counts = _load(root)
+    if any(silo not in counts for silo in REQUIRED_SILOS):
+        return False
+    return all(counts.values())
+
+
 def main(root: Path) -> int:
     unreviewed, unstamped, counts = _load(root)
 
