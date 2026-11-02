@@ -23,6 +23,13 @@ test_a_stray_non_adr_entry_is_invisible_to_index_check_but_rejected_by_revs_chec
 No case spells a live citation (`ADR` followed by digits) as a literal string: every one is built at
 runtime from separate parts, so this file's own text never reads as a citation when wise-ci's
 check-adrs gates wise-ci's own tree.
+
+A missing `docs/decisions/` is the empty ADR set: every citation still fails "not an ADR" rather
+than going unjudged, and the zero-count and collision guards that would otherwise misreport that
+as a parser fault are specific to an absent directory -- a present one holding only its own README
+still behaves exactly as before. A citation wrapped across a line break right after `ADR` is
+reported malformed on the ADR line, whatever comes next: missing, present, blockquote-continued,
+indented, or (a documented false positive) a year.
 """
 
 import os
@@ -686,6 +693,67 @@ CASES: list[_Case] = [
         _must_pass,
     ),
     _Case("an-untracked-file-once-tracked", _fixture({"NOTES.md": "scratch\n"}), _must_pass),
+    # The ADR-tail wrap (matrix A6/F5): a line break, optionally with a trailing separator or a
+    # blockquote marker opening the next line, sits between `ADR` and its number as readily as a
+    # space does, and is reported with the same malformed template, on the ADR line.
+    _Case(
+        "a-wrap-with-the-number-missing-from-the-adr-line",
+        _fixture({"WRAP.md": f"A note citing {ADR}\n0017 here.\n"}),
+        _must_fail_at(
+            "check_adr_revs",
+            has=(
+                "WRAP.md:1:",
+                f"'{ADR}\\n0017' is not a citation this can pin — write `{ADR} 0017 rev N`",
+            ),
+        ),
+    ),
+    _Case(
+        "a-wrap-with-a-trailing-hyphen",
+        _fixture({"WRAP.md": f"A note citing {ADR}-\n0017 here.\n"}),
+        _must_fail_at(
+            "check_adr_revs",
+            has=f"'{ADR}-\\n0017' is not a citation this can pin — write `{ADR} 0017 rev N`",
+        ),
+    ),
+    _Case(
+        "a-wrap-with-a-blockquote-continuation",
+        _fixture({"WRAP.md": f"A note citing {ADR}\n> 0017 here.\n"}),
+        _must_fail_at(
+            "check_adr_revs",
+            has=f"'{ADR}\\n> 0017' is not a citation this can pin — write `{ADR} 0017 rev N`",
+        ),
+    ),
+    _Case(
+        "a-wrap-with-the-number-indented-on-the-next-line",
+        _fixture({"WRAP.md": f"A note citing {ADR}\n   0017 here.\n"}),
+        _must_fail_at(
+            "check_adr_revs", has=f"is not a citation this can pin — write `{ADR} 0017 rev N`"
+        ),
+    ),
+    _Case(
+        # The same wrap pattern cannot tell a missing number from a 4-digit year starting the next
+        # line -- the script carries the same risk (check-adrs/README.md).
+        "a-year-on-the-next-line-is-a-documented-false-positive",
+        _fixture({"WRAP.md": f"A note:\n{ADR}\n2026 was eventful.\n"}),
+        _must_fail_at(
+            "check_adr_revs",
+            has=f"'{ADR}\\n2026' is not a citation this can pin — write `{ADR} 2026 rev N`",
+        ),
+    ),
+    _Case(
+        "adrnnnn-with-no-separator-is-malformed",
+        _fixture({"WRAP.md": f"{ADR}0001 is mentioned here.\n"}),
+        _must_fail_at(
+            "check_adr_revs", has=f"'{ADR}0001' is not a citation this can pin — write `{ADR} 0001 rev N`"
+        ),
+    ),
+    _Case(
+        # check_adr_revs scans every tracked file, not only Markdown: a non-ADR, non-Markdown file
+        # holding a missing-ADR citation is judged exactly like a Markdown one.
+        "a-missing-adr-citation-in-an-item-yaml-field-fails",
+        _fixture({"docs/requirements/srs/SRS001.yml": f"rationale: cites {_cite('0009', 1)}, which does not exist\n"}),
+        _must_fail_at("check_adr_revs", has=f"cites {ADR} 0009, which is not an {ADR}"),
+    ),
 ]
 
 
@@ -896,3 +964,97 @@ def test_outside_a_repository_fails(tmp_path: Path) -> None:
     assert result.returncode != 0
     assert "Traceback" in result.stderr
     assert "CalledProcessError" in result.stderr
+
+
+def test_missing_decisions_folder_with_a_citation_fails_as_not_an_adr(tmp_path: Path) -> None:
+    """docs/decisions/ absent is the empty ADR set: check_adr_index prints its existing 0-ADR
+    success line, and the citation is still judged -- against zero ADRs -- rather than left
+    unjudged the way a present-but-empty decisions/ leaves it (see the README-only case below)."""
+    overrides = {
+        "docs/decisions/README.md": None,
+        "docs/decisions/TEMPLATE.md": None,
+        f"docs/decisions/{FILE_0001}": None,
+        f"docs/decisions/{FILE_0002}": None,
+        "CITATIONS.md": f"Prose citation: {_cite('0001', 1)}.\n",
+    }
+    repo = _build(tmp_path, overrides)
+    assert not (repo / "docs/decisions").exists()
+
+    result = _run_check(repo)
+
+    for s in STAGES:
+        assert _stage_header(s) in result.stdout
+    assert result.returncode == 1
+    assert INDEX_PASSED in result.stdout
+    assert "0 ADR(s), contiguous from 0001." in result.stdout
+    assert f"cites {ADR} 0001, which is not an {ADR}" in result.stderr
+    assert REVS_PASSED not in result.stdout
+
+
+def test_missing_decisions_folder_with_no_citation_passes(tmp_path: Path) -> None:
+    """Zero ADRs and zero citations is not the parser-fault zero-count guard firing, and not the
+    'no ADR declared a rev' guard either -- it is the expected state of a repository that declares
+    no ADRs at all."""
+    overrides = {
+        "docs/decisions/README.md": None,
+        "docs/decisions/TEMPLATE.md": None,
+        f"docs/decisions/{FILE_0001}": None,
+        f"docs/decisions/{FILE_0002}": None,
+        "CITATIONS.md": "No citations here.\n",
+    }
+    repo = _build(tmp_path, overrides)
+    assert not (repo / "docs/decisions").exists()
+
+    result = _run_check(repo)
+
+    for s in STAGES:
+        assert _stage_header(s) in result.stdout
+    assert result.returncode == 0, result.stderr
+    assert "0 ADR(s), contiguous from 0001." in result.stdout
+    assert "0 ADRs; 0 citations, every one pinning the current rev" in result.stdout
+    combined = result.stdout + result.stderr
+    assert "no prose citation was judged" not in combined
+    assert "no link citation was judged" not in combined
+    assert "no ADR declared a rev" not in combined
+
+
+def test_decisions_folder_present_with_no_readme_still_crashes(tmp_path: Path) -> None:
+    """A present but README-less decisions/ is not the missing-folder case -- only an absent
+    directory is the empty ADR set. Unchanged: FileNotFoundError, uncaught."""
+    overrides = {
+        "docs/decisions/README.md": None,
+        "docs/decisions/TEMPLATE.md": None,
+        f"docs/decisions/{FILE_0001}": None,
+        f"docs/decisions/{FILE_0002}": None,
+    }
+    repo = _build(tmp_path, overrides, extra=lambda repo: (repo / "docs/decisions").mkdir(parents=True))
+    assert (repo / "docs/decisions").is_dir()
+    assert not (repo / "docs/decisions/README.md").exists()
+
+    result = _run_check(repo)
+
+    assert result.returncode != 0
+    assert "Traceback" in result.stderr
+    assert "FileNotFoundError" in result.stderr
+
+
+def test_decisions_folder_with_only_a_readme_leaves_citations_unjudged(tmp_path: Path) -> None:
+    """A present decisions/ holding only its own README is not the missing-folder case either: the
+    zero-count and 'no ADR declared a rev' guards still fire, and a real citation present in the
+    tree is still left unjudged, exactly as today."""
+    overrides = {
+        "docs/decisions/README.md": _index(),
+        "docs/decisions/TEMPLATE.md": None,
+        f"docs/decisions/{FILE_0001}": None,
+        f"docs/decisions/{FILE_0002}": None,
+        "CITATIONS.md": f"Prose citation: {_cite('0001', 1)}.\n",
+    }
+    repo = _build(tmp_path, overrides)
+
+    result = _run_check(repo)
+
+    assert result.returncode == 1
+    assert INDEX_PASSED in result.stdout
+    assert "0 ADR(s), contiguous from 0001." in result.stdout
+    assert "no ADR declared a rev — the head format or this parser is wrong" in result.stderr
+    assert f"cites {ADR} 0001, which is not an {ADR}" not in result.stderr
