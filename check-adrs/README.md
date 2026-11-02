@@ -1,16 +1,17 @@
 # check-adrs
 
-One console script, one Actions step, two checks: the index check fails unless `docs/decisions/`
-and its index table in `docs/decisions/README.md` agree; the revs check fails unless every
-citation of an ADR, anywhere in the tracked tree, pins that ADR's current rev. The index check runs
-first; the revs check runs after it, whether or not the index check found a problem. The script
-exits 1 if either check found a problem, and prints nothing of its own beyond each check's own
-output.
+One console script, one Actions step, two stages. `check_adr_index` fails unless
+`docs/decisions/` and its index table in `docs/decisions/README.md` agree; `check_adr_revs` fails
+unless every citation of an ADR, anywhere in the tracked tree, pins that ADR's current rev. Both
+stages run every time, each preceded by its own `check-adrs: <stage>` header; the script exits 1 if
+either found a problem, and prints nothing of its own beyond each stage's own output.
 
 Run from the root of the repository it checks. It takes no inputs: `docs/decisions/` and the
-tracked tree are the only paths either check reads by name.
+tracked tree are the only paths either stage reads by name.
 
-## What the index check ([`check_adrs/__init__.py`](check_adrs/__init__.py)'s `index_check()`) reports
+## Stages, in order
+
+### `check_adr_index` ([`check_adrs/check_adr_index.py`](check_adrs/check_adr_index.py))
 
 Read from `docs/decisions/`'s own directory listing, not git's tracked set — an ADR file the
 listing reports is judged whether or not it has been `git add`ed. `README.md` and `TEMPLATE.md` are
@@ -35,7 +36,7 @@ directory, or a missing `docs/decisions/README.md` within one that exists, fails
 revs check gets a chance to run — the exception propagates out of the script uncaught, the same
 traceback Python prints for one left to crash on its own, naming the missing path.
 
-## What the revs check ([`check_adrs/__init__.py`](check_adrs/__init__.py)'s `revs_check()`) reports
+### `check_adr_revs` ([`check_adrs/check_adr_revs.py`](check_adrs/check_adr_revs.py))
 
 The ADR set is read from `docs/decisions/` directly, the same as the index check, so an uncommitted
 ADR is judged; the citation scan reads the tracked set instead (`git ls-files`), and fails outright
