@@ -47,7 +47,7 @@ disable_warnings = ["no-data-collected"]
 [tool.coverage.report]
 fail_under = 100
 include_namespace_packages = true
-# [run] omit is not inherited here: with include_namespace_packages, the report's own file
-# discovery walks `source` independently and .venv (and an agent worktree under .claude/) leaks
-# in as a pile of 0%-covered "packages" unless excluded again at this level too.
+# include_namespace_packages makes each check job's own save touch that check's unexecuted files
+# as 0% -- the effective source for that touch is --cov=<check> on the command line, not a config
+# key here. This mirrors [run] omit on whatever lands in the merged data as a result.
 omit = ["*/tests/*", ".venv/**", ".claude/**"]

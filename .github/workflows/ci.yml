@@ -145,18 +145,13 @@ jobs:
           pattern: coverage-*
           merge-multiple: true
 
-      # Each check job's own coverage run is scoped to that check alone (justfile's test recipe);
-      # this job only combines what those runs' uploaded artifacts carry. Its own checkout is what
-      # lets the guard below re-derive the expected file list from git (docs/TESTING.md § In CI).
-      # justfile's merge-coverage recipe.
+      # Reads this job's own checkout, which the guard below also uses to re-derive the expected
+      # file list (docs/TESTING.md § In CI). justfile's merge-coverage recipe.
       - name: Merge coverage
         run: just merge-coverage
 
-      # Which files must appear in the merged report is re-derived rather than trusted:
-      # independently of the coverage configuration that normally discovers them, this lists every
-      # git-tracked `.py` file outside `tests/` at any depth and `.claude/**`, mirroring
-      # pyproject.toml's own `omit` patterns, and fails, naming them, if any is missing from the
-      # merged coverage data (docs/TESTING.md § In CI). Inline rather than a tracked script, so
+      # Re-derives the expected file list independently of the coverage configuration that
+      # normally discovers it (docs/TESTING.md § In CI). Inline rather than a tracked script, so
       # actionlint's own embedded shellcheck reaches it (docs/CI.md § Workflow supply-chain and
       # privilege audit); its one coverage command is still the justfile's coverage-json recipe, so
       # no pytest or coverage command in CI bypasses just.
