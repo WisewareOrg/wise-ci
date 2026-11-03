@@ -682,6 +682,62 @@ CASES: list[_Case] = [
     _Case("cc-item-field-citation-line-number-off-by-one",
           _seed(lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), rationale="See SRS999 for details.")),
           _must_fail_at("check_citations", has=("docs/requirements/sys/SYS001.yml:9", "SRS999", "names no item in the requirements tree"))),
+    # R18: the `.yml`-suffix exemption (cc-yml-suffix-exemption-pass, above) does not extend to
+    # `.yaml` -- the literal prefix check is `.yml` only, so a `.yaml`-suffixed mention still falls
+    # through to the header-comment rules and fails for carrying none.
+    _Case("cc-yaml-suffix-not-exempt-fails",
+          _seed(lambda r: _cc_md(r, "notes.md", "See SYS001.yaml for the source.\n")),
+          _must_fail_at("check_citations", has=("SYS001", "carries no header comment"))),
+    # R20: annotation() strips a leading run of backtick, 's or ' before testing for the opening
+    # comment. cc-backtick-wrapped-identifier-pass covers the backtick; these cover the other two.
+    _Case("cc-clitic-apostrophe-s-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "SRS001's<!-- Sample software requirement --> is mentioned here.\n")),
+          _must_pass),
+    _Case("cc-clitic-apostrophe-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "SRS001'<!-- Sample software requirement --> is mentioned here.\n")),
+          _must_pass),
+    # R26: normalise() folds a line break (with an optional blockquote marker continuing it) to a
+    # single space, then splits on any run of whitespace and casefolds -- so a header carried across
+    # a blockquote continuation, or written with irregular interior whitespace, or differing from the
+    # item's header only in case, all still match.
+    _Case("cc-header-blockquote-continuation-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "SRS001<!-- Sample software\n> requirement --> is mentioned here.\n")),
+          _must_pass),
+    _Case("cc-header-whitespace-run-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "SRS001<!--  Sample   software requirement  --> is mentioned here.\n")),
+          _must_pass),
+    _Case("cc-header-case-only-difference-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "SRS001<!-- SAMPLE SOFTWARE REQUIREMENT --> is mentioned here.\n")),
+          _must_pass),
+    # R27: a `~~~` fence blanks and hides a citation exactly as a ``` fence does
+    # (cc-fenced-citation-hidden-pass); and the two fence characters do not close each other, so a
+    # ``` opened and only ever followed by a `~~~` line stays open to EOF -- the same unclosed-fence
+    # finding as cc-unclosed-fence-fails-once.
+    _Case("cc-tilde-fence-hidden-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "Example:\n\n~~~\nSYS999 is just an example, not a real citation.\n~~~\n")),
+          _must_pass),
+    _Case("cc-backtick-fence-not-closed-by-tilde-fails-once",
+          _seed(lambda r: _cc_md(r, "notes.md", "```\nSYS999 would be a problem if read.\n~~~\n")),
+          _cc_single_problem("notes.md  a code fence is never closed, so everything below it goes unread")),
+    # R29: the must-pass partner of cc-comment-interrupts-paragraph-fails -- a comment opening a
+    # line is only a finding when the line above it is non-blank -- and the same finding reached via
+    # a blockquote continuation, where QUOTE-stripping is what exposes the interruption.
+    _Case("cc-comment-after-blank-line-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "A paragraph of plain prose.\n\n<!-- a stray comment -->\n")),
+          _must_pass),
+    _Case("cc-blockquote-continuation-comment-interrupts-fails",
+          _seed(lambda r: _cc_md(r, "notes.md", "> A paragraph of plain prose.\n> <!-- a stray comment -->\n")),
+          _must_fail_at("check_citations", has="a comment opens this line, splitting the paragraph above it")),
+    # R30: the fence and paragraph-interruption rules are applied only in the Markdown loop, never to
+    # item fields -- a fence-shaped rationale does not hide the citation inside it the way
+    # cc-fenced-citation-hidden-pass's Markdown fence does, and a comment-opening-a-line rationale is
+    # never checked for paragraph interruption at all.
+    _Case("cc-item-field-fence-not-blanked-fails",
+          _seed(lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), rationale="```\nSYS999 would be hidden in Markdown, not here.\n```")),
+          _must_fail_at("check_citations", has=("SYS999", "names no item in the requirements tree"))),
+    _Case("cc-item-field-paragraph-rule-not-applied-pass",
+          _seed(lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), rationale="A paragraph of plain prose.\n<!-- a stray comment -->\n")),
+          _must_pass),
     _Case("cc-outside-git-working-copy-not-judged",
           _seed(_cc_rmtree_git),
           _cc_outside_git_working_copy_not_judged),

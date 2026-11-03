@@ -748,6 +748,29 @@ CASES: list[_Case] = [
         ),
     ),
     _Case(
+        # Plan item D: a wrap is malformed whether the number is missing (the cases above) or
+        # exists -- 0001 is one of BASE_FILES' own current, correctly-revved ADRs, so this is the
+        # case that tells joining the wrapped pair (and judging it normally) apart from reporting
+        # every wrap malformed regardless of what follows. It is the latter.
+        "a-wrap-whose-number-exists-is-still-malformed",
+        _fixture({"WRAP.md": f"A note citing {ADR}\n0001 rev 1 here.\n"}),
+        _must_fail_at(
+            "check_adr_revs",
+            has=(
+                "WRAP.md:1:",
+                f"'{ADR}\\n0001' is not a citation this can pin — write `{ADR} 0001 rev N`",
+            ),
+        ),
+    ),
+    _Case(
+        # The must-pass partner: TAIL matches a line ending in `ADR`, but the next line opens with
+        # prose, not a digit -- NEXT_LINE does not match, so wrapped_citations finds nothing to
+        # report. Nothing else on either line forms a citation on its own.
+        "a-line-ending-in-adr-followed-by-prose-passes",
+        _fixture({"WRAP.md": f"A note citing {ADR}\nsomething else entirely, no numbers at all.\n"}),
+        _must_pass,
+    ),
+    _Case(
         # check_adr_revs scans every tracked file, not only Markdown: a non-ADR, non-Markdown file
         # holding a missing-ADR citation is judged exactly like a Markdown one.
         "a-missing-adr-citation-in-an-item-yaml-field-fails",
