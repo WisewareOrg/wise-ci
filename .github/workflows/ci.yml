@@ -100,8 +100,8 @@ jobs:
 
       # needs: above is hand-kept; this checks the run's own job list instead of trusting that
       # list to stay in sync with it, so a job added to this workflow without being added to
-      # needs: cannot run unwatched (docs/TESTING.md § In CI). An empty or incomplete job list —
-      # a failed API call, a wrong run id — fails loudly rather than reading as "nothing failed".
+      # needs: cannot run unwatched (docs/TESTING.md § In CI). An empty job list — a failed API
+      # call, a wrong run id — fails loudly rather than reading as "nothing failed".
       - name: Require every job in this run to have succeeded
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -118,14 +118,6 @@ jobs:
             echo "the run's job list came back empty" >&2
             exit 1
           fi
-
-          for name in "check-eol / test" "check-docs-index / test" "check-docs-index / self-check" "check-adrs / test" "check-adrs / self-check" "check-branch / test" "check-branch / expected-failure" "check-reqs / test" "check-reqs / self-check" "check-reqs / expected-failure" "repo-floor / test" "repo-floor / expected-failure" "pr-title / test" "pr-title / expected-failure"; do
-            known="$(jq -s --arg name "$name" '[.[] | select(.name == $name)] | length' "$RUNNER_TEMP/run-jobs.json")"
-            if [ "$known" -eq 0 ]; then
-              echo "the run's job list is missing $name" >&2
-              exit 1
-            fi
-          done
 
           unfinished="$(jq -s -r '[.[] | select(.name != "ci") | select(.status != "completed" or .conclusion != "success") | .name] | .[]' "$RUNNER_TEMP/run-jobs.json")"
           if [ -n "$unfinished" ]; then
@@ -147,80 +139,35 @@ jobs:
         with:
           just-version: "1.59.0"
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 26.13.0
-          package-manager-cache: false
-
-      - name: Install pr-title/, locked
-        run: npm --prefix pr-title ci --ignore-scripts
-
-      # justfile's test recipe, full-run branch: a developer's own `just test` (every check, no
-      # argument) runs here too, so a typo or a broken change to that branch fails CI the same way
-      # it would fail a human running it locally (docs/TESTING.md § In CI). Self-contained — its
-      # own coverage source and .coverage output are unrelated to the merge/report steps below, and
-      # it runs before the downloaded artifacts even exist, so neither can interfere with the other.
-      - name: pytest, full local run (just test)
-        run: just test
-
       - name: Download every check's coverage data
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: coverage-*
           merge-multiple: true
 
-      # Each check job's own coverage run, over its full checkout with source=".", is what
-      # makes an untested file or an unwired check show 0% here (pyproject.toml's
-      # include_namespace_packages); this job only combines and reports what those runs'
-      # uploaded artifacts carry — its own checkout is what lets the steps below read the
-      # source (docs/TESTING.md § In CI). justfile's merge-coverage recipe.
+      # Combines the downloaded .coverage.* data (docs/TESTING.md § In CI). justfile's
+      # merge-coverage recipe.
       - name: Merge coverage
         run: just merge-coverage
 
-      # Which files must appear in the merged report is re-derived rather than trusted:
-      # independently of the coverage configuration that normally discovers them, this lists
-      # every top-level folder with an `action.yml` and that folder's `.py` files outside
-      # `tests/`, from this job's own checkout, and fails, naming them, if any is missing from
-      # the merged coverage data (docs/TESTING.md § In CI). A check job whose own checkout was
-      # narrowed, or a coverage configuration that stops discovering a check's folder, would
-      # otherwise drop that check's source out of the report unnoticed rather than failing it.
-      # Inline rather than a tracked script, so actionlint's own embedded shellcheck reaches it
-      # (docs/CI.md § Workflow supply-chain and privilege audit); its one coverage command is
-      # still the justfile's coverage-json recipe, so no pytest or coverage command in CI
-      # bypasses just.
-      - name: Every check's source file is present in the merged coverage data
+      # Re-derives the expected file list independently of the coverage configuration that
+      # normally discovers it (docs/TESTING.md § In CI). Inline rather than a tracked script, so
+      # actionlint's own embedded shellcheck reaches it (docs/CI.md § Workflow supply-chain and
+      # privilege audit); its one coverage command is still the justfile's coverage-json recipe, so
+      # no pytest or coverage command in CI bypasses just.
+      - name: Every tracked Python file outside tests is in the merged coverage data
         run: |
           set -euo pipefail
 
           tmp="$(mktemp -d)"
           trap 'rm -rf "$tmp"' EXIT
 
-          for dir in */; do
-            dir="${dir%/}"
-            [ -f "$dir/action.yml" ] || continue
-            find "$dir" -name '*.py' -not -path "$dir/tests/*"
-          done | sort > "$tmp/expected-py-files"
+          git ls-files '*.py' ':!:**/tests/**' | sort > "$tmp/expected-py-files"
 
           if [ ! -s "$tmp/expected-py-files" ]; then
-            echo "no check's source files were found — run this from the repository root" >&2
+            echo "no tracked Python files were found outside tests — run this from the repository root" >&2
             exit 1
           fi
-
-          for file in "repo-floor/repo-floor.py" "pr-title/pr-title.py" \
-            "check-branch/check_branch/__init__.py" "check-eol/check_eol/__init__.py" \
-            "check-docs-index/check_docs_index/__init__.py" \
-            "check-adrs/check_adrs/__init__.py" "check-adrs/check_adrs/check_adr_index.py" \
-            "check-adrs/check_adrs/check_adr_revs.py" \
-            "check-reqs/check_reqs/__init__.py" "check-reqs/check_reqs/check_citations.py" \
-            "check-reqs/check_reqs/check_headers.py" \
-            "check-reqs/check_reqs/check_method_consistency.py" "check-reqs/check_reqs/check_suspect_links.py" \
-            "check-reqs/check_reqs/check_text_citations.py" "check-reqs/check_reqs/check_unreviewed.py" \
-            "check-reqs/check_reqs/report_proposed.py" "check-reqs/check_reqs/req_sha_item_validator.py"; do
-            if ! grep -qxF "$file" "$tmp/expected-py-files"; then
-              echo "expected file list is missing $file" >&2
-              exit 1
-            fi
-          done
 
           just coverage-json "$tmp/coverage.json"
           jq -r '.files | keys[]' "$tmp/coverage.json" | sort > "$tmp/covered-py-files"

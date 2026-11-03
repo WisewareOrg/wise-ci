@@ -33,12 +33,8 @@ jobs:
           just-version: "1.59.0"
 
       # docs/TESTING.md § In CI.
-      - name: pytest, one-check mode (just test check-adrs)
+      - name: pytest (just test check-adrs)
         run: just test check-adrs
-
-      # docs/TESTING.md § In CI.
-      - name: pytest, under coverage
-        run: just test-ci check-adrs
 
       # docs/TESTING.md § In CI.
       - name: Upload coverage data

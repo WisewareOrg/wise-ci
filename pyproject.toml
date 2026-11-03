@@ -15,45 +15,25 @@ python-downloads = "never"
 python-preference = "only-system"
 
 [tool.uv.workspace]
-members = ["check-adrs", "check-branch", "check-docs-index", "check-eol", "check-reqs"]
-
-[tool.uv.sources]
-check-adrs = { workspace = true }
-check-branch = { workspace = true }
-check-docs-index = { workspace = true }
-check-eol = { workspace = true }
-check-reqs = { workspace = true }
+members = ["check-*"]
 
 [dependency-groups]
 test = [
   "pytest",
   "coverage>=7.10",
   "pytest-cov>=7.1.0",
-  "check-adrs",
-  "check-branch",
-  "check-docs-index",
-  "check-eol",
-  "check-reqs",
+  "pytest-xdist>=3.8.0",
 ]
 
 [tool.pytest.ini_options]
-# Bare --cov (no path) leaves the coverage source to [tool.coverage.run] source below, so it is
-# defined in one place; one-check mode overrides it with --cov-reset --cov=<check> (justfile,
-# docs/TESTING.md § Running tests locally). :skip-covered collapses a fully-covered file to the
-# summary line instead of listing it, so a green run stays short; a file under 100% still lists
-# its missing lines.
-addopts = ["--strict-markers", "--strict-config", "-q", "--cov", "--cov-report=term-missing:skip-covered"]
-# Glob, not a literal list: matches every existing and future "<check>/tests/" at the repository
-# root without naming a check (docs/TESTING.md § Where tests live).
-testpaths = ["*/tests"]
+# :skip-covered collapses a fully-covered file to the summary line instead of listing it, so a
+# green run stays short; a file under 100% still lists its missing lines.
+addopts = ["--strict-markers", "--strict-config", "-q", "--cov-report=term-missing:skip-covered"]
 
 [tool.coverage.run]
 parallel = true
 patch = ["subprocess"]
-source = ["."]
-# .claude/** is gitignored machinery, not project content (docs/README.md) — an agent worktree
-# under .claude/worktrees/ can otherwise duplicate a check's own source as unexecuted.
-omit = ["*/tests/*", ".venv/**", ".claude/**"]
+omit = ["*/tests/*"]
 # A check's tests reach its script either as a subprocess (check-eol; docs/TESTING.md § Real
 # dependencies where possible), which the main pytest process itself collects nothing for, or by
 # importing it in-process (check-branch), which the main process collects directly. Collecting
@@ -64,8 +44,6 @@ disable_warnings = ["no-data-collected"]
 
 [tool.coverage.report]
 fail_under = 100
+# Lets each check job's save record that check's unexecuted files, including folders with no
+# __init__.py, at 0%.
 include_namespace_packages = true
-# [run] omit is not inherited here: with include_namespace_packages, the report's own file
-# discovery walks `source` independently and .venv (and an agent worktree under .claude/) leaks
-# in as a pile of 0%-covered "packages" unless excluded again at this level too.
-omit = ["*/tests/*", ".venv/**", ".claude/**"]

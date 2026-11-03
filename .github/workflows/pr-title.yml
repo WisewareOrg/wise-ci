@@ -41,12 +41,8 @@ jobs:
           just-version: "1.59.0"
 
       # docs/TESTING.md § In CI.
-      - name: pytest, one-check mode (just test pr-title)
+      - name: pytest (just test pr-title)
         run: just test pr-title
-
-      # docs/TESTING.md § In CI.
-      - name: pytest, under coverage
-        run: just test-ci pr-title
 
       # docs/TESTING.md § In CI.
       - name: Upload coverage data

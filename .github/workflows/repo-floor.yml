@@ -33,12 +33,8 @@ jobs:
           just-version: "1.59.0"
 
       # docs/TESTING.md § In CI.
-      - name: pytest, one-check mode (just test repo-floor)
+      - name: pytest (just test repo-floor)
         run: just test repo-floor
-
-      # docs/TESTING.md § In CI.
-      - name: pytest, under coverage
-        run: just test-ci repo-floor
 
       # docs/TESTING.md § In CI.
       - name: Upload coverage data
