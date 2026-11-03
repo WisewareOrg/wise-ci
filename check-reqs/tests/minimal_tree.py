@@ -1,6 +1,6 @@
 """Builds the clean minimal Doorstop tree check-reqs's tests run against, and the extra
-documents some cases add beside it. See check-reqs/tests/conftest.py for how it is built and
-copied per case.
+documents some cases add beside it. See check-reqs/tests/conftest.py for when it is built and
+how cases receive their own copy.
 
 `env(**overrides)` returns a subprocess environment with the machine's own git configuration shut
 out and a fixed author/committer identity, for every git and `doorstop` subprocess a caller runs.

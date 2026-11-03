@@ -145,8 +145,8 @@ jobs:
           pattern: coverage-*
           merge-multiple: true
 
-      # Reads this job's own checkout, which the guard below also uses to re-derive the expected
-      # file list (docs/TESTING.md § In CI). justfile's merge-coverage recipe.
+      # Combines the downloaded .coverage.* data (docs/TESTING.md § In CI). justfile's
+      # merge-coverage recipe.
       - name: Merge coverage
         run: just merge-coverage
 
