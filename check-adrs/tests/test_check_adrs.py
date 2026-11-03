@@ -17,8 +17,8 @@ check_adr_index but are both rejected outright by check_adr_revs's stricter "eve
 the index, or the template" rule. Those two keep their original assertion -- check_adr_index's own
 pass message still appears in stdout -- but the process exits 1 overall, because check_adr_revs
 independently, and correctly, rejects the same stray entry. See
-test_an_uppercase_extension_is_invisible_to_index_check_but_rejected_by_revs_check and
-test_a_stray_non_adr_entry_is_invisible_to_index_check_but_rejected_by_revs_check below.
+test_an_uppercase_extension_is_invisible_to_check_adr_index_but_rejected_by_check_adr_revs and
+test_a_stray_non_adr_entry_is_invisible_to_check_adr_index_but_rejected_by_check_adr_revs below.
 
 No case spells a live citation (`ADR` followed by digits) as a literal string: every one is built at
 runtime from separate parts, so this file's own text never reads as a citation when wise-ci's
@@ -770,6 +770,22 @@ CASES: list[_Case] = [
         _fixture({"WRAP.md": f"A note citing {ADR}\nsomething else entirely, no numbers at all.\n"}),
         _must_pass,
     ),
+    # A8: check_adr_revs blanks no fences (the documented Known-rejection) -- a citation of a
+    # missing number inside a fenced block, outside docs/decisions/, is judged exactly like one in
+    # ordinary prose, not hidden the way check-reqs' own fence rule would hide it.
+    _Case(
+        "a-fenced-citation-of-a-missing-number-still-fails",
+        _fixture({"FENCED.md": f"```\nSee {_cite('0009', 1)} for context.\n```\n"}),
+        _must_fail_at("check_adr_revs", has=f"cites {ADR} 0009, which is not an {ADR}"),
+    ),
+    # A16: the word boundary. A leading word character right before `ADR` (no boundary to open
+    # the citation), and a 5th digit right after the 4 the number group admits (no boundary to
+    # close it), both mean CITATION never matches at all -- neither is a citation, so both pass.
+    _Case(
+        "word-boundary-both-forms-pass",
+        _fixture({"WORDBOUNDARY.md": f"X{ADR} 0002 is just a word. {ADR} 00021 is also not a citation.\n"}),
+        _must_pass,
+    ),
     _Case(
         # check_adr_revs scans every tracked file, not only Markdown: a non-ADR, non-Markdown file
         # holding a missing-ADR citation is judged exactly like a Markdown one.
@@ -817,7 +833,7 @@ def test_fenced_code_block_row_is_read_as_a_real_row(tmp_path: Path) -> None:
     assert "docs/decisions/README.md row 0009 names no ADR file" in result.stderr
 
 
-def test_an_uppercase_extension_is_invisible_to_index_check_but_rejected_by_revs_check(
+def test_an_uppercase_extension_is_invisible_to_check_adr_index_but_rejected_by_check_adr_revs(
     tmp_path: Path,
 ) -> None:
     """Known gap (check-adrs/README.md): check_adr_index's `name.endswith(".md")` is case-sensitive,
@@ -842,7 +858,7 @@ def test_an_uppercase_extension_is_invisible_to_index_check_but_rejected_by_revs
     assert "0003-upper.MD" in result.stderr
 
 
-def test_a_stray_non_adr_entry_is_invisible_to_index_check_but_rejected_by_revs_check(
+def test_a_stray_non_adr_entry_is_invisible_to_check_adr_index_but_rejected_by_check_adr_revs(
     tmp_path: Path,
 ) -> None:
     """check_adr_index's directory scan only looks at `.md`-named entries at all, so a non-.md file
@@ -1081,3 +1097,30 @@ def test_decisions_folder_with_only_a_readme_leaves_citations_unjudged(tmp_path:
     assert "0 ADR(s), contiguous from 0001." in result.stdout
     assert "no ADR declared a rev — the head format or this parser is wrong" in result.stderr
     assert f"cites {ADR} 0001, which is not an {ADR}" not in result.stderr
+
+
+def test_independent_failures_in_both_stages_are_both_reported_in_one_run(tmp_path: Path) -> None:
+    """Plan criterion 4, for check-adrs: both stages run unconditionally and OR their results
+    (pre-existing, unchanged by this ticket), so a defect local to each -- an index row naming no
+    file, and an unrelated citation elsewhere pinning no rev -- both surface in the one run rather
+    than either masking the other."""
+    repo = _build(
+        tmp_path,
+        {
+            "docs/decisions/README.md": _index(
+                _row("0001", 1, FILE_0001), _row("0002", 1, FILE_0002), _row("0003", 1, "0003-ghost.md")
+            ),
+            "STALE.md": f"Unrelated citation: {_cite('0001')}.\n",
+        },
+    )
+
+    result = _run_check(repo)
+
+    assert result.returncode != 0
+    for s in STAGES:
+        assert _stage_header(s) in result.stdout
+    assert INDEX_PASSED not in result.stdout
+    assert REVS_PASSED not in result.stdout
+    assert "docs/decisions/README.md row 0003 names no ADR file" in result.stderr
+    assert f"cites {ADR} 0001 without a rev" in result.stderr
+    _no_traceback(result)

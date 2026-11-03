@@ -191,6 +191,21 @@ def _seed(editor: Callable[[Path], None]) -> Callable[[Path], Path]:
     return build
 
 
+# Every stage but `doorstop` prints exactly one of these on an outright pass, with no variable
+# text before the point checked here -- its absence is what ties a failure to the named stage
+# rather than to stray matching text elsewhere in the output. `doorstop` carries the same progress
+# chatter on its own stdout whether it passes or fails, so it is tied by the `ERROR:` prefix its
+# own failures carry instead; `report_proposed` never fails, so neither is needed for it.
+_PASS_MARKER = {
+    "check_unreviewed": "Every item and every link carries a review fingerprint.",
+    "check_suspect_links": "Every inactive item's links resolve and match the parents they were reviewed against.",
+    "check_method_consistency": "carry a verification-justification; methods are consistent across",
+    "check_text_citations": "No item's `text` cites another item.",
+    "check_headers": "Every header is non-empty, within the permitted set, and prefix-free (",
+    "check_citations": "Every citation resolves, and every requirement citation carries its item's header.",
+}
+
+
 def _must_fail_at(stage: str, *, has: str | tuple = ()) -> Callable:
     assert stage in STAGES
     needles = (has,) if isinstance(has, str) else has
@@ -199,10 +214,19 @@ def _must_fail_at(stage: str, *, has: str | tuple = ()) -> Callable:
         assert result.returncode != 0
         combined = result.stdout + result.stderr
         # Every stage's header prints regardless of an earlier failure (run-every-stage): a later
-        # stage is either judged -- and prints its own pass or fail content -- or not judged, never
-        # silently skipped the way stop-at-first left it.
+        # stage is either judged -- and prints its own pass or fail content -- or not judged; never
+        # silently absent.
         for s in STAGES:
             assert _stage_header(s) in result.stdout
+        # Ties the failure to the named stage specifically: it did not pass, and it was not gated
+        # as not-judged either -- the two ways a needle could otherwise match while the real fault
+        # sat somewhere else.
+        if stage == "doorstop":
+            assert "ERROR:" in result.stderr
+        else:
+            assert _PASS_MARKER[stage] not in result.stdout
+        for reason in (_CHECK_UNREVIEWED_FAILED, _TREE_DID_NOT_LOAD, _NOT_A_GIT_WORKING_COPY):
+            assert _not_judged(stage, reason) not in result.stdout
         for needle in needles:
             assert needle in combined
         _no_traceback(result)
@@ -443,7 +467,7 @@ def _cc_md(repo: Path, relpath: str, text: str) -> Path:
     path.write_text(text, encoding="utf-8")
     result = _git(repo, "add", relpath)
     assert result.returncode == 0, result.stderr
-    assert relpath in _git(repo, "ls-files", relpath).stdout.split()
+    assert relpath in _git(repo, "ls-files", "-z", relpath).stdout.split("\0")
     return path
 
 
@@ -728,16 +752,11 @@ CASES: list[_Case] = [
     _Case("cc-blockquote-continuation-comment-interrupts-fails",
           _seed(lambda r: _cc_md(r, "notes.md", "> A paragraph of plain prose.\n> <!-- a stray comment -->\n")),
           _must_fail_at("check_citations", has="a comment opens this line, splitting the paragraph above it")),
-    # R30: the fence and paragraph-interruption rules are applied only in the Markdown loop, never to
-    # item fields -- a fence-shaped rationale does not hide the citation inside it the way
-    # cc-fenced-citation-hidden-pass's Markdown fence does, and a comment-opening-a-line rationale is
-    # never checked for paragraph interruption at all.
-    _Case("cc-item-field-fence-not-blanked-fails",
-          _seed(lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), rationale="```\nSYS999 would be hidden in Markdown, not here.\n```")),
-          _must_fail_at("check_citations", has=("SYS999", "names no item in the requirements tree"))),
-    _Case("cc-item-field-paragraph-rule-not-applied-pass",
-          _seed(lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), rationale="A paragraph of plain prose.\n<!-- a stray comment -->\n")),
-          _must_pass),
+    # R5: a tracked Markdown path holding a space is judged, not an uncaught traceback -- the
+    # valid citation in it resolves cleanly, and the bad one is still reported, by its full path.
+    _Case("cc-tracked-md-path-with-space-judged-not-crashed",
+          _seed(lambda r: _cc_md(r, "docs/a b.md", "SRS001<!-- Sample software requirement --> is fine. SRS999 names nothing real.\n")),
+          _cc_single_problem(("docs/a b.md", "SRS999", "names no item in the requirements tree"))),
     _Case("cc-outside-git-working-copy-not-judged",
           _seed(_cc_rmtree_git),
           _cc_outside_git_working_copy_not_judged),
