@@ -1,5 +1,6 @@
 """The docs/decisions/ directory and its index table agree -- every ADR file has a row, every row
-resolves to a real file, and numbering is contiguous from 0001 with no duplicates.
+resolves to a real file, and numbering is contiguous from 0001 with no duplicates. A missing
+docs/decisions/ is the empty ADR set, not a crash.
 
 See check-adrs/README.md.
 """
@@ -30,35 +31,37 @@ def main(root: Path) -> int:
     problems = []
 
     files = {}
-    for name in sorted(os.listdir(decisions_dir)):
-        if name in ("README.md", "TEMPLATE.md") or not name.endswith(".md"):
-            continue
-        match = re.fullmatch(r"(\d{4})-.+\.md", name)
-        if not match:
-            problems.append(f"docs/decisions/{name} is not named NNNN-<slug>.md")
-            continue
-        # os.listdir reports names, not what they are: a directory or a dangling symlink named
-        # NNNN-<slug>.md otherwise counts as an ADR on the strength of its name alone.
-        if not (decisions_dir / name).is_file():
-            problems.append(f"docs/decisions/{name} is not a readable file")
-            continue
-        if match.group(1) in files:
-            problems.append(
-                f"number {match.group(1)} is carried by two files: {files[match.group(1)]}, {name}"
-            )
-        else:
-            files[match.group(1)] = name
-
-    index_text = (decisions_dir / "README.md").read_text(encoding="utf-8")
-
     rows = {}
-    for match in re.finditer(r"^\|\s*\[(\d{4})\]\(([^)]+)\)\s*\|", index_text, flags=re.M):
-        number, raw_target = match.group(1), match.group(2)
-        target = destination(raw_target)
-        if number in rows:
-            problems.append(f"docs/decisions/README.md has two rows for number {number}")
-        else:
-            rows[number] = target
+
+    if decisions_dir.exists():
+        for name in sorted(os.listdir(decisions_dir)):
+            if name in ("README.md", "TEMPLATE.md") or not name.endswith(".md"):
+                continue
+            match = re.fullmatch(r"(\d{4})-.+\.md", name)
+            if not match:
+                problems.append(f"docs/decisions/{name} is not named NNNN-<slug>.md")
+                continue
+            # os.listdir reports names, not what they are: a directory or a dangling symlink named
+            # NNNN-<slug>.md otherwise counts as an ADR on the strength of its name alone.
+            if not (decisions_dir / name).is_file():
+                problems.append(f"docs/decisions/{name} is not a readable file")
+                continue
+            if match.group(1) in files:
+                problems.append(
+                    f"number {match.group(1)} is carried by two files: {files[match.group(1)]}, {name}"
+                )
+            else:
+                files[match.group(1)] = name
+
+        index_text = (decisions_dir / "README.md").read_text(encoding="utf-8")
+
+        for match in re.finditer(r"^\|\s*\[(\d{4})\]\(([^)]+)\)\s*\|", index_text, flags=re.M):
+            number, raw_target = match.group(1), match.group(2)
+            target = destination(raw_target)
+            if number in rows:
+                problems.append(f"docs/decisions/README.md has two rows for number {number}")
+            else:
+                rows[number] = target
 
     for number, name in files.items():
         if number not in rows:

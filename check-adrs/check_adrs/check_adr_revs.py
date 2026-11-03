@@ -73,6 +73,13 @@ SECTION = re.compile(r"^## +(.+?) *$")
 CHANGELOG = re.compile(r"^- \*\*rev (\d+)\*\* — ")
 CONTINUATION = re.compile(r"^ {2,}\S")
 
+# A citation wrapped across a line break: the tail end of a line, joined to the next line's
+# leading digits -- a blockquote marker or indentation continuing it sits between `ADR` and its
+# number as readily as a space does, and is reported malformed the same as any other spelling this
+# cannot pin. A 5-digit next line is not flagged; a 4-digit year is (a documented false positive).
+TAIL = re.compile(r"\bADRs?[ _#\-]{0,3}$", re.I)
+NEXT_LINE = re.compile(r"^[^\S\n]*>?[^\S\n]*(\d{1,4})\b(?: +rev +(\d+))?")
+
 
 def fail(problems):
     print(f"{len(problems)} problem(s):", file=sys.stderr)
@@ -141,8 +148,15 @@ def changelog_revs(text):
 
 
 def current_revs(decisions, problems):
-    """Each ADR's number and the rev its own head declares, and the numbers carried by two files."""
+    """Each ADR's number and the rev its own head declares, and the numbers carried by two files.
+
+    A missing `decisions` is the empty ADR set, not a parser fault: nothing is iterated, and the
+    "no ADR declared a rev" guard below -- which exists to catch a present directory this cannot
+    read -- does not apply to a directory that is not there at all.
+    """
     revs, carriers, collided = {}, {}, set()
+    if not decisions.exists():
+        return revs, collided
     for path in sorted(decisions.iterdir()):
         match = ADR_FILE.match(path.name)
         if not match:
@@ -259,6 +273,26 @@ def readable(path, text, decisions, index):
         yield number, row.group(2) if row else line, False
 
 
+def wrapped_citations(where, rows):
+    """A citation whose `ADR` keyword and number are split across a line break -- reported with
+    the same template a same-line malformed spelling gets, on the line the citation opens.
+    Malformed inside a changelog entry too: form is never exempt, only currency is.
+    """
+    problems = []
+    for i in range(len(rows) - 1):
+        number, line, _ = rows[i]
+        tail = TAIL.search(line)
+        nxt = tail and NEXT_LINE.match(rows[i + 1][1])
+        if not nxt:
+            continue
+        spelling = f"{tail.group(0)}\n{nxt.group(0)}".split(" rev ")[0]
+        problems.append(
+            f"{where}:{number}: {spelling!r} is not a citation this can pin — "
+            f"write `ADR {nxt.group(1).zfill(4)} rev N`"
+        )
+    return problems
+
+
 def check_citations(root, decisions, index, revs, collided, problems):
     unreadable, judged = [], {"prose": 0, "link": 0}
     for path in tracked(root):
@@ -274,7 +308,9 @@ def check_citations(root, decisions, index, revs, collided, problems):
             continue
 
         where = str(path.relative_to(root))
-        for number, line, historical in readable(path, text, decisions, index):
+        rows = list(readable(path, text, decisions, index))
+        problems.extend(wrapped_citations(where, rows))
+        for number, line, historical in rows:
             titles = []
             for title, span, name in adr_links(line):
                 match = ADR_FILE.match(name)
@@ -338,12 +374,14 @@ def check_citations(root, decisions, index, revs, collided, problems):
         )
     # The mirror of the guard in current_revs, and per mechanism rather than over the total: the
     # tree exercises both, so either falling to zero means that reader stopped seeing its citations
-    # while the other kept the run green.
-    for mechanism, count in judged.items():
-        if not count:
-            problems.append(
-                f"no {mechanism} citation was judged — that spelling or this parser is wrong"
-            )
+    # while the other kept the run green. A missing decisions/ is the empty ADR set, where a zero
+    # count is correct rather than a parser fault, so the guard does not apply there.
+    if decisions.exists():
+        for mechanism, count in judged.items():
+            if not count:
+                problems.append(
+                    f"no {mechanism} citation was judged — that spelling or this parser is wrong"
+                )
     return sum(judged.values())
 
 
@@ -384,6 +422,10 @@ def main(root: Path) -> int:
     judged = 0
     if revs:
         check_index(index, revs, problems)
+        judged = check_citations(root, decisions, index, revs, collided, problems)
+    elif not decisions.exists():
+        # The empty ADR set: every citation still fails "not an ADR" rather than going unjudged
+        # the way a present-but-incomplete decisions/ (no ADR, but a README) leaves it below.
         judged = check_citations(root, decisions, index, revs, collided, problems)
     if problems:
         return fail(sorted(problems))

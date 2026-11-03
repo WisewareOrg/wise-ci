@@ -31,10 +31,11 @@ none of that is part of the filename the row claims. Only `docs/decisions/README
 row-shaped line in another file, or one indented so it no longer opens the line, is not a row at
 all.
 
-On success it prints the ADR count. A git call is never made: a missing `docs/decisions/`
-directory, or a missing `docs/decisions/README.md` within one that exists, fails here, before the
-revs check gets a chance to run — the exception propagates out of the script uncaught, the same
-traceback Python prints for one left to crash on its own, naming the missing path.
+On success it prints the ADR count. A git call is never made. A missing `docs/decisions/`
+directory is the empty ADR set — it prints `0 ADR(s), contiguous from 0001` and is not a crash. A
+present directory missing its own `docs/decisions/README.md` still is: the exception propagates
+out of the script uncaught, the same traceback Python prints for one left to crash on its own,
+naming the missing path.
 
 ### `check_adr_revs` ([`check_adrs/check_adr_revs.py`](check_adrs/check_adr_revs.py))
 
@@ -72,12 +73,31 @@ it prints the ADR count and the citation count, split by whether each was judged
 citation — and fails if either count is zero, since a scan that stops recognising a whole citation
 form would otherwise report the smaller population it can still see as complete.
 
-A missing `docs/decisions/` directory or `docs/decisions/README.md` never reaches the revs check at
-all: the index check reads both first and crashes on either, uncaught, before the revs check is
-called. With both paths present and at least one ADR validated, a revs-check problem the index
-check does not also catch — a stale or malformed citation, a rev mismatch — is reported as an
-ordinary problem rather than a crash; with no ADR at all, the run instead reports
-`no ADR declared a rev`.
+A missing `docs/decisions/` directory is the empty ADR set here too, judged the same way the index
+check treats it: every citation fails `not an ADR` rather than going unjudged, and the zero-count
+and `no ADR declared a rev` guards do not fire for a directory that is not there. A present
+directory missing its own `docs/decisions/README.md` still crashes in the index check, before the
+revs check is ever called. A present directory holding only its `README.md` — present, but
+declaring no ADR at all — instead reports `no ADR declared a rev`, and leaves every citation
+unjudged exactly as before.
+
+**A citation wrapped across a line break right after `ADR` is reported, not invisible.** The tail
+end of a line, joined to the next line's leading digits, is reported malformed on the line the
+citation opens, with the same template as any other spelling this cannot pin:
+
+```
+A note citing ADR
+0017 here.
+```
+
+```
+WRAP.md:1: 'ADR\n0017' is not a citation this can pin — write `ADR 0017 rev N`
+```
+
+A blockquote marker or indentation continuing the next line sits between `ADR` and its number as
+readily as a space does, and is joined the same way. A wrap right after `rev` was never a blind
+spot: the rev group is optional, so a split there already failed as a citation carrying no rev. A
+4-digit year opening the next line is a documented false positive, read as the wrapped number.
 
 ## Known rejections
 
@@ -109,10 +129,9 @@ as carrying no title at all.
 whitespace-delimited token after `# ` as the title's number; a title running the number into its
 text is reported as titling itself that whole token, not as separately malformed.
 
-**A citation split by a line wrap right after `ADR` or `rev` is invisible.** The revs check matches
-a citation within one line; a line ending in the bare keyword and the next opening with the number
-or the rev carries the citation across neither line, so the pin goes unchecked until the lines are
-joined.
+**A citation names an ADR in this repository, never another's.** The revs check reads
+`docs/decisions/` from the working directory; a citation of another repository's ADR number is
+judged against this one's set, and a coincidental match is judged as if it named the local ADR.
 
 ## Run locally
 
