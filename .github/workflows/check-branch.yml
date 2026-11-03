@@ -33,12 +33,8 @@ jobs:
           just-version: "1.59.0"
 
       # docs/TESTING.md § In CI.
-      - name: pytest, one-check mode (just test check-branch)
+      - name: pytest (just test check-branch)
         run: just test check-branch
-
-      # docs/TESTING.md § In CI.
-      - name: pytest, under coverage
-        run: just test-ci check-branch
 
       # docs/TESTING.md § In CI.
       - name: Upload coverage data

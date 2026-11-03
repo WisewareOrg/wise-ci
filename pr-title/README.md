@@ -68,9 +68,8 @@ running it against wise-ci's own pull request title; outside a pull request, `pr
 does not trigger, and nothing else exercises it — `test`'s own `npm ci` is a direct workflow step,
 not the action's `$GITHUB_ACTION_PATH`-prefixed one.
 
-**A `.py` file shipped inside `node_modules`.** `ci.yml`'s per-check `.py`-file sweep would pick
-one up and fail the merged-coverage population guard loudly — not a silent gap, named here because
-nothing else in this check's own tests would catch it.
+**A `.py` file shipped inside `node_modules`.** A stray `.py` under `node_modules` fails the
+pr-title job's own test step at less than 100% coverage, naming the file — not a silent gap.
 
 **A landed commit on `main`.** Under a fast-forward merge model, the pull request title this check
 lints does not become the landed commit's subject — covered by wise-ci issue 34 (Check that the
