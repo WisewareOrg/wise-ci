@@ -131,7 +131,7 @@ See SYS001.yml for the source.
 
 is exempt from the header pair: it names the file rather than cites the item.
 
-A mis-cased identifier (`srs001`) is reported directly, by its own rule, before the header is ever
+A mis-cased identifier is reported directly, by its own rule, before the header is ever
 checked. A comment opening a line that continues a paragraph is reported too, whether or not its
 own header is correct — bind it to the sentence it follows, or leave a blank line before it. A
 fenced code block is blanked before either rule runs, so an illustrative, unreal identifier inside
