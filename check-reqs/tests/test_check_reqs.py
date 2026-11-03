@@ -944,6 +944,40 @@ def test_suspect_links_passes_for_an_active_parent_mutation_which_doorstop_then_
     _no_wisekiosk_reference(combined)
 
 
+# -- Test plumbing: a copied tree matches a fresh build, and each case gets its own copy ----------
+
+
+def _working_tree_files(root: Path) -> dict[str, bytes]:
+    return {
+        str(path.relative_to(root)): path.read_bytes()
+        for path in root.rglob("*")
+        if path.is_file() and ".git" not in path.relative_to(root).parts
+    }
+
+
+def test_copied_tree_matches_fresh_build(repo: Path, tmp_path: Path) -> None:
+    """`repo` is a copy of the session's one baseline tree. Built fresh here instead, it must come
+    out byte for byte the same, doorstop review stamps included -- the real `doorstop` CLI's stamps
+    are a content hash, not a timestamp."""
+    fresh = minimal_tree.init_repo(tmp_path / "fresh")
+    minimal_tree.build(fresh)
+
+    assert _working_tree_files(repo) == _working_tree_files(fresh)
+    # The raw `.git/index` is not compared: it carries stat data that differs between the two
+    # repositories even when their tracked content is identical.
+    assert _git(repo, "ls-files", "-s").stdout == _git(fresh, "ls-files", "-s").stdout
+
+
+def test_each_case_gets_its_own_copy(repo: Path, baseline_tree: Path, tmp_path: Path) -> None:
+    assert repo.is_relative_to(tmp_path)
+    assert not repo.is_relative_to(baseline_tree)
+
+    (repo / SYS1).unlink()
+
+    assert not (repo / SYS1).exists()
+    assert (baseline_tree / SYS1).exists()
+
+
 def test_two_independent_failures_in_one_run_are_both_reported(tmp_path: Path) -> None:
     """check_method_consistency fails on SYS001, check_headers fails on TST001 -- two unrelated
     items, neither failure a precondition for the other -- and run-every-stage reports both in one
