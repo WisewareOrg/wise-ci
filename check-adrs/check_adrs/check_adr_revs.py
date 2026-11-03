@@ -77,7 +77,7 @@ CONTINUATION = re.compile(r"^ {2,}\S")
 # leading digits -- a blockquote marker or indentation continuing it sits between `ADR` and its
 # number as readily as a space does, and is reported malformed the same as any other spelling this
 # cannot pin. A 5-digit next line is not flagged; any 1-4 digit number that opens one is -- a
-# numbered-list item, a count, a year (a documented false positive).
+# numbered-list item or a count as readily as a year, the documented false positive.
 TAIL = re.compile(r"\bADRs?[ _#\-]{0,3}$", re.I)
 NEXT_LINE = re.compile(r"^[^\S\n]*>?[^\S\n]*(\d{1,4})\b(?: +rev +(\d+))?")
 
