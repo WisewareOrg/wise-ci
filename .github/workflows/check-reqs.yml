@@ -69,7 +69,7 @@ jobs:
           just-version: "1.59.0"
 
       - name: Build the minimal tree
-        run: uv run --locked python check-reqs/tests/minimal_tree.py minimal-tree
+        run: uv run --locked --package check-reqs python check-reqs/tests/minimal_tree.py minimal-tree
 
       - uses: ./check-reqs
         with:
@@ -95,7 +95,7 @@ jobs:
           just-version: "1.59.0"
 
       - name: Build the minimal tree
-        run: uv run --locked python check-reqs/tests/minimal_tree.py minimal-tree
+        run: uv run --locked --package check-reqs python check-reqs/tests/minimal_tree.py minimal-tree
 
       - name: "Delete the SYS item's reviewed: line"
         run: sed -i '/^reviewed:/d' minimal-tree/docs/requirements/sys/SYS001.yml
