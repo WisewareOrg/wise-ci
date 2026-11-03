@@ -1,6 +1,7 @@
 """Fails when a cited `SYS`/`SRS`/`TST` identifier, in tracked Markdown or an item's `rationale`
 and `verification-justification`, names no item in the requirements tree, is mis-cased, or carries
-no correctly-formed header comment.
+no correctly-formed header comment. Also fails on untracked Markdown this cannot read, a code
+fence that never closes, and a comment that opens a line continuing a paragraph above it.
 
 Scope is resolution, the header pair, and the comment's placement. Whether a cited item is
 accepted, and whether the sentence means the item it names, is beyond this.
@@ -13,10 +14,8 @@ from pathlib import Path
 
 import doorstop
 
-UID = re.compile(r"\b(?:SYS|SRS|TST)\d{3}\b")
-# Found case-insensitively so a mis-cased identifier is judged rather than skipped: matching only
-# the canonical spelling makes every other spelling invisible to the check rather than wrong.
-UID_ANY_CASE = re.compile(r"\b(?:SYS|SRS|TST)\d{3}\b", re.IGNORECASE)
+from . import check_text_citations
+
 FENCE = re.compile(r"^\s*(?:```|~~~)")
 QUOTE = re.compile(r"^\s*>\s?")
 
@@ -31,8 +30,8 @@ def in_git_working_copy() -> bool:
 
 
 def items():
-    """Every item in the tree. Document.items skips inactive items; the whole TST tier is
-    inactive."""
+    """Every item in the tree, inactive items included (`_iter()`, not `Document.items`, which
+    skips them)."""
     cwd = str(Path.cwd())
     tree = doorstop.build(cwd=cwd, root=cwd)
     return [item for document in tree.documents for item in document._iter()]
@@ -40,13 +39,14 @@ def items():
 
 def markdown_sources():
     """Tracked Markdown, less `.claude/` -- agent instructions cite the tree to describe how to
-    work on it, and are not part of the documentation set."""
+    work on it, and are not part of the documentation set. `-z` keeps a path with a space or
+    non-ASCII bytes one name."""
     cwd = Path.cwd()
     tracked = subprocess.run(
-        ["git", "ls-files", "*.md"], cwd=cwd, capture_output=True, text=True, check=True
-    ).stdout.split()
+        ["git", "ls-files", "-z", "*.md"], cwd=cwd, capture_output=True, text=True, check=True
+    ).stdout.split("\0")
     for name in tracked:
-        if name.startswith(".claude/"):
+        if not name or name.startswith(".claude/"):
             continue
         yield (name, *blank_fences((cwd / name).read_text()))
 
@@ -132,7 +132,10 @@ def interrupting_comments(source, text):
 
 def check(source, text, item_headers, base=1):
     problems = []
-    for match in UID_ANY_CASE.finditer(text):
+    # check_text_citations.UID is found case-insensitively here too, so a mis-cased identifier is
+    # judged rather than skipped: matching only the canonical spelling makes every other spelling
+    # invisible to the check rather than wrong.
+    for match in check_text_citations.UID.finditer(text):
         uid = match.group()
         line = base + text.count("\n", 0, match.start())
         if uid != uid.upper():

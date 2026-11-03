@@ -200,8 +200,15 @@ file. A consumer's own gate runs the checks the tree references.
   it, for any tier.
 - An item-field citation's reported line number is off by one for a short `rationale` or
   `verification-justification` Doorstop dumps as a plain scalar on the key's own line: the formula
-  assumes a block scalar beginning two lines after the key, which holds for a long or
-  special-character value but not a short, plain one.
+  assumes the content starts the line after the key, which holds for a block scalar but not a
+  short, plain one, whose value sits on the key's own line.
+- A citation names a `SYS`/`SRS`/`TST` identifier, never a repository; a citation of another
+  repository's item is judged against this one's tree, and a coincidental match is judged as if it
+  named the local item.
+- `check_citations`' fence blanking and paragraph-interrupting-comment rule apply to Markdown
+  only: an item's `rationale` or `verification-justification` carries neither exemption, so a
+  fenced example inside either is read as a real citation, and a comment splitting a paragraph
+  there is not reported as one.
 
 ## The `root` input and the project root
 

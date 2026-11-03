@@ -4,16 +4,10 @@ report_proposed, in that fixed order, every stage every run. A `check-reqs: <sta
 precedes each stage's own output; a stage whose precondition failed prints `not judged —
 <reason>` instead of running it. Exits 1 if any stage failed or was not judged.
 
-Three preconditions, checked in this order when more than one could apply to a stage:
-
-- `doorstop` is not judged when `check_unreviewed` itself failed -- Doorstop writes review stamps,
-  so running it over a tree check_unreviewed has not cleared would stamp a review nobody performed.
-- `check_suspect_links`, `check_text_citations`, `check_headers` and `check_citations` are not
-  judged when the requirements tree did not load -- each calls `doorstop.build()` directly, which
-  crashes on a missing or empty document the same way `check_unreviewed` itself reports as a
-  finding.
-- `check_citations` is not judged outside a git working copy -- its own `git ls-files` calls would
-  otherwise crash with no repository to search.
+Three preconditions, checked in this order when more than one could apply to a stage: `doorstop`
+on `check_unreviewed` itself failing; `check_suspect_links`, `check_text_citations`,
+`check_headers` and `check_citations` on the requirements tree failing to load; `check_citations`
+on running outside a git working copy. See check-reqs/README.md § Stages, in order.
 """
 
 import argparse

@@ -1,6 +1,6 @@
 """The docs/decisions/ directory and its index table agree -- every ADR file has a row, every row
 resolves to a real file, and numbering is contiguous from 0001 with no duplicates. A missing
-docs/decisions/ is the empty ADR set, not a crash.
+docs/decisions/ is the empty ADR set.
 
 See check-adrs/README.md.
 """
@@ -25,8 +25,7 @@ def destination(value):
 
 
 def main(root: Path) -> int:
-    root = Path.cwd()
-    decisions_dir = root / "docs" / "decisions"
+    decisions_dir = Path.cwd() / "docs" / "decisions"
 
     problems = []
 

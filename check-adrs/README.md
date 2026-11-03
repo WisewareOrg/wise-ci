@@ -86,8 +86,9 @@ ending a line, with the next line opening in digits — a blockquote marker or i
 continuing it included — is read across the break and reported malformed on the line it opens,
 with the same template any other spelling this cannot pin gets, the two lines joined by the
 literal break between them. A wrap right after `rev` was never a blind spot: the rev group is
-optional, so a split there already failed as a citation carrying no rev. A 4-digit year opening
-the next line is a documented false positive, read as the wrapped number. There is no fence
+optional, so a split there already failed as a citation carrying no rev. Any 1-4 digit number
+opening the next line is read as the wrapped number — a numbered-list item, a count, or a year, a
+documented false positive. There is no fence
 blanking here (see Known rejections above), so this paragraph names the rule without spelling a
 real wrap: this check reads its own README too.
 
