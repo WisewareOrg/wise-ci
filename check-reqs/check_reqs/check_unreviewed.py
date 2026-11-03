@@ -45,7 +45,7 @@ def _load(root: Path):
 
 
 def _unloadable(counts: dict) -> tuple[list, list]:
-    """Required silos absent from `counts` entirely, and those present but empty."""
+    """Required silos absent from `counts`, and any silo present but empty."""
     absent = [s for s in REQUIRED_SILOS if s not in counts]
     empty = sorted(s for s, n in counts.items() if not n)
     return absent, empty
