@@ -6,12 +6,11 @@ every row of WiseKiosk's scripts/cases/the-requirements-tree-checks.md,
 scripts/cases/check-citations-py.md (the requirement half only -- the ADR half is check-adrs'), and
 scripts/cases/report-proposed-py.md (check-reqs/README.md).
 
-Each case builds a fresh minimal tree (`minimal_tree.build`) inside a real, isolated git repository
-and runs the real console script against it as a subprocess (docs/TESTING.md "Real dependencies
-where possible"). Every seed is read back to confirm it landed before the check runs.
+Each case runs the real console script, as a subprocess, against its own copy of the session's one
+baseline minimal tree (conftest.py's `repo` fixture; docs/TESTING.md "Real dependencies where
+possible"). Every seed is read back to confirm it landed before the check runs.
 """
 
-import os
 import shutil
 import subprocess
 import sys
@@ -45,54 +44,31 @@ SYS1 = "docs/requirements/sys/SYS001.yml"
 SRS1 = "docs/requirements/srs/SRS001.yml"
 TST1 = "docs/requirements/tst/TST001.yml"
 
-# Shuts out the machine's own git configuration (docs/TESTING.md "Real dependencies where
-# possible"), as check-eol's tests do.
-_ISOLATION = {"GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1"}
-_IDENTITY = {
-    "GIT_AUTHOR_NAME": "check-reqs tests",
-    "GIT_AUTHOR_EMAIL": "check-reqs-tests@wise-ci.invalid",
-    "GIT_COMMITTER_NAME": "check-reqs tests",
-    "GIT_COMMITTER_EMAIL": "check-reqs-tests@wise-ci.invalid",
-}
-
-
-def _env(**overrides: str) -> dict[str, str]:
-    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
-    env.update(_ISOLATION)
-    env.update(_IDENTITY)
-    env.update(overrides)
-    return env
-
-
-def _init_repo(path: Path) -> Path:
-    result = subprocess.run(
-        ["git", "init", "-q", "-b", "main", str(path)], env=_env(), capture_output=True, text=True
-    )
-    assert result.returncode == 0, result.stderr
-    return path
-
-
-def _repo(tmp_path: Path) -> Path:
-    """A fresh, isolated git repository holding the minimal tree."""
-    repo = _init_repo(tmp_path / "repo")
-    minimal_tree.build(repo)
-    return repo
-
 
 def _run_check(repo: Path, *args: str) -> subprocess.CompletedProcess:
-    return subprocess.run([str(SCRIPT), *args], cwd=repo, env=_env(), capture_output=True, text=True)
+    return subprocess.run(
+        [str(SCRIPT), *args], cwd=repo, env=minimal_tree.env(), capture_output=True, text=True
+    )
 
 
 def _run_review(repo: Path, uid: str) -> None:
     result = subprocess.run(
-        [str(minimal_tree.DOORSTOP), "review", uid], cwd=repo, env=_env(), capture_output=True, text=True
+        [str(minimal_tree.DOORSTOP), "review", uid],
+        cwd=repo,
+        env=minimal_tree.env(),
+        capture_output=True,
+        text=True,
     )
     assert result.returncode == 0, result.stderr
 
 
 def _run_clear(repo: Path, uid: str) -> None:
     result = subprocess.run(
-        [str(minimal_tree.DOORSTOP), "clear", uid], cwd=repo, env=_env(), capture_output=True, text=True
+        [str(minimal_tree.DOORSTOP), "clear", uid],
+        cwd=repo,
+        env=minimal_tree.env(),
+        capture_output=True,
+        text=True,
     )
     assert result.returncode == 0, result.stderr
 
@@ -159,7 +135,9 @@ def _not_judged(stage: str, reason: str) -> str:
 
 
 def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["git", "-C", str(cwd), *args], env=_env(), capture_output=True, text=True)
+    return subprocess.run(
+        ["git", "-C", str(cwd), *args], env=minimal_tree.env(), capture_output=True, text=True
+    )
 
 
 def _no_traceback(result: subprocess.CompletedProcess) -> None:
@@ -180,11 +158,10 @@ class _Case:
 
 
 def _seed(editor: Callable[[Path], None]) -> Callable[[Path], Path]:
-    """Builds the minimal tree, then applies `editor(repo)` to it -- every editor confirms its own
-    seed landed, via `_set_fields`/`_delete_key` or its own read-back."""
+    """Applies `editor(repo)` to the case's own copy of the baseline tree -- every editor confirms
+    its own seed landed, via `_set_fields`/`_delete_key` or its own read-back."""
 
-    def build(tmp_path: Path) -> Path:
-        repo = _repo(tmp_path)
+    def build(repo: Path) -> Path:
         editor(repo)
         return repo
 
@@ -767,8 +744,8 @@ CASES: list[_Case] = [
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c.id)
-def test_case(case: _Case, tmp_path: Path) -> None:
-    repo = case.build(tmp_path)
+def test_case(case: _Case, repo: Path) -> None:
+    case.build(repo)
     result = _run_check(repo, "--root", "docs/requirements")
     case.check(result)
 
@@ -801,8 +778,7 @@ def test_case(case: _Case, tmp_path: Path) -> None:
         ),
     ],
 )
-def test_report_proposed_lines(tmp_path: Path, seed, must_contain: tuple) -> None:
-    repo = _repo(tmp_path)
+def test_report_proposed_lines(repo: Path, seed, must_contain: tuple) -> None:
     if seed is not None:
         seed(repo)
 
@@ -817,7 +793,7 @@ def test_report_proposed_lines(tmp_path: Path, seed, must_contain: tuple) -> Non
 
 
 def test_missing_root_fails_at_check_unreviewed_with_the_resolved_path(tmp_path: Path) -> None:
-    repo = _init_repo(tmp_path / "repo")
+    repo = minimal_tree.init_repo(tmp_path / "repo")
     assert not (repo / "docs/requirements").exists()
 
     result = _run_check(repo, "--root", "docs/requirements")
@@ -836,21 +812,17 @@ def test_missing_root_fails_at_check_unreviewed_with_the_resolved_path(tmp_path:
     _no_traceback(result)
 
 
-def test_absolute_root_is_accepted(tmp_path: Path) -> None:
-    repo = _repo(tmp_path)
+def test_absolute_root_is_accepted(repo: Path) -> None:
     _must_pass(_run_check(repo, "--root", str(repo / "docs/requirements")))
 
 
-def test_default_root_is_docs_requirements(tmp_path: Path) -> None:
-    repo = _repo(tmp_path)
+def test_default_root_is_docs_requirements(repo: Path) -> None:
     _must_pass(_run_check(repo))
 
 
-def test_check_citations_success_line_on_the_baseline_tree(tmp_path: Path) -> None:
+def test_check_citations_success_line_on_the_baseline_tree(repo: Path) -> None:
     """The baseline tree's one real citation (SRS001's rationale, citing TST001) exercises
     check_citations' pass path for real rather than vacuously."""
-    repo = _repo(tmp_path)
-
     result = _run_check(repo, "--root", "docs/requirements")
 
     _must_pass(result)
@@ -860,8 +832,7 @@ def test_check_citations_success_line_on_the_baseline_tree(tmp_path: Path) -> No
 # -- req_sha_item_validator: the TST extension hook --------------------------------------------
 
 
-def test_req_sha_item_validator_fails_when_referenced_file_changed_since_review(tmp_path: Path) -> None:
-    repo = _repo(tmp_path)
+def test_req_sha_item_validator_fails_when_referenced_file_changed_since_review(repo: Path) -> None:
     (repo / "verified-file.txt").write_text("verified behaviour\n")
     _set_fields(repo / TST1, references=[{"path": "verified-file.txt", "type": "file"}])
     _run_review(repo, "TST001")
@@ -873,8 +844,7 @@ def test_req_sha_item_validator_fails_when_referenced_file_changed_since_review(
     _must_fail_at("doorstop", has="referenced file changed since review: verified-file.txt")(result)
 
 
-def test_req_sha_item_validator_no_sha_recorded_backstopped_by_doorstop_itself(tmp_path: Path) -> None:
-    repo = _repo(tmp_path)
+def test_req_sha_item_validator_no_sha_recorded_backstopped_by_doorstop_itself(repo: Path) -> None:
     (repo / "untracked-reference.txt").write_text("not yet reviewed against\n")
     _set_fields(repo / TST1, references=[{"path": "untracked-reference.txt", "type": "file"}])
     assert _load(repo / TST1)["references"][0].get("sha") is None
@@ -894,11 +864,10 @@ def _item_bytes(repo: Path) -> dict[str, bytes]:
     return {relpath: (repo / relpath).read_bytes() for relpath in (SYS1, SRS1, TST1)}
 
 
-def test_failing_at_check_unreviewed_leaves_the_tree_byte_identical(tmp_path: Path) -> None:
+def test_failing_at_check_unreviewed_leaves_the_tree_byte_identical(repo: Path) -> None:
     """check_unreviewed fails on a plain unreviewed item, not a missing or empty document, so the
     tree still loads: only doorstop is gated (on check_unreviewed's own failure), and every other
     stage runs and judges normally."""
-    repo = _repo(tmp_path)
     _delete_key(repo / SYS1, "reviewed")
     before = _item_bytes(repo)
 
@@ -911,8 +880,7 @@ def test_failing_at_check_unreviewed_leaves_the_tree_byte_identical(tmp_path: Pa
     assert _item_bytes(repo) == before
 
 
-def test_passing_tree_is_byte_identical_after_the_run(tmp_path: Path) -> None:
-    repo = _repo(tmp_path)
+def test_passing_tree_is_byte_identical_after_the_run(repo: Path) -> None:
     before = _item_bytes(repo)
 
     result = _run_check(repo, "--root", "docs/requirements")
@@ -926,8 +894,7 @@ def test_passing_tree_is_byte_identical_after_the_run(tmp_path: Path) -> None:
 # -------------------------------------------------------------------------------------------------
 
 
-def test_suspect_links_passes_for_an_active_parent_mutation_which_doorstop_then_fails(tmp_path: Path) -> None:
-    repo = _repo(tmp_path)
+def test_suspect_links_passes_for_an_active_parent_mutation_which_doorstop_then_fails(repo: Path) -> None:
     _set_fields(repo / SYS1, text="The system shall do a mutated thing.\n")
 
     result = _run_check(repo, "--root", "docs/requirements")
@@ -978,11 +945,10 @@ def test_each_case_gets_its_own_copy(repo: Path, baseline_tree: Path, tmp_path: 
     assert (baseline_tree / SYS1).exists()
 
 
-def test_two_independent_failures_in_one_run_are_both_reported(tmp_path: Path) -> None:
+def test_two_independent_failures_in_one_run_are_both_reported(repo: Path) -> None:
     """check_method_consistency fails on SYS001, check_headers fails on TST001 -- two unrelated
     items, neither failure a precondition for the other -- and run-every-stage reports both in one
     run rather than hiding the second behind the first."""
-    repo = _repo(tmp_path)
     _reviewed_edit(repo, repo / SYS1, "SYS001", clears=("SRS001",), **{"verification-justification": ""})
     _set_fields(repo / TST1, header="")
 

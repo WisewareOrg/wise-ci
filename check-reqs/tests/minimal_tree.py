@@ -1,5 +1,11 @@
 """Builds the clean minimal Doorstop tree check-reqs's tests run against, and the extra
-documents some cases add beside it.
+documents some cases add beside it. check-reqs/tests/conftest.py builds it once per pytest
+session and copies it into each case's own directory.
+
+`env(**overrides)` returns a subprocess environment with the machine's own git configuration shut
+out and a fixed author/committer identity, for every git and `doorstop` subprocess a caller runs.
+
+`init_repo(directory)` runs `git init` at `directory`, under `env()`, and returns it.
 
 `build(directory)` writes `docs/requirements/{sys,srs,tst}` in the consumers' shape -- the three
 `.doorstop.yml`s (`digits: 3`, `sep: ''`, the `tst` extensions, the one-line validator shim) and one
@@ -20,6 +26,7 @@ returns its UID.
 Run as a script with one argument, the directory to build into, it calls `build` alone.
 """
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -40,6 +47,32 @@ _ATTRIBUTES = {
 }
 _TST_EXTENSIONS = {"item_sha_required": True, "item_validator": ".req_sha_item_validator.py"}
 _SHIM = "from check_reqs.req_sha_item_validator import item_validator\n"
+
+# Shuts out the machine's own git configuration (docs/TESTING.md "Real dependencies where
+# possible"), as check-eol's tests do.
+_ISOLATION = {"GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1"}
+_IDENTITY = {
+    "GIT_AUTHOR_NAME": "check-reqs tests",
+    "GIT_AUTHOR_EMAIL": "check-reqs-tests@wise-ci.invalid",
+    "GIT_COMMITTER_NAME": "check-reqs tests",
+    "GIT_COMMITTER_EMAIL": "check-reqs-tests@wise-ci.invalid",
+}
+
+
+def env(**overrides: str) -> dict[str, str]:
+    result = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    result.update(_ISOLATION)
+    result.update(_IDENTITY)
+    result.update(overrides)
+    return result
+
+
+def init_repo(directory: Path) -> Path:
+    result = subprocess.run(
+        ["git", "init", "-q", "-b", "main", str(directory)], env=env(), capture_output=True, text=True
+    )
+    assert result.returncode == 0, result.stderr
+    return directory
 
 
 def _run(directory: Path, *args: str) -> None:
