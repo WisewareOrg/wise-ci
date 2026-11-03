@@ -81,9 +81,9 @@ is written to `.coverage.<check>` and uploaded for the final job to combine.
 
 Which files must appear in the merged report is itself re-derived rather than trusted, in the final
 job, between the `merge-coverage` and `coverage-report` recipes: it lists every git-tracked `.py`
-file outside `tests/` at any depth and `.claude/**`, mirroring `pyproject.toml`'s own `omit`
-patterns, and fails, naming them, if any is missing from the merged coverage data (read with the
-`coverage-json` recipe) — independently of the coverage configuration that normally discovers them.
+file outside `tests/` at any depth, mirroring `pyproject.toml`'s own `omit` pattern, and fails,
+naming them, if any is missing from the merged coverage data (read with the `coverage-json`
+recipe) — independently of the coverage configuration that normally discovers them.
 
 ## Running tests locally
 
@@ -91,9 +91,9 @@ patterns, and fails, naming them, if any is missing from the merged coverage dat
 `coverage-report`, `coverage-json`). `test` is the only entry point, the same locally and in CI: it
 runs `uv run pytest -n auto`, configured through `pyproject.toml` (`[tool.pytest.ini_options]`,
 `[tool.coverage.run]`, `[tool.coverage.report]`): quiet output and the 100% floor. It requires a
-check's folder name, and scopes both test collection and coverage to that check's own `tests/`
-alone (`--cov=<check> <check>/tests`), so one check's tests are not failed by another, untested
-check's source.
+check's folder name, and collects only `<check>/tests` and measures coverage over `<check>` alone
+(`--cov=<check> <check>/tests`), so one check's tests are not failed by another, untested check's
+source.
 
 `pr-title/tests` run the real commitlint: `npm --prefix pr-title ci --ignore-scripts` installs it
-and must run before `test` reaches that check.
+and must run before `just test pr-title`.

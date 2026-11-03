@@ -100,8 +100,8 @@ jobs:
 
       # needs: above is hand-kept; this checks the run's own job list instead of trusting that
       # list to stay in sync with it, so a job added to this workflow without being added to
-      # needs: cannot run unwatched (docs/TESTING.md § In CI). An empty or incomplete job list —
-      # a failed API call, a wrong run id — fails loudly rather than reading as "nothing failed".
+      # needs: cannot run unwatched (docs/TESTING.md § In CI). An empty job list — a failed API
+      # call, a wrong run id — fails loudly rather than reading as "nothing failed".
       - name: Require every job in this run to have succeeded
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -162,7 +162,7 @@ jobs:
           tmp="$(mktemp -d)"
           trap 'rm -rf "$tmp"' EXIT
 
-          git ls-files '*.py' ':!:**/tests/**' ':!:.claude/**' | sort > "$tmp/expected-py-files"
+          git ls-files '*.py' ':!:**/tests/**' | sort > "$tmp/expected-py-files"
 
           if [ ! -s "$tmp/expected-py-files" ]; then
             echo "no tracked Python files were found outside tests — run this from the repository root" >&2

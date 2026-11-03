@@ -153,19 +153,8 @@ def _no_wisekiosk_reference(combined: str) -> None:
 @dataclass(frozen=True)
 class _Case:
     id: str
-    build: Callable[[Path], Path]
+    seed: Callable[[Path], None]
     check: Callable[[subprocess.CompletedProcess], None]
-
-
-def _seed(editor: Callable[[Path], None]) -> Callable[[Path], Path]:
-    """Applies `editor(repo)` to the case's own copy of the baseline tree -- every editor confirms
-    its own seed landed, via `_set_fields`/`_delete_key` or its own read-back."""
-
-    def build(repo: Path) -> Path:
-        editor(repo)
-        return repo
-
-    return build
 
 
 # Every stage but `doorstop` prints exactly one of these on an outright pass, with no variable
@@ -520,232 +509,232 @@ def _cc_both_preconditions_tree_did_not_load_wins(result: subprocess.CompletedPr
 
 CASES: list[_Case] = [
     # check_unreviewed
-    _Case("cu-reviewed-deleted", _seed(lambda r: _delete_key(r / SYS1, "reviewed")),
+    _Case("cu-reviewed-deleted", lambda r: _delete_key(r / SYS1, "reviewed"),
           _must_fail_at("check_unreviewed", has=("carry no review fingerprint", "SYS001"))),
-    _Case("cu-reviewed-true-bool", _seed(lambda r: _set_fields(r / SYS1, reviewed=True)),
+    _Case("cu-reviewed-true-bool", lambda r: _set_fields(r / SYS1, reviewed=True),
           _must_fail_at("check_unreviewed", has="carry no review fingerprint")),
-    _Case("cu-reviewed-empty-string", _seed(lambda r: _set_fields(r / SYS1, reviewed="")),
+    _Case("cu-reviewed-empty-string", lambda r: _set_fields(r / SYS1, reviewed=""),
           _must_fail_at("check_unreviewed", has="carry no review fingerprint")),
     _Case("cu-yaml-suffix-unreviewed",
-          _seed(lambda r: _raw_unreviewed_item(r / "docs/requirements/sys", "SYS002", "Extra", "Extra item.", ".yaml")),
+          lambda r: _raw_unreviewed_item(r / "docs/requirements/sys", "SYS002", "Extra", "Extra item.", ".yaml"),
           _must_fail_at("check_unreviewed", has=("carry no review fingerprint", "SYS002"))),
-    _Case("cu-link-stamp-copied-by-hand", _seed(lambda r: _delete_key(r / SRS1, "reviewed")),
+    _Case("cu-link-stamp-copied-by-hand", lambda r: _delete_key(r / SRS1, "reviewed"),
           _must_fail_at("check_unreviewed", has=("carry no review fingerprint", "SRS001"))),
-    _Case("cu-silo-removed", _seed(_cu_silo_removed),
+    _Case("cu-silo-removed", _cu_silo_removed,
           _cu_silo_removed_leaves_doorstop_stages_not_judged),
-    _Case("cu-silo-renamed", _seed(_cu_silo_renamed),
+    _Case("cu-silo-renamed", _cu_silo_renamed,
           _must_fail_at("check_unreviewed", has="holds no document — missing, renamed, or deleted.")),
     # The carried-over breakdown only ever names SYS/SRS/TST-prefixed UIDs (the fixed tuple in
     # check_unreviewed.py); a nested document's own prefix is never named, only counted.
-    _Case("cu-nested-item-unreviewed", _seed(_cu_nested_item_unreviewed),
+    _Case("cu-nested-item-unreviewed", _cu_nested_item_unreviewed,
           _must_fail_at("check_unreviewed", has="carry no review fingerprint")),
-    _Case("cu-all-silos-removed", _seed(_cu_all_silos_removed),
+    _Case("cu-all-silos-removed", _cu_all_silos_removed,
           _must_fail_at("check_unreviewed", has="holds no document — missing, renamed, or deleted.")),
-    _Case("cu-silo-emptied", _seed(_cu_silo_emptied),
+    _Case("cu-silo-emptied", _cu_silo_emptied,
           _must_fail_at("check_unreviewed", has="yielded no item — this check read none of it.")),
-    _Case("cu-nested-no-items", _seed(_cu_nested_no_items),
+    _Case("cu-nested-no-items", _cu_nested_no_items,
           _must_fail_at("check_unreviewed", has="yielded no item — this check read none of it.")),
-    _Case("cu-two-nested-share-dirname-one-empty", _seed(_cu_two_nested_share_dirname),
+    _Case("cu-two-nested-share-dirname-one-empty", _cu_two_nested_share_dirname,
           _must_fail_at("check_unreviewed", has="yielded no item — this check read none of it.")),
-    _Case("cu-fourth-tier-and-nested-pass", _seed(_cu_fourth_tier_and_nested_pass), _must_pass),
-    _Case("cu-venv-doorstop-yml-pass", _seed(_cu_venv_doorstop_yml_pass), _must_pass),
+    _Case("cu-fourth-tier-and-nested-pass", _cu_fourth_tier_and_nested_pass, _must_pass),
+    _Case("cu-venv-doorstop-yml-pass", _cu_venv_doorstop_yml_pass, _must_pass),
 
     # check_suspect_links
-    _Case("csl-parent-mutated-stale", _seed(_csl_parent_mutated_stale),
+    _Case("csl-parent-mutated-stale", _csl_parent_mutated_stale,
           _must_fail_at("check_suspect_links", has=("are suspect", "TST001", "SRS001"))),
-    _Case("csl-inactive-dangling-parent", _seed(_csl_inactive_dangling_parent),
+    _Case("csl-inactive-dangling-parent", _csl_inactive_dangling_parent,
           _must_fail_at("check_suspect_links", has=("name a parent the tree does not hold", "SRS999"))),
-    _Case("csl-both-dangling-and-stale", _seed(_csl_both_dangling_and_stale),
+    _Case("csl-both-dangling-and-stale", _csl_both_dangling_and_stale,
           _must_fail_at("check_suspect_links", has=("name a parent the tree does not hold", "are suspect", "SRS999", "SRS001"))),
-    _Case("csl-unstamped-link-outside-root-is-not-this-stages-finding", _seed(_csl_unstamped_link_outside_root),
+    _Case("csl-unstamped-link-outside-root-is-not-this-stages-finding", _csl_unstamped_link_outside_root,
           _check_unstamped_link_outside_root_passes_stage_two_then_fails_at_doorstop),
 
     # doorstop
-    _Case("doorstop-active-orphan-link", _seed(_doorstop_active_orphan_link),
+    _Case("doorstop-active-orphan-link", _doorstop_active_orphan_link,
           _must_fail_at("doorstop", has="no item with UID: SYS999")),
 
     # check_method_consistency
     _Case("mc-blanked-justification",
-          _seed(lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), **{"verification-justification": ""})),
+          lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), **{"verification-justification": ""}),
           _must_fail_at("check_method_consistency", has=("carry no verification-justification", "SYS001"))),
     _Case("mc-parent-overstates",
-          _seed(lambda r: _reviewed_edit(r, r / TST1, "TST001", **{"verification-method": "inspection"})),
+          lambda r: _reviewed_edit(r, r / TST1, "TST001", **{"verification-method": "inspection"}),
           _must_fail_at("check_method_consistency", has=("above its least-decidable child", "SRS001"))),
     _Case("mc-parent-understates-no-justification",
-          _seed(lambda r: _reviewed_edit(r, r / SRS1, "SRS001", clears=("TST001",), **{"verification-method": "inspection", "verification-justification": ""})),
+          lambda r: _reviewed_edit(r, r / SRS1, "SRS001", clears=("TST001",), **{"verification-method": "inspection", "verification-justification": ""}),
           _must_fail_at("check_method_consistency", has=("below every child with no verification-justification", "SRS001"))),
     # The one legitimate exception docs/requirements/README.md's "Choosing a verification method"
     # names: a parent below its least-decidable child, excused by its own verification-justification.
     _Case("mc-parent-understates-with-justification-pass",
-          _seed(_mc_parent_understates_with_justification_pass),
+          _mc_parent_understates_with_justification_pass,
           _must_pass),
     _Case("mc-capitalised-method",
-          _seed(lambda r: _reviewed_edit(r, r / TST1, "TST001", **{"verification-method": "Test"})),
+          lambda r: _reviewed_edit(r, r / TST1, "TST001", **{"verification-method": "Test"}),
           _must_fail_at("check_method_consistency", has=("carry an unrecognised verification-method", "'Test' is not one of"))),
     _Case("mc-typo-method",
-          _seed(lambda r: _reviewed_edit(r, r / TST1, "TST001", **{"verification-method": "tset"})),
+          lambda r: _reviewed_edit(r, r / TST1, "TST001", **{"verification-method": "tset"}),
           _must_fail_at("check_method_consistency", has=("carry an unrecognised verification-method", "'tset' is not one of"))),
-    _Case("mc-method-key-deleted", _seed(lambda r: _reviewed_delete(r, r / TST1, "TST001", "verification-method")),
+    _Case("mc-method-key-deleted", lambda r: _reviewed_delete(r, r / TST1, "TST001", "verification-method"),
           _must_fail_at("check_method_consistency", has=("carry an unrecognised verification-method", "TST001"))),
-    _Case("mc-normative-false-pass", _seed(_mc_normative_false_pass), _must_pass),
+    _Case("mc-normative-false-pass", _mc_normative_false_pass, _must_pass),
 
     # check_text_citations
     _Case("tc-identifier-in-text",
-          _seed(lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), text="The system shall match SRS001 exactly.\n")),
+          lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), text="The system shall match SRS001 exactly.\n"),
           _must_fail_at("check_text_citations", has=("cite another item in `text`", "SYS001 -> SRS001"))),
     _Case("tc-lowercase-identifier-in-text",
-          _seed(lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), text="The system shall match srs001 exactly.\n")),
+          lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), text="The system shall match srs001 exactly.\n"),
           _must_fail_at("check_text_citations", has="cite another item in `text`")),
 
     # check_headers (header is outside the review fingerprint -- no re-review needed)
-    _Case("ch-emptied-header", _seed(lambda r: _set_fields(r / SYS1, header="")),
+    _Case("ch-emptied-header", lambda r: _set_fields(r / SYS1, header=""),
           _must_fail_at("check_headers", has=("SYS001", "has no header"))),
-    _Case("ch-slash-in-header", _seed(lambda r: _set_fields(r / SYS1, header="Sample system/need")),
+    _Case("ch-slash-in-header", lambda r: _set_fields(r / SYS1, header="Sample system/need"),
           _must_fail_at("check_headers", has=("outside the permitted set", "'/'"))),
-    _Case("ch-en-dash-in-header", _seed(lambda r: _set_fields(r / SYS1, header="Sample system–need")),
+    _Case("ch-en-dash-in-header", lambda r: _set_fields(r / SYS1, header="Sample system–need"),
           _must_fail_at("check_headers", has="outside the permitted set")),
-    _Case("ch-nbsp-in-header", _seed(lambda r: _set_fields(r / SYS1, header=" Sample system need")),
+    _Case("ch-nbsp-in-header", lambda r: _set_fields(r / SYS1, header=" Sample system need"),
           _must_fail_at("check_headers", has="outside the permitted set")),
-    _Case("ch-folded-header-pass", _seed(lambda r: _set_fields(r / SYS1, header="Sample system\nneed, folded")),
+    _Case("ch-folded-header-pass", lambda r: _set_fields(r / SYS1, header="Sample system\nneed, folded"),
           _must_pass),
-    _Case("ch-duplicate-header", _seed(lambda r: _set_fields(r / TST1, header="SAMPLE SOFTWARE REQUIREMENT")),
+    _Case("ch-duplicate-header", lambda r: _set_fields(r / TST1, header="SAMPLE SOFTWARE REQUIREMENT"),
           _must_fail_at("check_headers", has=("carry the same header", "SRS001", "TST001"))),
-    _Case("ch-prefix-header", _seed(lambda r: _set_fields(r / SRS1, header="Sample verif")),
+    _Case("ch-prefix-header", lambda r: _set_fields(r / SRS1, header="Sample verif"),
           _must_fail_at("check_headers", has=("header is a prefix of", "SRS001", "TST001"))),
 
     # check_citations -- the requirement half of WiseKiosk's scripts/check-citations.py; the ADR
     # half is check-adrs'.
     _Case("cc-tracked-claude-md-excluded-pass",
-          _seed(lambda r: _cc_md(r, ".claude/notes.md", "SYS999 names nothing, but .claude/ is excluded.\n")),
+          lambda r: _cc_md(r, ".claude/notes.md", "SYS999 names nothing, but .claude/ is excluded.\n"),
           _must_pass),
     _Case("cc-untracked-md-fails",
-          _seed(lambda r: _cc_untracked_md(r, "notes.md", "Just a note.\n")),
+          lambda r: _cc_untracked_md(r, "notes.md", "Just a note.\n"),
           _must_fail_at("check_citations", has=("notes.md", "untracked, so this check cannot read it"))),
     _Case("cc-untracked-claude-md-pass",
-          _seed(lambda r: _cc_untracked_md(r, ".claude/notes.md", "Just a note.\n")),
+          lambda r: _cc_untracked_md(r, ".claude/notes.md", "Just a note.\n"),
           _must_pass),
-    _Case("cc-inactive-item-cited-pass", _seed(_cc_inactive_item_cited_pass), _must_pass),
+    _Case("cc-inactive-item-cited-pass", _cc_inactive_item_cited_pass, _must_pass),
     _Case("cc-word-containing-identifier-pass",
-          _seed(lambda r: _cc_md(r, "notes.md", "See SYS0019 for an unrelated serial number.\n")),
+          lambda r: _cc_md(r, "notes.md", "See SYS0019 for an unrelated serial number.\n"),
           _must_pass),
     _Case("cc-miscased-identifier-with-fabricated-header-one-report",
-          _seed(lambda r: _cc_md(r, "notes.md", "srs001<!-- A header this item does not carry --> is mentioned here.\n")),
+          lambda r: _cc_md(r, "notes.md", "srs001<!-- A header this item does not carry --> is mentioned here.\n"),
           _cc_single_problem("is not uppercase — an identifier is cited as SRS001")),
     _Case("cc-mixedcase-identifier-fails",
-          _seed(lambda r: _cc_md(r, "notes.md", "SrS001 is mentioned here.\n")),
+          lambda r: _cc_md(r, "notes.md", "SrS001 is mentioned here.\n"),
           _must_fail_at("check_citations", has="is not uppercase")),
     _Case("cc-citation-names-no-item-fails",
-          _seed(lambda r: _cc_md(r, "notes.md", "SRS999 names nothing real.\n")),
+          lambda r: _cc_md(r, "notes.md", "SRS999 names nothing real.\n"),
           _must_fail_at("check_citations", has=("SRS999", "names no item in the requirements tree"))),
     _Case("cc-yml-suffix-on-missing-item-still-fails",
-          _seed(lambda r: _cc_md(r, "notes.md", "See SYS999.yml for the source.\n")),
+          lambda r: _cc_md(r, "notes.md", "See SYS999.yml for the source.\n"),
           _must_fail_at("check_citations", has=("SYS999", "names no item in the requirements tree"))),
     _Case("cc-yml-suffix-exemption-pass",
-          _seed(lambda r: _cc_md(r, "notes.md", "See SYS001.yml for the source.\n")),
+          lambda r: _cc_md(r, "notes.md", "See SYS001.yml for the source.\n"),
           _must_pass),
     _Case("cc-yml-suffix-exemption-in-rationale-pass",
-          _seed(lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), rationale="See SRS001.yml for the source.\n")),
+          lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), rationale="See SRS001.yml for the source.\n"),
           _must_pass),
     _Case("cc-backtick-wrapped-identifier-pass",
-          _seed(lambda r: _cc_md(r, "notes.md", "The item `SRS001`<!-- Sample software requirement --> is linked here.\n")),
+          lambda r: _cc_md(r, "notes.md", "The item `SRS001`<!-- Sample software requirement --> is linked here.\n"),
           _must_pass),
     _Case("cc-no-header-comment-fails",
-          _seed(lambda r: _cc_md(r, "notes.md", "SRS001 is mentioned here with no comment.\n")),
+          lambda r: _cc_md(r, "notes.md", "SRS001 is mentioned here with no comment.\n"),
           _must_fail_at("check_citations", has=("SRS001", "carries no header comment"))),
     _Case("cc-whitespace-before-comment-fails",
-          _seed(lambda r: _cc_md(r, "notes.md", "SRS001 <!-- Sample software requirement --> is mentioned here.\n")),
+          lambda r: _cc_md(r, "notes.md", "SRS001 <!-- Sample software requirement --> is mentioned here.\n"),
           _must_fail_at("check_citations", has=("SRS001", "whitespace separates the identifier from its header"))),
     _Case("cc-unterminated-comment-fails",
-          _seed(lambda r: _cc_md(r, "notes.md", "SRS001<!-- never closes\n")),
+          lambda r: _cc_md(r, "notes.md", "SRS001<!-- never closes\n"),
           _must_fail_at("check_citations", has=("SRS001", "opens a header comment that never closes"))),
     _Case("cc-wrong-header-fails",
-          _seed(lambda r: _cc_md(r, "notes.md", "SRS001<!-- Wrong header text --> is mentioned here.\n")),
+          lambda r: _cc_md(r, "notes.md", "SRS001<!-- Wrong header text --> is mentioned here.\n"),
           _must_fail_at("check_citations", has="expected the item's header 'Sample software requirement', found 'wrong header text'")),
     _Case("tc-identifier-in-rationale-pass",
-          _seed(lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), rationale="Decomposed by SRS001<!-- Sample software requirement -->, which is fine to name here.\n")),
+          lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), rationale="Decomposed by SRS001<!-- Sample software requirement -->, which is fine to name here.\n"),
           _must_pass),
     _Case("cc-header-split-across-blank-line-pass",
-          _seed(lambda r: _cc_md(r, "notes.md", "SRS001<!-- Sample software\n\nrequirement --> is mentioned here.\n")),
+          lambda r: _cc_md(r, "notes.md", "SRS001<!-- Sample software\n\nrequirement --> is mentioned here.\n"),
           _must_pass),
     _Case("cc-fenced-citation-hidden-pass",
-          _seed(lambda r: _cc_md(r, "notes.md", "Example:\n\n```\nSYS999 is just an example, not a real citation.\n```\n")),
+          lambda r: _cc_md(r, "notes.md", "Example:\n\n```\nSYS999 is just an example, not a real citation.\n```\n"),
           _must_pass),
     _Case("cc-unclosed-fence-fails-once",
-          _seed(lambda r: _cc_md(r, "notes.md", "```\nSYS999 would be a problem if read.\n")),
+          lambda r: _cc_md(r, "notes.md", "```\nSYS999 would be a problem if read.\n"),
           _cc_single_problem("notes.md  a code fence is never closed, so everything below it goes unread")),
     _Case("cc-comment-interrupts-paragraph-fails",
-          _seed(lambda r: _cc_md(r, "notes.md", "A paragraph of plain prose.\n<!-- a stray comment -->\n")),
+          lambda r: _cc_md(r, "notes.md", "A paragraph of plain prose.\n<!-- a stray comment -->\n"),
           _must_fail_at("check_citations", has="a comment opens this line, splitting the paragraph above it")),
     # The script's line formula (`item_sources`' first line starting "{field}:", plus 2) assumes a
     # block scalar; Doorstop dumps a short, special-character-free rationale as a plain scalar on
     # the key line itself, so the formula reports one line past the actual content (line 9, not the
     # real line 8) -- lift-and-shift carries this exactly, a documented gap, not a fix.
     _Case("cc-item-field-citation-line-number-off-by-one",
-          _seed(lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), rationale="See SRS999 for details.")),
+          lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), rationale="See SRS999 for details."),
           _must_fail_at("check_citations", has=("docs/requirements/sys/SYS001.yml:9", "SRS999", "names no item in the requirements tree"))),
     # R18: the `.yml`-suffix exemption (cc-yml-suffix-exemption-pass, above) does not extend to
     # `.yaml` -- the literal prefix check is `.yml` only, so a `.yaml`-suffixed mention still falls
     # through to the header-comment rules and fails for carrying none.
     _Case("cc-yaml-suffix-not-exempt-fails",
-          _seed(lambda r: _cc_md(r, "notes.md", "See SYS001.yaml for the source.\n")),
+          lambda r: _cc_md(r, "notes.md", "See SYS001.yaml for the source.\n"),
           _must_fail_at("check_citations", has=("SYS001", "carries no header comment"))),
     # R20: annotation() strips a leading run of backtick, 's or ' before testing for the opening
     # comment. cc-backtick-wrapped-identifier-pass covers the backtick; these cover the other two.
     _Case("cc-clitic-apostrophe-s-pass",
-          _seed(lambda r: _cc_md(r, "notes.md", "SRS001's<!-- Sample software requirement --> is mentioned here.\n")),
+          lambda r: _cc_md(r, "notes.md", "SRS001's<!-- Sample software requirement --> is mentioned here.\n"),
           _must_pass),
     _Case("cc-clitic-apostrophe-pass",
-          _seed(lambda r: _cc_md(r, "notes.md", "SRS001'<!-- Sample software requirement --> is mentioned here.\n")),
+          lambda r: _cc_md(r, "notes.md", "SRS001'<!-- Sample software requirement --> is mentioned here.\n"),
           _must_pass),
     # R26: normalise() folds a line break (with an optional blockquote marker continuing it) to a
     # single space, then splits on any run of whitespace and casefolds -- so a header carried across
     # a blockquote continuation, or written with irregular interior whitespace, or differing from the
     # item's header only in case, all still match.
     _Case("cc-header-blockquote-continuation-pass",
-          _seed(lambda r: _cc_md(r, "notes.md", "SRS001<!-- Sample software\n> requirement --> is mentioned here.\n")),
+          lambda r: _cc_md(r, "notes.md", "SRS001<!-- Sample software\n> requirement --> is mentioned here.\n"),
           _must_pass),
     _Case("cc-header-whitespace-run-pass",
-          _seed(lambda r: _cc_md(r, "notes.md", "SRS001<!--  Sample   software requirement  --> is mentioned here.\n")),
+          lambda r: _cc_md(r, "notes.md", "SRS001<!--  Sample   software requirement  --> is mentioned here.\n"),
           _must_pass),
     _Case("cc-header-case-only-difference-pass",
-          _seed(lambda r: _cc_md(r, "notes.md", "SRS001<!-- SAMPLE SOFTWARE REQUIREMENT --> is mentioned here.\n")),
+          lambda r: _cc_md(r, "notes.md", "SRS001<!-- SAMPLE SOFTWARE REQUIREMENT --> is mentioned here.\n"),
           _must_pass),
     # R27: a `~~~` fence blanks and hides a citation exactly as a ``` fence does
     # (cc-fenced-citation-hidden-pass); and the two fence characters do not close each other, so a
     # ``` opened and only ever followed by a `~~~` line stays open to EOF -- the same unclosed-fence
     # finding as cc-unclosed-fence-fails-once.
     _Case("cc-tilde-fence-hidden-pass",
-          _seed(lambda r: _cc_md(r, "notes.md", "Example:\n\n~~~\nSYS999 is just an example, not a real citation.\n~~~\n")),
+          lambda r: _cc_md(r, "notes.md", "Example:\n\n~~~\nSYS999 is just an example, not a real citation.\n~~~\n"),
           _must_pass),
     _Case("cc-backtick-fence-not-closed-by-tilde-fails-once",
-          _seed(lambda r: _cc_md(r, "notes.md", "```\nSYS999 would be a problem if read.\n~~~\n")),
+          lambda r: _cc_md(r, "notes.md", "```\nSYS999 would be a problem if read.\n~~~\n"),
           _cc_single_problem("notes.md  a code fence is never closed, so everything below it goes unread")),
     # R29: the must-pass partner of cc-comment-interrupts-paragraph-fails -- a comment opening a
     # line is only a finding when the line above it is non-blank -- and the same finding reached via
     # a blockquote continuation, where QUOTE-stripping is what exposes the interruption.
     _Case("cc-comment-after-blank-line-pass",
-          _seed(lambda r: _cc_md(r, "notes.md", "A paragraph of plain prose.\n\n<!-- a stray comment -->\n")),
+          lambda r: _cc_md(r, "notes.md", "A paragraph of plain prose.\n\n<!-- a stray comment -->\n"),
           _must_pass),
     _Case("cc-blockquote-continuation-comment-interrupts-fails",
-          _seed(lambda r: _cc_md(r, "notes.md", "> A paragraph of plain prose.\n> <!-- a stray comment -->\n")),
+          lambda r: _cc_md(r, "notes.md", "> A paragraph of plain prose.\n> <!-- a stray comment -->\n"),
           _must_fail_at("check_citations", has="a comment opens this line, splitting the paragraph above it")),
     # R5: a tracked Markdown path holding a space is judged, not an uncaught traceback -- the
     # valid citation in it resolves cleanly, and the bad one is still reported, by its full path.
     _Case("cc-tracked-md-path-with-space-judged-not-crashed",
-          _seed(lambda r: _cc_md(r, "docs/a b.md", "SRS001<!-- Sample software requirement --> is fine. SRS999 names nothing real.\n")),
+          lambda r: _cc_md(r, "docs/a b.md", "SRS001<!-- Sample software requirement --> is fine. SRS999 names nothing real.\n"),
           _cc_single_problem(("docs/a b.md", "SRS999", "names no item in the requirements tree"))),
     _Case("cc-outside-git-working-copy-not-judged",
-          _seed(_cc_rmtree_git),
+          _cc_rmtree_git,
           _cc_outside_git_working_copy_not_judged),
     _Case("cc-both-preconditions-tree-did-not-load-wins",
-          _seed(_cc_silo_removed_and_no_git),
+          _cc_silo_removed_and_no_git,
           _cc_both_preconditions_tree_did_not_load_wins),
 ]
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c.id)
 def test_case(case: _Case, repo: Path) -> None:
-    case.build(repo)
+    case.seed(repo)
     result = _run_check(repo, "--root", "docs/requirements")
     case.check(result)
 

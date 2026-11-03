@@ -28,14 +28,12 @@ test = [
 [tool.pytest.ini_options]
 # :skip-covered collapses a fully-covered file to the summary line instead of listing it, so a
 # green run stays short; a file under 100% still lists its missing lines.
-addopts = ["--strict-markers", "--strict-config", "-q"]
+addopts = ["--strict-markers", "--strict-config", "-q", "--cov-report=term-missing:skip-covered"]
 
 [tool.coverage.run]
 parallel = true
 patch = ["subprocess"]
-# .claude/** is gitignored machinery, not project content (docs/README.md) — an agent worktree
-# under .claude/worktrees/ can otherwise duplicate a check's own source as unexecuted.
-omit = ["*/tests/*", ".venv/**", ".claude/**"]
+omit = ["*/tests/*"]
 # A check's tests reach its script either as a subprocess (check-eol; docs/TESTING.md § Real
 # dependencies where possible), which the main pytest process itself collects nothing for, or by
 # importing it in-process (check-branch), which the main process collects directly. Collecting
@@ -50,4 +48,4 @@ include_namespace_packages = true
 # include_namespace_packages makes each check job's own save touch that check's unexecuted files
 # as 0% -- the effective source for that touch is --cov=<check> on the command line, not a config
 # key here. This mirrors [run] omit on whatever lands in the merged data as a result.
-omit = ["*/tests/*", ".venv/**", ".claude/**"]
+omit = ["*/tests/*"]
