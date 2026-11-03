@@ -51,7 +51,9 @@ jobs:
 
   # check-reqs run over a minimal tree built on the fly: the check's integration test
   # (docs/TESTING.md § In CI; docs/CI.md § check-reqs). wise-ci carries no requirements tree of
-  # its own, so this proves the action rather than any content here.
+  # its own, so this proves the action over the minimal tree for the Doorstop-reading stages, not
+  # any content here. check_citations' Markdown-citation path is the exception: it reads this
+  # repository's own tracked Markdown for real.
   self-check:
     name: self-check
     runs-on: ubuntu-latest

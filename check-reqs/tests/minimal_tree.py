@@ -5,8 +5,9 @@ documents some cases add beside it.
 `.doorstop.yml`s (`digits: 3`, `sep: ''`, the `tst` extensions, the one-line validator shim) and one
 reviewed, accepted item per tier (header, text, `verification-method: test`,
 `verification-justification`, `rationale`), SRS linked to SYS and TST linked to SRS, every stamp
-written by the real `doorstop` CLI's `clear` and `review` commands. `directory` must already lie
-inside a git working copy.
+written by the real `doorstop` CLI's `clear` and `review` commands. SRS001's `rationale` carries one
+correct citation of TST001 -- never of SYS001, whose header a must-pass case changes. `directory`
+must already lie inside a git working copy.
 
 `add_document(directory, relpath, prefix, parent=None)` writes one more `.doorstop.yml` beside the
 three, with no items -- a document with no items, or an inert marker such as a tool directory's own
@@ -125,6 +126,9 @@ def build(directory: Path) -> None:
         header="Sample software requirement",
         text="The software shall do the sample thing.",
         verification_justification="Settled by its TST child.",
+        # A correct citation, not SYS001's: ch-folded-header-pass (below) changes SYS001's header,
+        # which would turn this citation into a header mismatch.
+        rationale="Decomposed by TST001<!-- Sample verification -->, which is fine to name here.",
         parent_uid=sys_uid,
     )
     add_reviewed_item(

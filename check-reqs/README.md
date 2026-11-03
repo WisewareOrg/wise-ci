@@ -2,7 +2,8 @@
 
 Gates a [Doorstop](https://doorstop.readthedocs.io/) requirements tree shaped as three documents —
 `sys`, `srs`, `tst` — each `SYS`/`SRS`/`TST` item one YAML file. It is the shared implementation of
-the gate a repository runs over its own Doorstop requirements tree.
+the gate a repository runs over its own Doorstop requirements tree, and — through `check_citations`
+— over every citation of that tree anywhere in the repository's tracked Markdown.
 
 ## Inputs
 
@@ -12,9 +13,22 @@ See [`action.yml`](action.yml) for `root`'s description and default. The action 
 
 ## Stages, in order
 
-Seven stages run in a fixed order and stop at the first that fails, each preceded by its own
-`check-reqs: <stage>` header. `--root` is the directory holding `sys`/`srs`/`tst`; the Doorstop
-project root is always the working directory (see [The `root` input](#the-root-input-and-the-project-root) below).
+Eight stages run in a fixed order, every one of them every run, each preceded by its own
+`check-reqs: <stage>` header. The run fails if any stage failed. A stage whose precondition failed
+prints `not judged — <reason>` instead of running it, and still fails the run:
+
+- `doorstop` is not judged when `check_unreviewed` itself failed — Doorstop writes review stamps,
+  so running it over a tree `check_unreviewed` has not cleared would stamp a review nobody
+  performed.
+- `check_suspect_links`, `check_text_citations`, `check_headers` and `check_citations` are not
+  judged when the requirements tree did not load — each calls `doorstop.build()` directly, which
+  crashes on a missing or empty document the same way `check_unreviewed` itself reports as a
+  finding.
+- `check_citations` is also not judged outside a git working copy — its own `git ls-files` calls
+  would otherwise crash with no repository to search.
+
+`--root` is the directory holding `sys`/`srs`/`tst`; the Doorstop project root is always the
+working directory (see [The `root` input](#the-root-input-and-the-project-root) below).
 
 ### `check_unreviewed`
 
@@ -22,11 +36,11 @@ Runs first because Doorstop writes. The first time it validates a tree, Doorstop
 fingerprint into any item whose `reviewed` value is absent, and into any link carrying no stamp —
 whether or not a person looked, and `--no-reformat` does not stop it. An item authored in one commit
 would otherwise read as reviewed by whoever next ran the gate, which is the one thing the
-fingerprint exists to prove. This stage fails first and stops the gate before Doorstop's own
-validation can stamp anything. `reviewed: true` is the same defect declared by hand: Doorstop reads
-it as "matching, hash to follow" and fills the hash in unprompted the next time it validates. Clear
-either by reading the item against its parent and running `doorstop review <uid>`, deliberately,
-never by re-running the gate.
+fingerprint exists to prove. This stage's own failure leaves `doorstop` not judged, so Doorstop's
+own validation never runs over a tree this has not cleared. `reviewed: true` is the same defect
+declared by hand: Doorstop reads it as "matching, hash to follow" and fills the hash in unprompted
+the next time it validates. Clear either by reading the item against its parent and running
+`doorstop review <uid>`, deliberately, never by re-running the gate.
 
 A link counts as unreviewed when its own stamp is absent, or when the item holding it is: a stamp is
 a digest of the parent's content, so nothing reading the tree tells a copied one from an earned one.
@@ -53,7 +67,7 @@ Doorstop's own validation: every `SYS` need has a child `SRS`, every `SRS` has a
 promotes Doorstop's own suspect/unreviewed/orphan/unresolved-reference warnings to errors, so the
 run actually blocks; plain `doorstop` only warns. `--no-reformat` stops Doorstop rewriting item
 files on a passing run — it does not stop it writing a missing stamp, which is why
-`check_unreviewed` runs first.
+`check_unreviewed` runs first and `doorstop` is not judged when it fails.
 
 ### `check_method_consistency`
 
@@ -85,9 +99,9 @@ consistent.
 An item's `text` must be understandable without a lookup — ISO/IEC/IEEE 29148's *complete* and
 *singular* characteristics. An identifier inside it defeats both: the reader cannot tell what is
 required without fetching the item it names, and a renumber rewrites `links:` while leaving the
-sentence pointing at whatever now occupies the number. `rationale` and `verification-justification`
-explain the tree to someone reading it as a tree, so they may name items freely; only `text` is
-scanned, case-insensitively, for an `SYS`/`SRS`/`TST` identifier.
+sentence pointing at whatever now occupies the number. Only `text` is scanned, case-insensitively,
+for an `SYS`/`SRS`/`TST` identifier — `rationale` and `verification-justification` are exempt from
+this rule alone; a citation inside either is `check_citations`' to judge, not free of every rule.
 
 ### `check_headers`
 
@@ -97,6 +111,36 @@ list of characters to *admit* rather than to reject: a header carrying `|` would
 one carrying `-->` would close an HTML comment, and a denylist fails open on whichever metacharacter
 nobody thought of. Prefix-freeness is the reader's constraint rather than the checker's — two
 headers that begin alike are told apart only by reading to the end of both.
+
+### `check_citations`
+
+Every `SYS`/`SRS`/`TST` identifier cited anywhere in tracked Markdown, outside `.claude/`, or in an
+item's `rationale` or `verification-justification`, must name a real item and carry that item's
+header verbatim, in an HTML comment closed up to it:
+
+```
+SRS015<!-- One schema, all boundary value classes -->
+```
+
+No whitespace at the junction — a space there survives into the rendered page as a gap before the
+following punctuation — and the comment must close. A citation of an item's own filename, such as
+
+```
+See SYS001.yml for the source.
+```
+
+is exempt from the header pair: it names the file rather than cites the item.
+
+A mis-cased identifier is reported directly, by its own rule, before the header is ever
+checked. A comment opening a line that continues a paragraph is reported too, whether or not its
+own header is correct — bind it to the sentence it follows, or leave a blank line before it. A
+fenced code block is blanked before either rule runs, so an illustrative, unreal identifier inside
+one is never read as a citation; a fence that never closes blanks everything below it, reported
+once rather than silently.
+
+Untracked Markdown, outside `.claude/`, fails the run — it is outside what `git ls-files` can read,
+not silently excused. `.claude/` itself is exempt throughout: agent instructions cite the tree to
+describe how to work on it, and are not part of the documentation set.
 
 ### `report_proposed`
 
@@ -120,6 +164,11 @@ Together these stages assert that, under `root`:
 - no item's `text` names another item;
 - every header is non-empty, within the permitted set, and prefix-free.
 
+And, over the whole repository, not only `root`:
+
+- every `SYS`/`SRS`/`TST` identifier cited in tracked Markdown, outside `.claude/`, or in an item's
+  `rationale` or `verification-justification`, names a real item and carries its header.
+
 It does not prove that a referenced check itself passes — only that a `TST` item points at a real
 file. A consumer's own gate runs the checks the tree references.
 
@@ -136,16 +185,30 @@ file. A consumer's own gate runs the checks the tree references.
   correctness by anything that reaches inactive items: `doorstop --error-all` skips inactive items
   entirely, and `check_suspect_links` scopes itself to link staleness. A stale stamp on an inactive
   item's own text or attributes passes every stage here.
-- `report_proposed` prints `0 of 0` for a tier with no items, and exits 0 — visible only through its
-  own population figure, since `check_unreviewed` fails that state before `report_proposed` ever
-  runs in the fixed order.
+- `report_proposed` prints `0 of 0` for a tier with no items, and exits 0 — indistinguishable on its
+  own from a tier that is healthy and simply has nothing proposed. Nothing gates it on
+  `check_unreviewed`, which fails that same state (`yielded no item`) in the same run, so the
+  ambiguity is `report_proposed`'s own, not a hidden one.
 - `check_unreviewed`, `check_method_consistency`, and `report_proposed` read only `root`; the
-  `doorstop` stage and the Doorstop-library stages read every document under the working directory.
-  A document outside `root` is invisible to the first three — its review freshness,
-  verification-justification coverage, and backlog count are never checked — even though its links
-  and headers still are, by whichever of the other stages reaches it first.
+  `doorstop` stage and the Doorstop-library stages (`check_suspect_links`, `check_text_citations`,
+  `check_headers`, `check_citations`) read every document under the working directory. A document
+  outside `root` is invisible to the first three — its review freshness, verification-justification
+  coverage, and backlog count are never checked — even though its links, headers and citations
+  still are, by every one of the other stages, since every stage runs regardless of an earlier
+  one's result.
 - A mis-spelled status is listed by `report_proposed` as outside the vocabulary; nothing here gates
   it, for any tier.
+- An item-field citation's reported line number is off by one for a short `rationale` or
+  `verification-justification` Doorstop dumps as a plain scalar on the key's own line: the formula
+  assumes the content starts the line after the key, which holds for a block scalar but not a
+  short, plain one, whose value sits on the key's own line.
+- A citation names a `SYS`/`SRS`/`TST` identifier, never a repository; a citation of another
+  repository's item is judged against this one's tree, and a coincidental match is judged as if it
+  named the local item.
+- `check_citations`' fence blanking and paragraph-interrupting-comment rule apply to Markdown
+  only: an item's `rationale` or `verification-justification` carries neither exemption, so a
+  fenced example inside either is read as a real citation, and a comment splitting a paragraph
+  there is not reported as one.
 
 ## The `root` input and the project root
 

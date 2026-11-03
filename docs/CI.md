@@ -168,7 +168,10 @@ carries no requirements tree of its own, so the check runs as a required gate ov
 minimal tree built on the fly, in
 [`../.github/workflows/check-reqs.yml`](../.github/workflows/check-reqs.yml)'s `self-check` job,
 called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)) — that job proves
-the action, not any content here. The same workflow's `expected-failure` job seeds a defect onto
+the action over the minimal tree for the Doorstop-reading stages, not any content here.
+`check_citations`' Markdown-citation path is the exception: it reads wise-ci's own tracked
+Markdown for real, and passes while none of it cites an identifier outside a fenced block. The
+same workflow's `expected-failure` job seeds a defect onto
 that tree and asserts the action's own step outcome is `failure` ([`TESTING.md`](TESTING.md) § The
 action).
 

@@ -1,8 +1,10 @@
-"""Specifies check_reqs's runner: the fixed stage order and stop (check_unreviewed,
-check_suspect_links, doorstop, check_method_consistency, check_text_citations, check_headers,
-report_proposed), `--root` resolution, and the req_sha_item_validator hook -- seeded from every row
-of WiseKiosk's scripts/cases/the-requirements-tree-checks.md and scripts/cases/report-proposed-py.md
-(check-reqs/README.md).
+"""Specifies check_reqs's runner: the fixed stage order (check_unreviewed, check_suspect_links,
+doorstop, check_method_consistency, check_text_citations, check_headers, check_citations,
+report_proposed), every stage run regardless of an earlier failure, `not judged -- <reason>` where
+a precondition failed, `--root` resolution, and the req_sha_item_validator hook -- seeded from
+every row of WiseKiosk's scripts/cases/the-requirements-tree-checks.md,
+scripts/cases/check-citations-py.md (the requirement half only -- the ADR half is check-adrs'), and
+scripts/cases/report-proposed-py.md (check-reqs/README.md).
 
 Each case builds a fresh minimal tree (`minimal_tree.build`) inside a real, isolated git repository
 and runs the real console script against it as a subprocess (docs/TESTING.md "Real dependencies
@@ -31,6 +33,7 @@ STAGES = (
     "check_method_consistency",
     "check_text_citations",
     "check_headers",
+    "check_citations",
     "report_proposed",
 )
 
@@ -144,6 +147,21 @@ def _stage_header(stage: str) -> str:
     return f"check-reqs: {stage}"
 
 
+# The three reasons a precondition leaves a later stage un-run under run-every-stage. Each is
+# printed by the dispatcher itself, on stdout, immediately after that stage's own header.
+_CHECK_UNREVIEWED_FAILED = "check_unreviewed failed"
+_TREE_DID_NOT_LOAD = "the requirements tree did not load"
+_NOT_A_GIT_WORKING_COPY = "not a git working copy"
+
+
+def _not_judged(stage: str, reason: str) -> str:
+    return f"{_stage_header(stage)}\nnot judged — {reason}"
+
+
+def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", "-C", str(cwd), *args], env=_env(), capture_output=True, text=True)
+
+
 def _no_traceback(result: subprocess.CompletedProcess) -> None:
     assert "Traceback" not in result.stdout
     assert "Traceback" not in result.stderr
@@ -173,17 +191,42 @@ def _seed(editor: Callable[[Path], None]) -> Callable[[Path], Path]:
     return build
 
 
+# Every stage but `doorstop` prints exactly one of these on an outright pass, with no variable
+# text before the point checked here -- its absence is what ties a failure to the named stage
+# rather than to stray matching text elsewhere in the output. `doorstop` carries the same progress
+# chatter on its own stdout whether it passes or fails, so it is tied by the `ERROR:` prefix its
+# own failures carry instead; `report_proposed` never fails, so neither is needed for it.
+_PASS_MARKER = {
+    "check_unreviewed": "Every item and every link carries a review fingerprint.",
+    "check_suspect_links": "Every inactive item's links resolve and match the parents they were reviewed against.",
+    "check_method_consistency": "carry a verification-justification; methods are consistent across",
+    "check_text_citations": "No item's `text` cites another item.",
+    "check_headers": "Every header is non-empty, within the permitted set, and prefix-free (",
+    "check_citations": "Every citation resolves, and every requirement citation carries its item's header.",
+}
+
+
 def _must_fail_at(stage: str, *, has: str | tuple = ()) -> Callable:
-    idx = STAGES.index(stage)
+    assert stage in STAGES
     needles = (has,) if isinstance(has, str) else has
 
     def check(result: subprocess.CompletedProcess) -> None:
         assert result.returncode != 0
         combined = result.stdout + result.stderr
-        for s in STAGES[: idx + 1]:
-            assert _stage_header(s) in combined
-        for s in STAGES[idx + 1 :]:
-            assert _stage_header(s) not in combined
+        # Every stage's header prints regardless of an earlier failure (run-every-stage): a later
+        # stage is either judged -- and prints its own pass or fail content -- or not judged; never
+        # silently absent.
+        for s in STAGES:
+            assert _stage_header(s) in result.stdout
+        # Ties the failure to the named stage specifically: it did not pass, and it was not gated
+        # as not-judged either -- the two ways a needle could otherwise match while the real fault
+        # sat somewhere else.
+        if stage == "doorstop":
+            assert "ERROR:" in result.stderr
+        else:
+            assert _PASS_MARKER[stage] not in result.stdout
+        for reason in (_CHECK_UNREVIEWED_FAILED, _TREE_DID_NOT_LOAD, _NOT_A_GIT_WORKING_COPY):
+            assert _not_judged(stage, reason) not in result.stdout
         for needle in needles:
             assert needle in combined
         _no_traceback(result)
@@ -206,7 +249,9 @@ def _check_unstamped_link_outside_root_passes_stage_two_then_fails_at_doorstop(
 ) -> None:
     """Stage 1 never walks outside `root`, so it passes; stage 2 walks from the working directory,
     finds the unstamped link, and silently skips it (its own pass line prints); stage 3 then fails
-    on the same outside-root document, whose only item being inactive leaves it with none."""
+    on the same outside-root document, whose only item being inactive leaves it with none. Nothing
+    here is gated -- check_unreviewed passed, and root's own tree still loads -- so every later
+    stage still runs."""
     combined = result.stdout + result.stderr
     assert result.returncode != 0
     assert _stage_header("check_unreviewed") in combined
@@ -214,7 +259,8 @@ def _check_unstamped_link_outside_root_passes_stage_two_then_fails_at_doorstop(
     assert "Every inactive item's links resolve and match the parents they were reviewed against." in combined
     assert _stage_header("doorstop") in combined
     for s in STAGES[3:]:
-        assert _stage_header(s) not in combined
+        assert _stage_header(s) in result.stdout
+    assert "not judged" not in combined
     _no_traceback(result)
     _no_wisekiosk_reference(combined)
 
@@ -307,6 +353,22 @@ def _cu_fourth_tier_and_nested_pass(repo: Path) -> None:
     )
 
 
+def _cu_silo_removed_leaves_doorstop_stages_not_judged(result: subprocess.CompletedProcess) -> None:
+    """check_unreviewed fails on the missing silo. The dispatcher gates doorstop on that failure,
+    and check_suspect_links/check_text_citations/check_headers/check_citations on the tree failing
+    to load, rather than letting any of them reach doorstop.build() over a tree with an unplaced
+    document."""
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0
+    assert "holds no document — missing, renamed, or deleted." in combined
+    assert _not_judged("doorstop", _CHECK_UNREVIEWED_FAILED) in result.stdout
+    for stage in ("check_suspect_links", "check_text_citations", "check_headers", "check_citations"):
+        assert _not_judged(stage, _TREE_DID_NOT_LOAD) in result.stdout
+    assert combined.count("not judged") == 5
+    _no_traceback(result)
+    _no_wisekiosk_reference(combined)
+
+
 def _cu_venv_doorstop_yml_pass(repo: Path) -> None:
     venv_dir = repo / "docs/requirements/.venv"
     venv_dir.mkdir()
@@ -394,6 +456,91 @@ def _mc_normative_false_pass(repo: Path) -> None:
     _run_review(repo, "SRS002")
 
 
+# -- check_citations: Markdown seeds and multi-step seeds ------------------------------------------
+
+
+def _cc_md(repo: Path, relpath: str, text: str) -> Path:
+    """Writes and `git add`s a Markdown file -- `git ls-files` sees a staged path with no commit
+    needed."""
+    path = repo / relpath
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    result = _git(repo, "add", relpath)
+    assert result.returncode == 0, result.stderr
+    assert relpath in _git(repo, "ls-files", "-z", relpath).stdout.split("\0")
+    return path
+
+
+def _cc_untracked_md(repo: Path, relpath: str, text: str) -> Path:
+    path = repo / relpath
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    assert relpath not in _git(repo, "ls-files", relpath).stdout.split()
+    return path
+
+
+def _cc_inactive_item_cited_pass(repo: Path) -> None:
+    """An inactive item still carries a header, and `_iter()` includes it -- the fold's header map
+    is not active-only."""
+    uid = minimal_tree.add_reviewed_item(
+        repo, "docs/requirements/srs", "SRS",
+        header="Extra inactive note", text="An inactive item, included in the citation's header map.",
+        verification_method="", verification_justification="",
+        parent_uid="SYS001",
+    )
+    _set_fields(repo / f"docs/requirements/srs/{uid}.yml", active=False, normative=False)
+    _cc_md(repo, "notes.md", f"See {uid}<!-- Extra inactive note --> for background.\n")
+
+
+def _cc_rmtree_git(repo: Path) -> None:
+    shutil.rmtree(repo / ".git")
+    assert not (repo / ".git").exists()
+
+
+def _cc_silo_removed_and_no_git(repo: Path) -> None:
+    _cu_silo_removed(repo)
+    _cc_rmtree_git(repo)
+
+
+def _cc_single_problem(needle: str) -> Callable:
+    """Exactly one indented finding line in stderr -- each is printed `  {problem}`, so a second,
+    unwanted report (e.g. an existence check firing after a case report should have short-circuited
+    it) would add a second such line."""
+
+    def check(result: subprocess.CompletedProcess) -> None:
+        _must_fail_at("check_citations", has=needle)(result)
+        assert result.stderr.count("\n  ") == 1
+
+    return check
+
+
+def _cc_outside_git_working_copy_not_judged(result: subprocess.CompletedProcess) -> None:
+    """check_unreviewed and check_suspect_links need no VCS and pass; doorstop's own CLI calls
+    vcs.find_root and fails cleanly, with no traceback; check_citations is gated on the missing
+    working copy."""
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0
+    assert "Every item and every link carries a review fingerprint." in combined
+    assert "no working copy found from" in combined
+    assert _not_judged("check_citations", _NOT_A_GIT_WORKING_COPY) in result.stdout
+    assert combined.count("not judged") == 1
+    _no_traceback(result)
+    _no_wisekiosk_reference(combined)
+
+
+def _cc_both_preconditions_tree_did_not_load_wins(result: subprocess.CompletedProcess) -> None:
+    """Both of check_citations' preconditions fail at once; the reason printed is the first in the
+    plan's listed order -- the tree not loading, not the missing working copy."""
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0
+    assert "holds no document — missing, renamed, or deleted." in combined
+    assert _not_judged("check_citations", _TREE_DID_NOT_LOAD) in result.stdout
+    assert _NOT_A_GIT_WORKING_COPY not in combined
+    assert combined.count("not judged") == 5
+    _no_traceback(result)
+    _no_wisekiosk_reference(combined)
+
+
 CASES: list[_Case] = [
     # check_unreviewed
     _Case("cu-reviewed-deleted", _seed(lambda r: _delete_key(r / SYS1, "reviewed")),
@@ -408,7 +555,7 @@ CASES: list[_Case] = [
     _Case("cu-link-stamp-copied-by-hand", _seed(lambda r: _delete_key(r / SRS1, "reviewed")),
           _must_fail_at("check_unreviewed", has=("carry no review fingerprint", "SRS001"))),
     _Case("cu-silo-removed", _seed(_cu_silo_removed),
-          _must_fail_at("check_unreviewed", has="holds no document — missing, renamed, or deleted.")),
+          _cu_silo_removed_leaves_doorstop_stages_not_judged),
     _Case("cu-silo-renamed", _seed(_cu_silo_renamed),
           _must_fail_at("check_unreviewed", has="holds no document — missing, renamed, or deleted.")),
     # The carried-over breakdown only ever names SYS/SRS/TST-prefixed UIDs (the fixed tuple in
@@ -472,9 +619,6 @@ CASES: list[_Case] = [
     _Case("tc-lowercase-identifier-in-text",
           _seed(lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), text="The system shall match srs001 exactly.\n")),
           _must_fail_at("check_text_citations", has="cite another item in `text`")),
-    _Case("tc-identifier-in-rationale-pass",
-          _seed(lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), rationale="Decomposed by SRS001, which is fine to name here.\n")),
-          _must_pass),
 
     # check_headers (header is outside the review fingerprint -- no re-review needed)
     _Case("ch-emptied-header", _seed(lambda r: _set_fields(r / SYS1, header="")),
@@ -491,6 +635,134 @@ CASES: list[_Case] = [
           _must_fail_at("check_headers", has=("carry the same header", "SRS001", "TST001"))),
     _Case("ch-prefix-header", _seed(lambda r: _set_fields(r / SRS1, header="Sample verif")),
           _must_fail_at("check_headers", has=("header is a prefix of", "SRS001", "TST001"))),
+
+    # check_citations -- the requirement half of WiseKiosk's scripts/check-citations.py; the ADR
+    # half is check-adrs'.
+    _Case("cc-tracked-claude-md-excluded-pass",
+          _seed(lambda r: _cc_md(r, ".claude/notes.md", "SYS999 names nothing, but .claude/ is excluded.\n")),
+          _must_pass),
+    _Case("cc-untracked-md-fails",
+          _seed(lambda r: _cc_untracked_md(r, "notes.md", "Just a note.\n")),
+          _must_fail_at("check_citations", has=("notes.md", "untracked, so this check cannot read it"))),
+    _Case("cc-untracked-claude-md-pass",
+          _seed(lambda r: _cc_untracked_md(r, ".claude/notes.md", "Just a note.\n")),
+          _must_pass),
+    _Case("cc-inactive-item-cited-pass", _seed(_cc_inactive_item_cited_pass), _must_pass),
+    _Case("cc-word-containing-identifier-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "See SYS0019 for an unrelated serial number.\n")),
+          _must_pass),
+    _Case("cc-miscased-identifier-with-fabricated-header-one-report",
+          _seed(lambda r: _cc_md(r, "notes.md", "srs001<!-- A header this item does not carry --> is mentioned here.\n")),
+          _cc_single_problem("is not uppercase — an identifier is cited as SRS001")),
+    _Case("cc-mixedcase-identifier-fails",
+          _seed(lambda r: _cc_md(r, "notes.md", "SrS001 is mentioned here.\n")),
+          _must_fail_at("check_citations", has="is not uppercase")),
+    _Case("cc-citation-names-no-item-fails",
+          _seed(lambda r: _cc_md(r, "notes.md", "SRS999 names nothing real.\n")),
+          _must_fail_at("check_citations", has=("SRS999", "names no item in the requirements tree"))),
+    _Case("cc-yml-suffix-on-missing-item-still-fails",
+          _seed(lambda r: _cc_md(r, "notes.md", "See SYS999.yml for the source.\n")),
+          _must_fail_at("check_citations", has=("SYS999", "names no item in the requirements tree"))),
+    _Case("cc-yml-suffix-exemption-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "See SYS001.yml for the source.\n")),
+          _must_pass),
+    _Case("cc-yml-suffix-exemption-in-rationale-pass",
+          _seed(lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), rationale="See SRS001.yml for the source.\n")),
+          _must_pass),
+    _Case("cc-backtick-wrapped-identifier-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "The item `SRS001`<!-- Sample software requirement --> is linked here.\n")),
+          _must_pass),
+    _Case("cc-no-header-comment-fails",
+          _seed(lambda r: _cc_md(r, "notes.md", "SRS001 is mentioned here with no comment.\n")),
+          _must_fail_at("check_citations", has=("SRS001", "carries no header comment"))),
+    _Case("cc-whitespace-before-comment-fails",
+          _seed(lambda r: _cc_md(r, "notes.md", "SRS001 <!-- Sample software requirement --> is mentioned here.\n")),
+          _must_fail_at("check_citations", has=("SRS001", "whitespace separates the identifier from its header"))),
+    _Case("cc-unterminated-comment-fails",
+          _seed(lambda r: _cc_md(r, "notes.md", "SRS001<!-- never closes\n")),
+          _must_fail_at("check_citations", has=("SRS001", "opens a header comment that never closes"))),
+    _Case("cc-wrong-header-fails",
+          _seed(lambda r: _cc_md(r, "notes.md", "SRS001<!-- Wrong header text --> is mentioned here.\n")),
+          _must_fail_at("check_citations", has="expected the item's header 'Sample software requirement', found 'wrong header text'")),
+    _Case("tc-identifier-in-rationale-pass",
+          _seed(lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), rationale="Decomposed by SRS001<!-- Sample software requirement -->, which is fine to name here.\n")),
+          _must_pass),
+    _Case("cc-header-split-across-blank-line-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "SRS001<!-- Sample software\n\nrequirement --> is mentioned here.\n")),
+          _must_pass),
+    _Case("cc-fenced-citation-hidden-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "Example:\n\n```\nSYS999 is just an example, not a real citation.\n```\n")),
+          _must_pass),
+    _Case("cc-unclosed-fence-fails-once",
+          _seed(lambda r: _cc_md(r, "notes.md", "```\nSYS999 would be a problem if read.\n")),
+          _cc_single_problem("notes.md  a code fence is never closed, so everything below it goes unread")),
+    _Case("cc-comment-interrupts-paragraph-fails",
+          _seed(lambda r: _cc_md(r, "notes.md", "A paragraph of plain prose.\n<!-- a stray comment -->\n")),
+          _must_fail_at("check_citations", has="a comment opens this line, splitting the paragraph above it")),
+    # The script's line formula (`item_sources`' first line starting "{field}:", plus 2) assumes a
+    # block scalar; Doorstop dumps a short, special-character-free rationale as a plain scalar on
+    # the key line itself, so the formula reports one line past the actual content (line 9, not the
+    # real line 8) -- lift-and-shift carries this exactly, a documented gap, not a fix.
+    _Case("cc-item-field-citation-line-number-off-by-one",
+          _seed(lambda r: _reviewed_edit(r, r / SYS1, "SYS001", clears=("SRS001",), rationale="See SRS999 for details.")),
+          _must_fail_at("check_citations", has=("docs/requirements/sys/SYS001.yml:9", "SRS999", "names no item in the requirements tree"))),
+    # R18: the `.yml`-suffix exemption (cc-yml-suffix-exemption-pass, above) does not extend to
+    # `.yaml` -- the literal prefix check is `.yml` only, so a `.yaml`-suffixed mention still falls
+    # through to the header-comment rules and fails for carrying none.
+    _Case("cc-yaml-suffix-not-exempt-fails",
+          _seed(lambda r: _cc_md(r, "notes.md", "See SYS001.yaml for the source.\n")),
+          _must_fail_at("check_citations", has=("SYS001", "carries no header comment"))),
+    # R20: annotation() strips a leading run of backtick, 's or ' before testing for the opening
+    # comment. cc-backtick-wrapped-identifier-pass covers the backtick; these cover the other two.
+    _Case("cc-clitic-apostrophe-s-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "SRS001's<!-- Sample software requirement --> is mentioned here.\n")),
+          _must_pass),
+    _Case("cc-clitic-apostrophe-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "SRS001'<!-- Sample software requirement --> is mentioned here.\n")),
+          _must_pass),
+    # R26: normalise() folds a line break (with an optional blockquote marker continuing it) to a
+    # single space, then splits on any run of whitespace and casefolds -- so a header carried across
+    # a blockquote continuation, or written with irregular interior whitespace, or differing from the
+    # item's header only in case, all still match.
+    _Case("cc-header-blockquote-continuation-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "SRS001<!-- Sample software\n> requirement --> is mentioned here.\n")),
+          _must_pass),
+    _Case("cc-header-whitespace-run-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "SRS001<!--  Sample   software requirement  --> is mentioned here.\n")),
+          _must_pass),
+    _Case("cc-header-case-only-difference-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "SRS001<!-- SAMPLE SOFTWARE REQUIREMENT --> is mentioned here.\n")),
+          _must_pass),
+    # R27: a `~~~` fence blanks and hides a citation exactly as a ``` fence does
+    # (cc-fenced-citation-hidden-pass); and the two fence characters do not close each other, so a
+    # ``` opened and only ever followed by a `~~~` line stays open to EOF -- the same unclosed-fence
+    # finding as cc-unclosed-fence-fails-once.
+    _Case("cc-tilde-fence-hidden-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "Example:\n\n~~~\nSYS999 is just an example, not a real citation.\n~~~\n")),
+          _must_pass),
+    _Case("cc-backtick-fence-not-closed-by-tilde-fails-once",
+          _seed(lambda r: _cc_md(r, "notes.md", "```\nSYS999 would be a problem if read.\n~~~\n")),
+          _cc_single_problem("notes.md  a code fence is never closed, so everything below it goes unread")),
+    # R29: the must-pass partner of cc-comment-interrupts-paragraph-fails -- a comment opening a
+    # line is only a finding when the line above it is non-blank -- and the same finding reached via
+    # a blockquote continuation, where QUOTE-stripping is what exposes the interruption.
+    _Case("cc-comment-after-blank-line-pass",
+          _seed(lambda r: _cc_md(r, "notes.md", "A paragraph of plain prose.\n\n<!-- a stray comment -->\n")),
+          _must_pass),
+    _Case("cc-blockquote-continuation-comment-interrupts-fails",
+          _seed(lambda r: _cc_md(r, "notes.md", "> A paragraph of plain prose.\n> <!-- a stray comment -->\n")),
+          _must_fail_at("check_citations", has="a comment opens this line, splitting the paragraph above it")),
+    # R5: a tracked Markdown path holding a space is judged, not an uncaught traceback -- the
+    # valid citation in it resolves cleanly, and the bad one is still reported, by its full path.
+    _Case("cc-tracked-md-path-with-space-judged-not-crashed",
+          _seed(lambda r: _cc_md(r, "docs/a b.md", "SRS001<!-- Sample software requirement --> is fine. SRS999 names nothing real.\n")),
+          _cc_single_problem(("docs/a b.md", "SRS999", "names no item in the requirements tree"))),
+    _Case("cc-outside-git-working-copy-not-judged",
+          _seed(_cc_rmtree_git),
+          _cc_outside_git_working_copy_not_judged),
+    _Case("cc-both-preconditions-tree-did-not-load-wins",
+          _seed(_cc_silo_removed_and_no_git),
+          _cc_both_preconditions_tree_did_not_load_wins),
 ]
 
 
@@ -552,12 +824,15 @@ def test_missing_root_fails_at_check_unreviewed_with_the_resolved_path(tmp_path:
 
     combined = result.stdout + result.stderr
     assert result.returncode != 0
-    assert _stage_header("check_unreviewed") in combined
-    for stage in STAGES[1:]:
-        assert _stage_header(stage) not in combined
+    for stage in STAGES:
+        assert _stage_header(stage) in result.stdout
     resolved = repo / "docs/requirements"
     for silo in ("sys", "srs", "tst"):
         assert f"{resolved / silo}/ holds no document — missing, renamed, or deleted." in combined
+    assert _not_judged("doorstop", _CHECK_UNREVIEWED_FAILED) in result.stdout
+    for stage in ("check_suspect_links", "check_text_citations", "check_headers", "check_citations"):
+        assert _not_judged(stage, _TREE_DID_NOT_LOAD) in result.stdout
+    assert combined.count("not judged") == 5
     _no_traceback(result)
 
 
@@ -569,6 +844,17 @@ def test_absolute_root_is_accepted(tmp_path: Path) -> None:
 def test_default_root_is_docs_requirements(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
     _must_pass(_run_check(repo))
+
+
+def test_check_citations_success_line_on_the_baseline_tree(tmp_path: Path) -> None:
+    """The baseline tree's one real citation (SRS001's rationale, citing TST001) exercises
+    check_citations' pass path for real rather than vacuously."""
+    repo = _repo(tmp_path)
+
+    result = _run_check(repo, "--root", "docs/requirements")
+
+    _must_pass(result)
+    assert "Every citation resolves, and every requirement citation carries its item's header." in result.stdout
 
 
 # -- req_sha_item_validator: the TST extension hook --------------------------------------------
@@ -599,8 +885,8 @@ def test_req_sha_item_validator_no_sha_recorded_backstopped_by_doorstop_itself(t
     _must_fail_at("doorstop", has="unreviewed changes")(result)
 
 
-# -- Order: check_unreviewed runs before Doorstop ever validates, so its own stop -- and a clean
-# pass -- leave every item file byte-identical.
+# -- Order: check_unreviewed runs before Doorstop ever validates, so its own failure -- gating
+# doorstop rather than letting it run -- and a clean pass both leave every item file byte-identical.
 # -------------------------------------------------------------------------------------------------
 
 
@@ -609,6 +895,9 @@ def _item_bytes(repo: Path) -> dict[str, bytes]:
 
 
 def test_failing_at_check_unreviewed_leaves_the_tree_byte_identical(tmp_path: Path) -> None:
+    """check_unreviewed fails on a plain unreviewed item, not a missing or empty document, so the
+    tree still loads: only doorstop is gated (on check_unreviewed's own failure), and every other
+    stage runs and judges normally."""
     repo = _repo(tmp_path)
     _delete_key(repo / SYS1, "reviewed")
     before = _item_bytes(repo)
@@ -616,6 +905,9 @@ def test_failing_at_check_unreviewed_leaves_the_tree_byte_identical(tmp_path: Pa
     result = _run_check(repo, "--root", "docs/requirements")
 
     _must_fail_at("check_unreviewed")(result)
+    combined = result.stdout + result.stderr
+    assert _not_judged("doorstop", _CHECK_UNREVIEWED_FAILED) in result.stdout
+    assert combined.count("not judged") == 1
     assert _item_bytes(repo) == before
 
 
@@ -646,6 +938,30 @@ def test_suspect_links_passes_for_an_active_parent_mutation_which_doorstop_then_
     assert "Every inactive item's links resolve and match the parents they were reviewed against." in combined
     assert _stage_header("doorstop") in combined
     for stage in STAGES[3:]:
-        assert _stage_header(stage) not in combined
+        assert _stage_header(stage) in result.stdout
+    assert "not judged" not in combined
+    _no_traceback(result)
+    _no_wisekiosk_reference(combined)
+
+
+def test_two_independent_failures_in_one_run_are_both_reported(tmp_path: Path) -> None:
+    """check_method_consistency fails on SYS001, check_headers fails on TST001 -- two unrelated
+    items, neither failure a precondition for the other -- and run-every-stage reports both in one
+    run rather than hiding the second behind the first."""
+    repo = _repo(tmp_path)
+    _reviewed_edit(repo, repo / SYS1, "SYS001", clears=("SRS001",), **{"verification-justification": ""})
+    _set_fields(repo / TST1, header="")
+
+    result = _run_check(repo, "--root", "docs/requirements")
+
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0
+    for stage in STAGES:
+        assert _stage_header(stage) in result.stdout
+    assert "carry no verification-justification" in combined
+    assert "SYS001" in combined
+    assert "has no header" in combined
+    assert "TST001" in combined
+    assert "not judged" not in combined
     _no_traceback(result)
     _no_wisekiosk_reference(combined)

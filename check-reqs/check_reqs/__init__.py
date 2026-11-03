@@ -1,7 +1,13 @@
 """Runs the requirements-tree gate: check_unreviewed, check_suspect_links, doorstop, then
-check_method_consistency, check_text_citations, check_headers, and report_proposed, in that fixed
-order. Stops at the first stage returning non-zero, with that stage's own exit status; a
-`check-reqs: <stage>` header precedes each stage's own output.
+check_method_consistency, check_text_citations, check_headers, check_citations, and
+report_proposed, in that fixed order, every stage every run. A `check-reqs: <stage>` header
+precedes each stage's own output; a stage whose precondition failed prints `not judged —
+<reason>` instead of running it. Exits 1 if any stage failed or was not judged.
+
+Three preconditions, checked in this order when more than one could apply to a stage: `doorstop`
+on `check_unreviewed` itself failing; `check_suspect_links`, `check_text_citations`,
+`check_headers` and `check_citations` on the requirements tree failing to load; `check_citations`
+on running outside a git working copy. See check-reqs/README.md § Stages, in order.
 """
 
 import argparse
@@ -10,6 +16,7 @@ import sys
 from pathlib import Path
 
 from . import (
+    check_citations,
     check_headers,
     check_method_consistency,
     check_suspect_links,
@@ -33,8 +40,13 @@ STAGES = (
     ("check_method_consistency", check_method_consistency.main),
     ("check_text_citations", check_text_citations.main),
     ("check_headers", check_headers.main),
+    ("check_citations", check_citations.main),
     ("report_proposed", report_proposed.main),
 )
+
+# The stages that call doorstop.build() directly, and so share check_unreviewed's own "did the
+# tree load" precondition rather than the narrower "did check_unreviewed itself pass".
+_TREE_GATED = ("check_suspect_links", "check_text_citations", "check_headers", "check_citations")
 
 
 def main() -> int:
@@ -47,9 +59,32 @@ def main() -> int:
     args = parser.parse_args()
     root = Path.cwd() / args.root
 
+    failed = False
+    check_unreviewed_failed = False
+    tree_loaded = True
+
     for name, stage in STAGES:
         print(f"check-reqs: {name}", flush=True)
+
+        if name == "doorstop" and check_unreviewed_failed:
+            reason = "check_unreviewed failed"
+        elif name in _TREE_GATED and not tree_loaded:
+            reason = "the requirements tree did not load"
+        elif name == "check_citations" and not check_citations.in_git_working_copy():
+            reason = "not a git working copy"
+        else:
+            reason = None
+
+        if reason is not None:
+            print(f"not judged — {reason}", flush=True)
+            failed = True
+            continue
+
         status = stage(root)
         if status != 0:
-            return status
-    return 0
+            failed = True
+        if name == "check_unreviewed":
+            check_unreviewed_failed = status != 0
+            tree_loaded = check_unreviewed.tree_loads(root)
+
+    return 1 if failed else 0

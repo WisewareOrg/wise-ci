@@ -1,16 +1,17 @@
 # check-adrs
 
-One console script, one Actions step, two checks: the index check fails unless `docs/decisions/`
-and its index table in `docs/decisions/README.md` agree; the revs check fails unless every
-citation of an ADR, anywhere in the tracked tree, pins that ADR's current rev. The index check runs
-first; the revs check runs after it, whether or not the index check found a problem. The script
-exits 1 if either check found a problem, and prints nothing of its own beyond each check's own
-output.
+One console script, one Actions step, two stages. `check_adr_index` fails unless
+`docs/decisions/` and its index table in `docs/decisions/README.md` agree; `check_adr_revs` fails
+unless every citation of an ADR, anywhere in the tracked tree, pins that ADR's current rev. Both
+stages run every time, each preceded by its own `check-adrs: <stage>` header; the script exits 1 if
+either found a problem, and prints nothing of its own beyond each stage's own output.
 
 Run from the root of the repository it checks. It takes no inputs: `docs/decisions/` and the
-tracked tree are the only paths either check reads by name.
+tracked tree are the only paths either stage reads by name.
 
-## What the index check ([`check_adrs/__init__.py`](check_adrs/__init__.py)'s `index_check()`) reports
+## Stages, in order
+
+### `check_adr_index` ([`check_adrs/check_adr_index.py`](check_adrs/check_adr_index.py))
 
 Read from `docs/decisions/`'s own directory listing, not git's tracked set — an ADR file the
 listing reports is judged whether or not it has been `git add`ed. `README.md` and `TEMPLATE.md` are
@@ -30,12 +31,13 @@ none of that is part of the filename the row claims. Only `docs/decisions/README
 row-shaped line in another file, or one indented so it no longer opens the line, is not a row at
 all.
 
-On success it prints the ADR count. A git call is never made: a missing `docs/decisions/`
-directory, or a missing `docs/decisions/README.md` within one that exists, fails here, before the
-revs check gets a chance to run — the exception propagates out of the script uncaught, the same
-traceback Python prints for one left to crash on its own, naming the missing path.
+On success it prints the ADR count. A git call is never made. A missing `docs/decisions/`
+directory is the empty ADR set — it prints `0 ADR(s), contiguous from 0001` and is not a crash. A
+present directory missing its own `docs/decisions/README.md` still is: the exception propagates
+out of the script uncaught, the same traceback Python prints for one left to crash on its own,
+naming the missing path.
 
-## What the revs check ([`check_adrs/__init__.py`](check_adrs/__init__.py)'s `revs_check()`) reports
+### `check_adr_revs` ([`check_adrs/check_adr_revs.py`](check_adrs/check_adr_revs.py))
 
 The ADR set is read from `docs/decisions/` directly, the same as the index check, so an uncommitted
 ADR is judged; the citation scan reads the tracked set instead (`git ls-files`), and fails outright
@@ -71,12 +73,24 @@ it prints the ADR count and the citation count, split by whether each was judged
 citation — and fails if either count is zero, since a scan that stops recognising a whole citation
 form would otherwise report the smaller population it can still see as complete.
 
-A missing `docs/decisions/` directory or `docs/decisions/README.md` never reaches the revs check at
-all: the index check reads both first and crashes on either, uncaught, before the revs check is
-called. With both paths present and at least one ADR validated, a revs-check problem the index
-check does not also catch — a stale or malformed citation, a rev mismatch — is reported as an
-ordinary problem rather than a crash; with no ADR at all, the run instead reports
-`no ADR declared a rev`.
+A missing `docs/decisions/` directory is the empty ADR set here too, judged the same way the index
+check treats it: every citation fails `not an ADR` rather than going unjudged, and the zero-count
+and `no ADR declared a rev` guards do not fire for a directory that is not there. A present
+directory missing its own `docs/decisions/README.md` still crashes in the index check, before the
+revs check is ever called. A present directory holding only its `README.md` — present, but
+declaring no ADR at all — instead reports `no ADR declared a rev`, and leaves every citation
+unjudged exactly as before.
+
+**A citation wrapped across a line break right after `ADR` is reported, not invisible.** `ADR`
+ending a line, with the next line opening in digits — a blockquote marker or indentation
+continuing it included — is read across the break and reported malformed on the line it opens,
+with the same template any other spelling this cannot pin gets, the two lines joined by the
+literal break between them. A wrap right after `rev` was never a blind spot: the rev group is
+optional, so a split there already failed as a citation carrying no rev. Any 1-4 digit number
+opening the next line is read as the wrapped number, so a numbered-list item, a count and a year
+are all documented false positives (a test pins the year). There is no fence
+blanking here (see Known rejections above), so this paragraph names the rule without spelling a
+real wrap: this check reads its own README too.
 
 ## Known rejections
 
@@ -108,10 +122,9 @@ as carrying no title at all.
 whitespace-delimited token after `# ` as the title's number; a title running the number into its
 text is reported as titling itself that whole token, not as separately malformed.
 
-**A citation split by a line wrap right after `ADR` or `rev` is invisible.** The revs check matches
-a citation within one line; a line ending in the bare keyword and the next opening with the number
-or the rev carries the citation across neither line, so the pin goes unchecked until the lines are
-joined.
+**A citation names an ADR in this repository, never another's.** The revs check reads
+`docs/decisions/` from the working directory; a citation of another repository's ADR number is
+judged against this one's set, and a coincidental match is judged as if it named the local ADR.
 
 ## Run locally
 

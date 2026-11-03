@@ -44,11 +44,25 @@ def _load(root: Path):
     return unreviewed, unstamped, counts
 
 
+def _unloadable(counts: dict) -> tuple[list, list]:
+    """Required silos absent from `counts`, and any silo present but empty."""
+    absent = [s for s in REQUIRED_SILOS if s not in counts]
+    empty = sorted(s for s, n in counts.items() if not n)
+    return absent, empty
+
+
+def tree_loads(root: Path) -> bool:
+    """True when every required silo below `root` yielded at least one item -- the precondition
+    the stages that call `doorstop.build()` need before they can walk the tree without crashing."""
+    _, _, counts = _load(root)
+    absent, empty = _unloadable(counts)
+    return not absent and not empty
+
+
 def main(root: Path) -> int:
     unreviewed, unstamped, counts = _load(root)
 
-    empty = sorted(s for s, n in counts.items() if not n)
-    absent = [s for s in REQUIRED_SILOS if s not in counts]
+    absent, empty = _unloadable(counts)
     if empty or absent:
         for silo in absent:
             print(f"{root / silo}/ holds no document — missing, renamed, or deleted.", file=sys.stderr)
