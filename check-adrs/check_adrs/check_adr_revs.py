@@ -76,8 +76,9 @@ CONTINUATION = re.compile(r"^ {2,}\S")
 # A citation wrapped across a line break: the tail end of a line, joined to the next line's
 # leading digits -- a blockquote marker or indentation continuing it sits between `ADR` and its
 # number as readily as a space does, and is reported malformed the same as any other spelling this
-# cannot pin. A 5-digit next line is not flagged; any 1-4 digit number that opens one is -- a
-# numbered-list item or a count as readily as a year, the documented false positive.
+# cannot pin. A 5-digit next line is not flagged; any 1-4 digit number that opens one is read as
+# the wrapped number, so a numbered-list item, a count and a year are all documented false
+# positives (a test pins the year).
 TAIL = re.compile(r"\bADRs?[ _#\-]{0,3}$", re.I)
 NEXT_LINE = re.compile(r"^[^\S\n]*>?[^\S\n]*(\d{1,4})\b(?: +rev +(\d+))?")
 
