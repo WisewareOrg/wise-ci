@@ -43,8 +43,10 @@ so that same `self-check` job's own passing run is what proves the setup. check-
 `expected-failure` job does the same over a fixture carrying one defect per tool, then asserts each
 tool's own failure marker is in the output, so a tool that stopped judging cannot hide behind the
 others' failures; its `self-check` job proves the setup in the same way. check-python-floor's
-`self-check` job asserts its own output lacks the "no Python" line, so the action is proven to have
-read a `pyproject.toml` rather than passed vacuously.
+`expected-failure` job runs a fixture whose `line-length` is 100 and asserts the step's own
+outcome is `failure` and that the floor reported that line; its `self-check` job asserts its own
+output lacks the "no Python" line, so the action is proven to have read a `pyproject.toml` rather
+than passed vacuously.
 
 repo-floor's own `expected-failure` job passes the action an invalid `github-token`, so the floor
 fetch itself breaks, and asserts the step's own outcome is `failure` — proving only that the

@@ -194,7 +194,7 @@ Holds a repository's `pyproject.toml` to the org Python floor (ADR 0002 rev 1) â
 what it does not catch, is [`../check-python-floor/README.md`](../check-python-floor/README.md)'s to
 state. wise-ci runs it over a conformant fixture repository generated at job time,
 in [`../.github/workflows/check-python-floor.yml`](../.github/workflows/check-python-floor.yml)'s
-`self-check` job, which also asserts the run did not take the "no Python" pass.
+`self-check` job, which also asserts the run did not take the "no Python" pass, and its `expected-failure` job runs a fixture below the floor and asserts the action's own step outcome is `failure`.
 
 ## repo-floor
 

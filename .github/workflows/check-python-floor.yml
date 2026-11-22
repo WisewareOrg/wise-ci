@@ -87,3 +87,48 @@ jobs:
             echo "the floor passed as no-Python over a repository that tracks Python" >&2
             exit 1
           fi
+
+  # docs/TESTING.md § The action: the fixture's line-length is 100, so the action must fail, and
+  # the floor must report that line.
+  expected-failure:
+    name: expected-failure
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: wise-ci
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.9"
+
+      - name: Build the fixture with line-length 100
+        run: |
+          git init -q
+          echo wise-ci/ >> .git/info/exclude
+          uv run --locked --project wise-ci --package check-python-floor python -c "
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, 'wise-ci/check-python-floor/tests')
+          import floor_repo
+          floor_repo.make_repo(Path('.'), floor_repo.pyproject(line_length=100))
+          "
+
+      - name: check-python-floor (line-length 100; expected to fail)
+        id: check-python-floor
+        continue-on-error: true
+        uses: ./wise-ci/check-python-floor
+
+      - name: The previous step must have failed
+        if: steps.check-python-floor.outcome != 'failure'
+        run: exit 1
+
+      - name: The floor reports the seed
+        run: |
+          set -euo pipefail
+          out="$(uv run --locked --project wise-ci --package check-python-floor check-python-floor 2>&1 || true)"
+          echo "$out"
+          grep -qF -- "[tool.ruff] line-length: expected 120, found 100" <<< "$out"
