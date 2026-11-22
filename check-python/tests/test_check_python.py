@@ -1,7 +1,7 @@
-"""Specifies check-python/check_python/__init__.py and its output interface as ruled in
-~/.claude/deliverables/ca349fb5-0eba-40fc-849a-a8f9341652f1/i19-ruling-wiseci-output.md: ruff check,
-ruff format, interrogate, pydoclint and ty each run, in that order, every run, against the
-repository at the working directory (ty against its `.venv`); a `check-python: <name>` header
+"""Specifies check-python/check_python/__init__.py and its output interface (check-python/README.md).
+
+Ruff check, ruff format, interrogate, pydoclint and ty each run, in that order, every run, against
+the repository at the working directory (ty against its `.venv`); a `check-python: <name>` header
 precedes each tool's own output; the exit status is 1 if any tool failed or was not judged.
 
 Each case builds a real, isolated git repository in a temporary directory with its own `.venv`
@@ -18,7 +18,6 @@ import sys
 from pathlib import Path
 
 import pytest
-
 import python_repo
 
 SCRIPT = Path(sys.executable).with_name("check-python")
@@ -39,12 +38,27 @@ MARKERS = {
 
 
 def _run(repo: Path) -> tuple[int, str]:
+    """Run the check in a repository.
+
+    Args:
+        repo: The repository to run in.
+
+    Returns:
+        The exit status and the combined stdout and stderr.
+    """
     result = subprocess.run([str(SCRIPT)], cwd=repo, env=python_repo.env(), capture_output=True, text=True)
     return result.returncode, result.stdout + result.stderr
 
 
 def _sections(output: str) -> dict[str, str]:
-    """Maps each header's tool name to the text between it and the next header."""
+    """Map each header's tool name to the text between it and the next header.
+
+    Args:
+        output: The check's combined stdout and stderr.
+
+    Returns:
+        The section text by tool name.
+    """
     headers = list(HEADER.finditer(output))
     return {
         m.group(1): output[m.end() : headers[i + 1].start() if i + 1 < len(headers) else len(output)]
@@ -53,6 +67,11 @@ def _sections(output: str) -> dict[str, str]:
 
 
 def test_clean_repository_passes_with_all_five_sections_in_order(tmp_path: Path) -> None:
+    """A clean repository passes with all five sections in order and no tool failure marker.
+
+    Args:
+        tmp_path: A fresh temporary directory.
+    """
     status, output = _run(python_repo.make_repo(tmp_path / "repo"))
     assert status == 0, output
     assert HEADER.findall(output) == list(TOOLS), output
@@ -63,6 +82,12 @@ def test_clean_repository_passes_with_all_five_sections_in_order(tmp_path: Path)
 
 @pytest.mark.parametrize("seeded", TOOLS)
 def test_one_seeded_defect_is_reported_by_its_own_tool_alone(tmp_path: Path, seeded: str) -> None:
+    """One seeded defect is reported in its own tool's section and no other, with exit 1.
+
+    Args:
+        tmp_path: A fresh temporary directory.
+        seeded: The tool whose seed the repository carries.
+    """
     status, output = _run(python_repo.make_repo(tmp_path / "repo", (seeded,)))
     assert status == 1, output
     sections = _sections(output)
@@ -73,6 +98,11 @@ def test_one_seeded_defect_is_reported_by_its_own_tool_alone(tmp_path: Path, see
 
 
 def test_every_tool_runs_even_when_earlier_ones_fail(tmp_path: Path) -> None:
+    """Every tool runs and reports its own seed even when earlier tools fail.
+
+    Args:
+        tmp_path: A fresh temporary directory.
+    """
     status, output = _run(python_repo.make_repo(tmp_path / "repo", tuple(python_repo.SEEDS)))
     assert status == 1, output
     sections = _sections(output)
@@ -83,6 +113,11 @@ def test_every_tool_runs_even_when_earlier_ones_fail(tmp_path: Path) -> None:
 
 
 def test_without_a_venv_ty_is_not_judged_and_the_other_tools_still_run(tmp_path: Path) -> None:
+    """Without a `.venv`, ty is not judged, the exit is 1, and the other tools still run.
+
+    Args:
+        tmp_path: A fresh temporary directory.
+    """
     status, output = _run(python_repo.make_repo(tmp_path / "repo", venv=False))
     assert status == 1, output
     sections = _sections(output)

@@ -1,14 +1,15 @@
-"""Builds the git repositories check-python's tests run against, each in its own temporary
-directory, with its own `.venv`.
+"""Builds the git repositories check-python's tests run against, each with its own `.venv`.
+
+Each repository is in its own temporary directory.
 
 `env(**overrides)` returns a subprocess environment with the machine's own git configuration shut
 out and a fixed identity (docs/TESTING.md "Real dependencies where possible").
 
-`make_repo(directory, seeds, venv)` runs `git init` at `directory`, writes the clean project (CLEAN) plus
-one file per seed named in `seeds`, creates `.venv` with `uv venv` unless `venv` is false (the project has no dependencies,
-so it is synced as created), gitignores `.venv`, and `git add`s the rest so `git ls-files '*.py'`
-sees every Python file. The clean project passes every tool; each seed in SEEDS is one file that
-trips exactly one tool and no other.
+`make_repo(directory, seeds, venv)` runs `git init` at `directory`, writes the clean project (CLEAN)
+plus one file per seed named in `seeds`, creates `.venv` with `uv venv` unless `venv` is false (the
+project has no dependencies, so it is synced as created), gitignores `.venv`, and `git add`s the
+rest so `git ls-files '*.py'` sees every Python file. The clean project passes every tool; each
+seed in SEEDS is one file that trips exactly one tool and no other.
 """
 
 import os
@@ -52,7 +53,7 @@ SEEDS = {
     ),
     "ruff format": (
         "seed_ruff_format.py",
-        "\"\"\"A string ruff format would requote.\"\"\"\n\nVALUE = 'single'\n",
+        '"""A string ruff format would requote."""\n\nVALUE = \'single\'\n',
     ),
     "interrogate": (
         "seed_interrogate.py",
@@ -93,6 +94,14 @@ def wrong() -> int:
 
 
 def env(**overrides: str) -> dict[str, str]:
+    """Build a subprocess environment isolated from the machine's git configuration.
+
+    Args:
+        **overrides: Variables set last, over the isolated environment.
+
+    Returns:
+        The environment mapping.
+    """
     result = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
     result.update(_ISOLATION)
     result.update(_IDENTITY)
@@ -103,11 +112,27 @@ def env(**overrides: str) -> dict[str, str]:
 
 
 def _run(directory: Path, *args: str) -> None:
+    """Run a command in a directory, asserting it succeeds.
+
+    Args:
+        directory: The working directory.
+        *args: The command and its arguments.
+    """
     result = subprocess.run(list(args), cwd=directory, env=env(), capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
 
 
 def make_repo(directory: Path, seeds: tuple[str, ...] = (), venv: bool = True) -> Path:
+    """Create a git repository holding the clean project and the named seeds.
+
+    Args:
+        directory: Where to create it.
+        seeds: Names in SEEDS whose files to add.
+        venv: Whether to create `.venv`.
+
+    Returns:
+        The repository directory.
+    """
     directory.mkdir(parents=True, exist_ok=True)
     _run(directory, "git", "init", "-q", "-b", "main")
     for name, text in CLEAN.items():
