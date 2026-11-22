@@ -26,8 +26,8 @@ TOOLS = ("ruff check", "ruff format", "interrogate", "pydoclint", "ty")
 HEADER = re.compile(r"^check-python: (.+)$", re.MULTILINE)
 NOT_JUDGED = "not judged — no .venv at ./.venv; run uv sync first"
 
-# Each pinned tool's own output when it fails the tool's seed, never when it passes (verified
-# against the pins in docs and by the clean-repository case below).
+# Each pinned tool's own output when it fails the tool's seed, never when it passes (verified against
+# the versions pinned in check-python/pyproject.toml and by the clean-repository case below).
 MARKERS = {
     "ruff check": "F401",
     "ruff format": "would be reformatted",
