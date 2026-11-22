@@ -60,7 +60,7 @@ The org Python standard is the one tool set run from here: `check-python` runs r
 pydoclint and ty, all `==`-pinned in that check, and `check-python-floor` holds a repository's own
 `[tool.ruff]` to the floor, since ruff's configuration is read by the editor from the repository.
 Everything else the tools need is shipped inside `check-python`. See
-[`docs/decisions/0002-org-python-standards-in-wise-ci.md`](docs/decisions/0002-org-python-standards-in-wise-ci.md).
+[ADR 0002 rev 1](docs/decisions/0002-org-python-standards-in-wise-ci.md).
 
 ## Documentation
 

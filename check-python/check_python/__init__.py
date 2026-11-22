@@ -27,7 +27,10 @@ def _tool(name: str) -> str:
 
 
 def main() -> int:
-    """Runs every tool, prints their output under their headers and returns the exit status."""
+    """Runs every tool under its header and returns the exit status.
+
+    A tool's stderr is merged into stdout so its text stays under its own header.
+    """
     tracked = subprocess.run(["git", "ls-files", "*.py"], capture_output=True, text=True, check=True).stdout.split()
     tools = (
         ("ruff check", [_tool("ruff"), "check"]),
@@ -43,5 +46,5 @@ def main() -> int:
             print(f"not judged — no .venv at ./{VENV}; run uv sync first", flush=True)
             failed = True
         else:
-            failed |= subprocess.run(command).returncode != 0
+            failed |= subprocess.run(command, stderr=subprocess.STDOUT).returncode != 0
     return int(failed)
