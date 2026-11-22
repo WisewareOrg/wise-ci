@@ -29,11 +29,9 @@ repository with no local entry point, so they drift. The constraints:
   ships inside `check-python`: interrogate and pydoclint options are passed by flag, ty runs on its
   default rules. A repository deletes its own `[tool.interrogate]` and `[tool.pydoclint]`.
 - **The floor is an exact allowlist**, so drift is impossible by construction: `[tool.ruff]` may hold
-  only `line-length = 120`, `lint.select = ["E", "F", "W", "I", "UP", "B", "SIM", "D", "D417"]`,
-  `lint.pydocstyle.convention = "google"` and the repository-specific `src`; `[tool.ty]`,
-  `[tool.interrogate]` and `[tool.pydoclint]` must be absent; `requires-python` has a lower bound of
-  at least 3.12; a repository tracking Python has a root `pyproject.toml`. A repository tracking no
-  Python passes.
+  only the floor's values plus the repository-specific `src`; a repository tracking Python has a
+  root `pyproject.toml`; a repository tracking no Python passes. The values are
+  [`check-python-floor/README.md`](../../check-python-floor/README.md)'s.
 - **Scope is every tracked `.py` file, with no exclusions.** interrogate and pydoclint receive
   `git ls-files '*.py'`; ruff and ty honour `.gitignore`.
 - **The type checker is ty**, on its default rules. It is beta

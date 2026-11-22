@@ -1,8 +1,7 @@
 name: check-python-floor
 description: >-
-  The repository's root pyproject.toml meets the org Python floor (the ruff allowlist, no
-  `[tool.ty]`, `[tool.interrogate]` or `[tool.pydoclint]`, `requires-python` of at least 3.12);
-  passes when the repository tracks no Python.
+  The repository's root pyproject.toml meets the org Python floor; passes when the
+  repository tracks no Python.
 runs:
   using: composite
   steps:

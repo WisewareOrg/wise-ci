@@ -1,7 +1,7 @@
-"""Runs the org Python gate against the repository at the working directory: ruff check,
-ruff format --check, interrogate, pydoclint and ty, in that fixed order, every tool every run. A
-`check-python: <name>` header precedes each tool's own output. interrogate and pydoclint receive
-every tracked `.py` file; ruff and ty honour `.gitignore`. ty checks against `./.venv`; with none
+"""Runs the org Python gate against the repository at the working directory (the tools and their
+order are in the check's README), every tool every run. A `check-python: <name>` header precedes
+each tool's own output. interrogate and pydoclint receive every tracked `.py` file; ruff and ty
+honour `.gitignore`. ty checks against `./.venv`; with none
 it prints `not judged — ...` instead of running. Exits 1 if any tool failed or was not judged.
 """
 

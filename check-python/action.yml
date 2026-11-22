@@ -1,8 +1,7 @@
 name: check-python
 description: >-
-  The repository at the working directory passes ruff check, ruff format --check, interrogate
-  (100%) and pydoclint over every tracked Python file, and ty over its `.venv`. The repository
-  must already be synced (`uv sync`).
+  The repository at the working directory passes the org Python standard. The repository must
+  already be synced (`uv sync`).
 runs:
   using: composite
   steps:

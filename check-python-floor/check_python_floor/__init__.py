@@ -1,10 +1,8 @@
 """Checks the repository at the working directory against the org Python floor.
 
 A repository tracking no `.py` file passes with a "no Python" line and its pyproject.toml is not
-read. Otherwise a root pyproject.toml must exist, its `[tool.ruff]` may hold only the floor's
-allowlist (`src` is read but never judged), `[tool.ty]`, `[tool.interrogate]` and `[tool.pydoclint]`
-must be absent and `requires-python` must have a lower bound of at least 3.12. One stderr line per
-violation, in a fixed order; exit 1 if any.
+read. Otherwise a root pyproject.toml must exist and meet the allowlist constants below (`src` is
+read but never judged). One stderr line per violation, in a fixed order; exit 1 if any.
 """
 
 import json
