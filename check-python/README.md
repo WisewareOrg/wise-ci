@@ -36,4 +36,5 @@ uv run --locked check-python
 No arguments and no environment variables.
 
 Run it from the root of the repository it checks: the repository is the working directory, so a run
-from a subfolder sees only that subtree.
+from a subfolder sees only that subtree, and a subtree with no `.py` file passes with the no-Python
+line.

@@ -35,4 +35,5 @@ uv run --locked check-python-floor
 No arguments and no environment variables.
 
 Run it from the root of the repository it checks: the repository is the working directory, so a run
-from a subfolder sees only that subtree.
+from a subfolder sees only that subtree. A subfolder that tracks `.py` files but holds no
+`pyproject.toml` fails as missing, and one with no `.py` file passes with the no-Python line.
