@@ -3,7 +3,8 @@
 The tools and their order are in the check's README; every tool runs every time. A
 `check-python: <name>` header precedes each tool's own output. interrogate and pydoclint receive
 every tracked `.py` file; ruff and ty honour `.gitignore`. ty checks against `./.venv`; with none it
-prints `not judged — ...` instead of running. Exits 1 if any tool failed or was not judged.
+prints `not judged — ...` instead of running. Exits 1 if any tool failed or was not judged. A
+repository tracking no `.py` file passes with a "no Python" line and no tool runs.
 """
 
 import subprocess
@@ -40,10 +41,13 @@ def main() -> int:
     A tool's stderr is merged into stdout so its text stays under its own header.
 
     Returns:
-        The exit status: 1 if any tool failed or was not judged.
+        The exit status: 1 if any tool failed or was not judged, 0 for a repository with no Python.
     """
     listing = subprocess.run(["git", "ls-files", "-z", "*.py"], capture_output=True, text=True, check=True).stdout
     tracked = [name for name in listing.split("\0") if name]
+    if not tracked:
+        print("check-python: no Python — no tracked .py files.")
+        return 0
     tools = (
         ("ruff check", [_tool("ruff"), "check"]),
         ("ruff format", [_tool("ruff"), "format", "--check"]),

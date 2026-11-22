@@ -14,6 +14,9 @@ same versions; why it is built this way is
   [`../check-python-floor/README.md`](../check-python-floor/README.md) holds to the floor. ty runs on
   its default rules against `./.venv`.
 
+**A repository tracking no `.py` file passes** with the one line `check-python: no Python — no
+tracked .py files.` and no tool runs, as `check-python-floor` does.
+
 **Run with no `.venv` at the working directory, and ty prints `not judged — no .venv at ./.venv; run
 uv sync first`**, counts as failed, and the other four tools still run. ty is never left to find an
 interpreter itself, which would silently resolve against the wrong environment.

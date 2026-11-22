@@ -24,7 +24,7 @@ repository with no local entry point, so they drift. The constraints:
   the repository at the working directory, ty pointed at its `.venv`; `check-python-floor` holds the
   repository's `pyproject.toml` to the floor below. Tools are `==`-pinned in wise-ci, and a
   consuming repository takes `check-python` as a `tool.uv.sources` git dependency, which brings the
-  same pins into its venv.
+  same pins into its venv. Each passes, running no tool, in a repository that tracks no Python.
 - **Configuration.** `[tool.ruff]` stays in each repository, held to the floor. Everything else
   ships inside `check-python`: interrogate and pydoclint options are passed by flag, ty runs on its
   default rules. A repository deletes its own `[tool.interrogate]` and `[tool.pydoclint]`.
