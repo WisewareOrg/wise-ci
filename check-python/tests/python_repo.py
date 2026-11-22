@@ -5,13 +5,13 @@ Each repository is in its own temporary directory.
 `env(**overrides)` returns a subprocess environment with the machine's own git configuration shut
 out and a fixed identity (docs/TESTING.md "Real dependencies where possible").
 
-`make_repo(directory, seeds, venv, tracked_files, ignored_files)` runs `git init` at `directory`,
+`make_repo(directory, seeds, venv, tracked_files, ignored_files, python)` runs `git init` at `directory`,
 writes the clean project (CLEAN) plus one file per seed named in `seeds`, creates `.venv` with
 `uv venv` unless `venv` is false (the project has no dependencies, so it is synced as created),
 gitignores `.venv`, and `git add`s the rest so `git ls-files '*.py'` sees every Python file. The
 clean project passes every tool; each seed in SEEDS is one file that trips exactly one tool and no
 other. `tracked_files` adds further tracked files (for nested paths); `ignored_files` writes files
-that `.gitignore` excludes.
+that `.gitignore` excludes; `python=False` drops the clean project's Python file.
 """
 
 import os
@@ -130,6 +130,7 @@ def make_repo(
     venv: bool = True,
     tracked_files: dict[str, str] | None = None,
     ignored_files: dict[str, str] | None = None,
+    python: bool = True,
 ) -> Path:
     """Create a git repository holding the clean project and the named seeds.
 
@@ -139,6 +140,7 @@ def make_repo(
         venv: Whether to create `.venv`.
         tracked_files: Further files to write and track, as path to text.
         ignored_files: Files to write under a gitignored path, as path to text.
+        python: False to leave out the clean project's Python file.
 
     Returns:
         The repository directory.
@@ -146,6 +148,8 @@ def make_repo(
     directory.mkdir(parents=True, exist_ok=True)
     _run(directory, "git", "init", "-q", "-b", "main")
     for name, text in CLEAN.items():
+        if name.endswith(".py") and not python:
+            continue
         (directory / name).write_text(text)
     for seed in seeds:
         name, text = SEEDS[seed]

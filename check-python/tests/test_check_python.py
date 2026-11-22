@@ -24,6 +24,7 @@ SCRIPT = Path(sys.executable).with_name("check-python")
 
 TOOLS = ("ruff check", "ruff format", "interrogate", "pydoclint", "ty")
 HEADER = re.compile(r"^check-python: (.+)$", re.MULTILINE)
+NO_PYTHON_LINE = "check-python: no Python — no tracked .py files."
 NOT_JUDGED = "not judged — no .venv at ./.venv; run uv sync first"
 
 # Each pinned tool's own output when it fails the tool's seed, never when it passes (verified against
@@ -157,3 +158,17 @@ def test_an_ignored_python_file_is_in_no_section(tmp_path: Path) -> None:
     assert "ignored/" not in output, output
     for tool, section in _sections(output).items():
         assert MARKERS[tool] not in section, (tool, output)
+
+
+@pytest.mark.parametrize("venv", [True, False], ids=["with a venv", "without a venv"])
+def test_no_tracked_python_passes_with_the_no_python_line_and_runs_no_tool(tmp_path: Path, venv: bool) -> None:
+    """A repository tracking no `.py` passes with only the no-Python line: no tool section, no not-judged line.
+
+    Args:
+        tmp_path: A fresh temporary directory.
+        venv: Whether the repository has a `.venv`.
+    """
+    repo = python_repo.make_repo(tmp_path / "repo", venv=venv, python=False, ignored_files={"ignored/x.py": "x ="})
+    status, output = _run(repo)
+    assert status == 0, output
+    assert output.splitlines() == [NO_PYTHON_LINE], output
