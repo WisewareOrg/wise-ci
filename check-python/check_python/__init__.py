@@ -31,7 +31,8 @@ def main() -> int:
 
     A tool's stderr is merged into stdout so its text stays under its own header.
     """
-    tracked = subprocess.run(["git", "ls-files", "*.py"], capture_output=True, text=True, check=True).stdout.split()
+    listing = subprocess.run(["git", "ls-files", "-z", "*.py"], capture_output=True, text=True, check=True).stdout
+    tracked = [name for name in listing.split("\0") if name]
     tools = (
         ("ruff check", [_tool("ruff"), "check"]),
         ("ruff format", [_tool("ruff"), "format", "--check"]),

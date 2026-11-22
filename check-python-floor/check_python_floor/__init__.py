@@ -26,8 +26,8 @@ _LOWER_BOUND = re.compile(r"(?:>=|==|~=)\s*(\d+)\.(\d+)")
 
 def _tracked_python() -> list[str]:
     """Returns the tracked `.py` files of the repository at the working directory."""
-    out = subprocess.run(["git", "ls-files", "*.py"], capture_output=True, text=True, check=True).stdout
-    return out.splitlines()
+    out = subprocess.run(["git", "ls-files", "-z", "*.py"], capture_output=True, text=True, check=True).stdout
+    return [name for name in out.split("\0") if name]
 
 
 def _extras(table: dict, allowed: set[str], path: str) -> list[str]:
@@ -43,8 +43,9 @@ def _extras(table: dict, allowed: set[str], path: str) -> list[str]:
     return lines
 
 
-def _expected(path: str, key: str, table: dict, expected: object, text: str) -> list[str]:
+def _expected(path: str, key: str, table: dict, expected: object) -> list[str]:
     """Returns the violation for `key` in `table`, or nothing when it equals `expected`."""
+    text = json.dumps(expected)
     if key not in table:
         return [f"pyproject.toml: [{path}] {key}: missing, expected {text}"]
     if table[key] != expected:
@@ -86,11 +87,9 @@ def violations(pyproject: dict) -> list[str]:
     lint = ruff.get("lint", {})
     pydocstyle = lint.get("pydocstyle", {})
     lines = _requires_python(pyproject.get("project", {}))
-    lines += _expected("tool.ruff", "line-length", ruff, LINE_LENGTH, str(LINE_LENGTH))
+    lines += _expected("tool.ruff", "line-length", ruff, LINE_LENGTH)
     lines += _select(lint)
-    lines += _expected(
-        "tool.ruff.lint.pydocstyle", "convention", pydocstyle, CONVENTION, json.dumps(CONVENTION)
-    )
+    lines += _expected("tool.ruff.lint.pydocstyle", "convention", pydocstyle, CONVENTION)
     lines += _extras(ruff, _RUFF_ALLOWED, "tool.ruff")
     lines += _extras(lint, _LINT_ALLOWED, "tool.ruff.lint")
     lines += _extras(pydocstyle, _PYDOCSTYLE_ALLOWED, "tool.ruff.lint.pydocstyle")

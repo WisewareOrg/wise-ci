@@ -185,7 +185,7 @@ check runs as a gate over a clean fixture repository generated at job time, in
 [`../.github/workflows/check-python.yml`](../.github/workflows/check-python.yml)'s `self-check` job,
 called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)). The same
 workflow's `expected-failure` job runs a fixture carrying one defect per tool and asserts the
-action's own step outcome is `failure`, and that each tool reported its own defect. A consuming
+action's own step outcome is `failure`, and that each tool's failure marker is in the output. A consuming
 repository runs `check-python` in its own CI; it is not a required status-check context.
 
 ## check-python-floor
