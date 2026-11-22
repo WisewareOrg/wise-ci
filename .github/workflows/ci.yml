@@ -71,6 +71,18 @@ jobs:
       contents: read
     uses: ./.github/workflows/check-reqs.yml
 
+  check-python:
+    name: check-python
+    permissions:
+      contents: read
+    uses: ./.github/workflows/check-python.yml
+
+  check-python-floor:
+    name: check-python-floor
+    permissions:
+      contents: read
+    uses: ./.github/workflows/check-python-floor.yml
+
   repo-floor:
     name: repo-floor
     permissions:
@@ -85,7 +97,7 @@ jobs:
 
   ci:
     name: ci
-    needs: [checks, codeql, check-eol, check-docs-index, check-adrs, check-branch, check-reqs, repo-floor, pr-title]
+    needs: [checks, codeql, check-eol, check-docs-index, check-adrs, check-branch, check-reqs, check-python, check-python-floor, repo-floor, pr-title]
     if: always()
     runs-on: ubuntu-latest
     permissions:

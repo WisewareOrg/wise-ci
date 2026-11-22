@@ -34,6 +34,7 @@ amended, so a number in git history need not mean what it means here.
 | # | Rev | Decided | Decision |
 |---|---|---|---|
 | [0001](0001-pr-title-commitlint-python-handoff.md) | 1 | 2026-10-14 | Check pull-request titles with commitlint, handed the title by a standard-library Python script |
+| [0002](0002-org-python-standards-in-wise-ci.md) | 1 | 2026-11-22 | Define the org Python standards once in wise-ci, run them by one command, and type-check with ty |
 
 ## Revisions
 

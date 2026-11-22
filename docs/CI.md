@@ -175,6 +175,29 @@ same workflow's `expected-failure` job seeds a defect onto
 that tree and asserts the action's own step outcome is `failure` ([`TESTING.md`](TESTING.md) § The
 action).
 
+## check-python
+
+The org Python standard, run by one command in CI and locally: ruff check, ruff format, interrogate,
+pydoclint and ty over a repository that is already synced — what it checks, and what it does not
+catch, is [`../check-python/README.md`](../check-python/README.md)'s to state, and why it is built
+this way is [ADR 0002 rev 1](decisions/0002-org-python-standards-in-wise-ci.md)'s. The
+check runs as a gate over a clean fixture repository generated at job time, in
+[`../.github/workflows/check-python.yml`](../.github/workflows/check-python.yml)'s `self-check` job,
+called by the wiring workflow like every other check ([`TESTING.md`](TESTING.md)). The same
+workflow's `expected-failure` job runs a fixture carrying one defect per tool and asserts the
+action's own step outcome is `failure`, and that each tool's failure marker is in the output. A consuming
+repository runs `check-python` in its own CI; it is not a required status-check context.
+
+## check-python-floor
+
+Holds a repository's `pyproject.toml` to the org Python floor (ADR 0002 rev 1) — what it checks, and
+what it does not catch, is [`../check-python-floor/README.md`](../check-python-floor/README.md)'s to
+state. wise-ci runs it over a conformant fixture repository generated at job time, in
+[`../.github/workflows/check-python-floor.yml`](../.github/workflows/check-python-floor.yml)'s
+`self-check` job, which also asserts the run did not take the "no Python" pass. Its
+`expected-failure` job runs a fixture below the floor and asserts the action's own step outcome is
+`failure`.
+
 ## repo-floor
 
 Compares a repository's live rulesets against the floor stated once in `WisewareOrg/.github`'s

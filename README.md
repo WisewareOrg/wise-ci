@@ -56,6 +56,12 @@ red before the new version reaches their `main`.
 A tool someone else maintains — zizmor, commitlint, and the like — is decided tool by tool. As much as
 possible is centralised here, though many such tools carry configuration specific to each project.
 
+The org Python standard is the one tool set run from here: see
+[`check-python/README.md`](check-python/README.md) for the tools and
+[`check-python-floor/README.md`](check-python-floor/README.md) for the ruff floor, since ruff's
+configuration is read by the editor from the repository. See
+[ADR 0002 rev 1](docs/decisions/0002-org-python-standards-in-wise-ci.md).
+
 ## Documentation
 
 - [`docs/README.md`](docs/README.md) — the documentation index: which document guarantees which
