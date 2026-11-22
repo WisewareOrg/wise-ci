@@ -40,6 +40,19 @@ def _tracked(pattern: str) -> list[str]:
     return [name for name in out.split("\0") if name]
 
 
+def _load(path: Path) -> dict:
+    """Parse a TOML file.
+
+    Args:
+        path: The file.
+
+    Returns:
+        The parsed table.
+    """
+    with path.open("rb") as handle:
+        return tomllib.load(handle)
+
+
 def _stray_configuration() -> list[str]:
     """Find ruff or ty configuration the allowlist does not read.
 
@@ -54,14 +67,13 @@ def _stray_configuration() -> list[str]:
         name = Path(path).name
         if name in STRAY_FILES:
             lines.append(f"{path}: not allowed by the floor")
-        if name != "pyproject.toml" or path == name:
-            continue
-        try:
-            tool = tomllib.loads(Path(path).read_text()).get("tool", {})
-        except tomllib.TOMLDecodeError as error:
-            lines.append(f"{path}: not valid TOML: {error}")
-            continue
-        lines += [f"{path}: [tool.{name}] not allowed by the floor" for name in ("ruff", "ty") if name in tool]
+        elif name == "pyproject.toml" and path != name:
+            try:
+                tool = _load(Path(path)).get("tool", {})
+            except tomllib.TOMLDecodeError as error:
+                lines.append(f"{path}: not valid TOML: {error}")
+                continue
+            lines += [f"{path}: [tool.{table}] not allowed by the floor" for table in ("ruff", "ty") if table in tool]
     return lines
 
 
@@ -183,7 +195,7 @@ def main() -> int:
         found = [f"pyproject.toml: missing at the repository root, but {len(tracked)} tracked .py file(s)"]
     else:
         try:
-            found = violations(tomllib.loads(path.read_text()))
+            found = violations(_load(path))
         except tomllib.TOMLDecodeError as error:
             found = [f"pyproject.toml: not valid TOML: {error}"]
     found += _stray_configuration()

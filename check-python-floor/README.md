@@ -14,8 +14,9 @@ without reading `pyproject.toml`, when `git ls-files '*.py'` is empty. Otherwise
   the root has a `[tool.ruff]` or `[tool.ty]`, since either would configure the tool outside the
   allowlist.
 
-One stderr line per violation, `pyproject.toml: [<table>] <key>: <reason>`, in a fixed order, no
-summary; a pass prints `check-python-floor: pyproject.toml meets the floor.`. The floor is data at
+One stderr line per violation, in a fixed order, no summary: `pyproject.toml: [<table>] <key>:
+<reason>` for the root file, `<path>: not allowed by the floor` for a stray configuration file, and
+`<path>: [tool.<table>] not allowed by the floor` for a stray table below the root; a pass prints `check-python-floor: pyproject.toml meets the floor.`. The floor is data at
 the top of [`check_python_floor/__init__.py`](check_python_floor/__init__.py).
 
 **What this does not catch:** that the repository runs `check-python` at all, or that it passes. The
