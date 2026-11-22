@@ -49,9 +49,9 @@ default level.
 - **basedpyright.** The study's own lean: pyright's engine with the lowest false-positive count (3
   sites in WiseGncDesign, 1 in WiseDynamics), `extends` for a central base file, a mature baseline,
   and node locked through `nodejs-wheel-binaries`. Costs: a community fork, a 282 MB dev dependency,
-  and Pylance disabled in the editor. Not chosen: ty was chosen knowingly despite being beta. ty is a 39 MB
-  single Rust binary with no dependencies, and checks notebooks and runs from the venv in the
-  editor.
+  and Pylance disabled in the editor. Not chosen: ty was chosen instead,
+  despite being beta. ty is a 39 MB single Rust binary with no dependencies, and checks notebooks
+  and runs from the venv in the editor.
 - **pyright.** The same detection, but it needs node, which it downloads unpinned unless the
   `[nodejs]` extra is used, it does not check notebooks from the command line, and Pylance bundles a
   lagging copy so editor and CI disagree.
