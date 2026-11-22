@@ -126,3 +126,34 @@ def test_without_a_venv_ty_is_not_judged_and_the_other_tools_still_run(tmp_path:
     for tool in TOOLS[:-1]:
         assert "not judged" not in sections[tool], (tool, output)
         assert sections[tool].strip(), (tool, output)
+
+
+def test_a_nested_tracked_file_is_checked_by_every_tool(tmp_path: Path) -> None:
+    """Interrogate and pydoclint cover a tracked file below the root, not only root files.
+
+    Args:
+        tmp_path: A fresh temporary directory.
+    """
+    nested = {
+        "pkg/sub/test_undocumented.py": python_repo.SEEDS["interrogate"][1],
+        "pkg/sub/test_mismatched.py": python_repo.SEEDS["pydoclint"][1],
+    }
+    status, output = _run(python_repo.make_repo(tmp_path / "repo", tracked_files=nested))
+    assert status == 1, output
+    sections = _sections(output)
+    assert "pkg/sub/test_undocumented.py" in sections["interrogate"], output
+    assert "pkg/sub/test_mismatched.py" in sections["pydoclint"], output
+
+
+def test_an_ignored_python_file_is_in_no_section(tmp_path: Path) -> None:
+    """A gitignored `.py` file with a defect for every tool is not checked by any of them.
+
+    Args:
+        tmp_path: A fresh temporary directory.
+    """
+    ignored = {f"ignored/{name}": text for name, text in python_repo.SEEDS.values()}
+    status, output = _run(python_repo.make_repo(tmp_path / "repo", ignored_files=ignored))
+    assert status == 0, output
+    assert "ignored/" not in output, output
+    for tool, section in _sections(output).items():
+        assert MARKERS[tool] not in section, (tool, output)

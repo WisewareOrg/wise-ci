@@ -5,11 +5,13 @@ Each repository is in its own temporary directory.
 `env(**overrides)` returns a subprocess environment with the machine's own git configuration shut
 out and a fixed identity (docs/TESTING.md "Real dependencies where possible").
 
-`make_repo(directory, seeds, venv)` runs `git init` at `directory`, writes the clean project (CLEAN)
-plus one file per seed named in `seeds`, creates `.venv` with `uv venv` unless `venv` is false (the
-project has no dependencies, so it is synced as created), gitignores `.venv`, and `git add`s the
-rest so `git ls-files '*.py'` sees every Python file. The clean project passes every tool; each
-seed in SEEDS is one file that trips exactly one tool and no other.
+`make_repo(directory, seeds, venv, tracked_files, ignored_files)` runs `git init` at `directory`,
+writes the clean project (CLEAN) plus one file per seed named in `seeds`, creates `.venv` with
+`uv venv` unless `venv` is false (the project has no dependencies, so it is synced as created),
+gitignores `.venv`, and `git add`s the rest so `git ls-files '*.py'` sees every Python file. The
+clean project passes every tool; each seed in SEEDS is one file that trips exactly one tool and no
+other. `tracked_files` adds further tracked files (for nested paths); `ignored_files` writes files
+that `.gitignore` excludes.
 """
 
 import os
@@ -122,13 +124,21 @@ def _run(directory: Path, *args: str) -> None:
     assert result.returncode == 0, result.stderr
 
 
-def make_repo(directory: Path, seeds: tuple[str, ...] = (), venv: bool = True) -> Path:
+def make_repo(
+    directory: Path,
+    seeds: tuple[str, ...] = (),
+    venv: bool = True,
+    tracked_files: dict[str, str] | None = None,
+    ignored_files: dict[str, str] | None = None,
+) -> Path:
     """Create a git repository holding the clean project and the named seeds.
 
     Args:
         directory: Where to create it.
         seeds: Names in SEEDS whose files to add.
         venv: Whether to create `.venv`.
+        tracked_files: Further files to write and track, as path to text.
+        ignored_files: Files to write under a gitignored path, as path to text.
 
     Returns:
         The repository directory.
@@ -140,6 +150,12 @@ def make_repo(directory: Path, seeds: tuple[str, ...] = (), venv: bool = True) -
     for seed in seeds:
         name, text = SEEDS[seed]
         (directory / name).write_text(text)
+    for relpath, text in {**(tracked_files or {}), **(ignored_files or {})}.items():
+        path = directory / relpath
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+    with (directory / ".gitignore").open("a") as gitignore:
+        gitignore.writelines(f"{relpath}\n" for relpath in ignored_files or {})
     if venv:
         _run(directory, "uv", "venv", "-q", "--python", sys.executable, ".venv")
     _run(directory, "git", "add", "-A")
