@@ -9,7 +9,10 @@ without reading `pyproject.toml`, when `git ls-files '*.py'` is empty. Otherwise
   `E, F, W, I, UP, B, SIM, D, D417`, `lint.pydocstyle.convention = "google"`, and `src` (any value,
   never judged); any other key, or a different value, fails;
 - `[tool.ty]`, `[tool.interrogate]` and `[tool.pydoclint]` must be absent;
-- `requires-python` must be present with a lower bound of at least 3.12.
+- `requires-python` must be present with a lower bound of at least 3.12;
+- no tracked `ruff.toml`, `.ruff.toml` or `ty.toml` exists anywhere, and no `pyproject.toml` below
+  the root has a `[tool.ruff]` or `[tool.ty]`, since either would configure the tool outside the
+  allowlist.
 
 One stderr line per violation, `pyproject.toml: [<table>] <key>: <reason>`, in a fixed order, no
 summary; a pass prints `check-python-floor: pyproject.toml meets the floor.`. The floor is data at

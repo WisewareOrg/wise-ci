@@ -7,7 +7,7 @@ failed or was not judged. The tools are `==`-pinned in this package, so CI and a
 same versions; why it is built this way is
 [ADR 0002 rev 1](../docs/decisions/0002-org-python-standards-in-wise-ci.md)'s.
 
-- interrogate runs at `--fail-under 100 -vv`, and pydoclint with the Google style, type hints in
+- interrogate runs at `--fail-under 100 -vv --omit-covered-files`, and pydoclint with the Google style, type hints in
   signatures and not in docstrings, return types unchecked, short docstrings checked and `__init__`
   docstrings allowed; both receive `git ls-files '*.py'`, so every tracked Python file is in scope.
 - ruff and ty honour `.gitignore`. ruff reads the repository's own `[tool.ruff]`, which

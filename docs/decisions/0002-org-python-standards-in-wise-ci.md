@@ -29,7 +29,8 @@ repository with no local entry point, so they drift. The constraints:
   ships inside `check-python`: interrogate and pydoclint options are passed by flag, ty runs on its
   default rules. A repository deletes its own `[tool.interrogate]` and `[tool.pydoclint]`.
 - **The floor is an exact allowlist**, so drift is impossible by construction: `[tool.ruff]` may hold
-  only the floor's values plus the repository-specific `src`; a repository tracking Python has a
+  only the floor's values plus the repository-specific `src`, and no other ruff or ty configuration
+  file exists; a repository tracking Python has a
   root `pyproject.toml`; a repository tracking no Python passes. The values are
   [`check-python-floor/README.md`](../../check-python-floor/README.md)'s.
 - **Scope is every tracked `.py` file, with no exclusions.** interrogate and pydoclint receive
