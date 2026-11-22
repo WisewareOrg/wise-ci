@@ -12,7 +12,7 @@
 
 WiseGncDesign issue 19 asked for a type checker in CI. Discovery found that no org repository ran
 one, and that the lint and docstring gates (ruff, interrogate, pydoclint) were copy-pasted inline per
-repository with no local entry point, so they drift. The owner's constraints:
+repository with no local entry point, so they drift. The constraints:
 
 - the standards are defined once, here, and run by one command identically in CI and locally;
 - ruff is read by the editor from the repository, so its configuration cannot live only here;
@@ -36,7 +36,7 @@ repository with no local entry point, so they drift. The owner's constraints:
   Python passes.
 - **Scope is every tracked `.py` file, with no exclusions.** interrogate and pydoclint receive
   `git ls-files '*.py'`; ruff and ty honour `.gitignore`.
-- **The type checker is ty**, on its default rules. The owner chose it knowingly: it is beta
+- **The type checker is ty**, on its default rules. It is beta
   (`0.0.x`, "breaking changes, including to diagnostics, between any two versions"), so a Renovate
   bump can change what a repository reports.
 
@@ -49,8 +49,9 @@ default level.
 - **basedpyright.** The study's own lean: pyright's engine with the lowest false-positive count (3
   sites in WiseGncDesign, 1 in WiseDynamics), `extends` for a central base file, a mature baseline,
   and node locked through `nodejs-wheel-binaries`. Costs: a community fork, a 282 MB dev dependency,
-  and Pylance disabled in the editor. Not chosen: the owner chose ty, knowingly beta. ty is a 39 MB single Rust
-  binary with no dependencies, and checks notebooks and runs from the venv in the editor.
+  and Pylance disabled in the editor. Not chosen: ty was chosen knowingly despite being beta. ty is a 39 MB
+  single Rust binary with no dependencies, and checks notebooks and runs from the venv in the
+  editor.
 - **pyright.** The same detection, but it needs node, which it downloads unpinned unless the
   `[nodejs]` extra is used, it does not check notebooks from the command line, and Pylance bundles a
   lagging copy so editor and CI disagree.
