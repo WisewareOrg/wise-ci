@@ -8,6 +8,8 @@ members = [
     "check-branch",
     "check-docs-index",
     "check-eol",
+    "check-python",
+    "check-python-floor",
     "check-reqs",
     "wise-ci",
 ]
@@ -180,6 +182,16 @@ source = { editable = "check-docs-index" }
 name = "check-eol"
 version = "0"
 source = { editable = "check-eol" }
+
+[[package]]
+name = "check-python"
+version = "0"
+source = { editable = "check-python" }
+
+[[package]]
+name = "check-python-floor"
+version = "0"
+source = { editable = "check-python-floor" }
 
 [[package]]
 name = "check-reqs"
