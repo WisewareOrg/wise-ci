@@ -28,16 +28,17 @@ NO_PYTHON_LINE = "check-python-floor: no Python — no tracked .py files."
 SELECT_EXPECTED = "E, F, W, I, UP, B, SIM, D, D417"
 
 
-def _run(repo: Path) -> tuple[int, list[str], list[str]]:
+def _run(repo: Path, cwd: Path | None = None) -> tuple[int, list[str], list[str]]:
     """Run the check in a repository.
 
     Args:
         repo: The repository to run in.
+        cwd: The working directory, the repository root when None.
 
     Returns:
         The exit status, the non-blank stdout lines and the non-blank stderr lines.
     """
-    result = subprocess.run([str(SCRIPT)], cwd=repo, env=floor_repo.env(), capture_output=True, text=True)
+    result = subprocess.run([str(SCRIPT)], cwd=cwd or repo, env=floor_repo.env(), capture_output=True, text=True)
     return result.returncode, _lines(result.stdout), _lines(result.stderr)
 
 
@@ -372,3 +373,28 @@ def test_a_non_root_pyproject_may_not_configure_ruff_or_ty(tmp_path: Path, text:
     assert (status, out) == (1, [])
     assert len(err) == len(lines), err
     assert all(line.startswith(prefix) for line, prefix in zip(err, lines, strict=True)), err
+
+
+def test_run_from_a_subdirectory_sees_only_that_subtree(tmp_path: Path) -> None:
+    """The working directory decides what is read: a root pyproject.toml defect shows from the root, not `sub/`.
+
+    Args:
+        tmp_path: A fresh temporary directory.
+    """
+    repo = floor_repo.make_repo(tmp_path / "repo", pyproject(line_length=100), tracked_py=("sub/ok.py",))
+    assert _run(repo) == (1, [], ["pyproject.toml: [tool.ruff] line-length: expected 120, found 100"])
+    assert _run(repo, repo / "sub") == (
+        1,
+        [],
+        ["pyproject.toml: missing at the repository root, but 1 tracked .py file(s)"],
+    )
+
+
+def test_a_subdirectory_with_no_python_passes_with_the_no_python_line(tmp_path: Path) -> None:
+    """Run from a subtree tracking no `.py`, a repository with a violating root pyproject.toml passes.
+
+    Args:
+        tmp_path: A fresh temporary directory.
+    """
+    repo = floor_repo.make_repo(tmp_path / "repo", pyproject(line_length=100), extra_files={"docs/a.md": "text\n"})
+    assert _run(repo, repo / "docs") == (0, [NO_PYTHON_LINE], [])

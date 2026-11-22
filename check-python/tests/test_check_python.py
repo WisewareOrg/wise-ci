@@ -38,16 +38,17 @@ MARKERS = {
 }
 
 
-def _run(repo: Path) -> tuple[int, str]:
+def _run(repo: Path, cwd: Path | None = None) -> tuple[int, str]:
     """Run the check in a repository.
 
     Args:
         repo: The repository to run in.
+        cwd: The working directory, the repository root when None.
 
     Returns:
         The exit status and the combined stdout and stderr.
     """
-    result = subprocess.run([str(SCRIPT)], cwd=repo, env=python_repo.env(), capture_output=True, text=True)
+    result = subprocess.run([str(SCRIPT)], cwd=cwd or repo, env=python_repo.env(), capture_output=True, text=True)
     return result.returncode, result.stdout + result.stderr
 
 
@@ -170,5 +171,34 @@ def test_no_tracked_python_passes_with_the_no_python_line_and_runs_no_tool(tmp_p
     """
     repo = python_repo.make_repo(tmp_path / "repo", venv=venv, python=False, ignored_files={"ignored/x.py": "x ="})
     status, output = _run(repo)
+    assert status == 0, output
+    assert output.splitlines() == [NO_PYTHON_LINE], output
+
+
+def test_run_from_a_subdirectory_sees_only_that_subtree(tmp_path: Path) -> None:
+    """The working directory decides what is checked: root defects show from the root and not from `sub/`.
+
+    Args:
+        tmp_path: A fresh temporary directory.
+    """
+    seeds = ("ruff check", "ruff format", "interrogate", "pydoclint")
+    clean = python_repo.CLEAN["clean.py"]
+    repo = python_repo.make_repo(tmp_path / "repo", seeds, tracked_files={"sub/ok.py": clean})
+    _, from_root = _run(repo)
+    _, from_sub = _run(repo, repo / "sub")
+    for tool in seeds:
+        assert MARKERS[tool] in _sections(from_root)[tool], (tool, from_root)
+        assert MARKERS[tool] not in _sections(from_sub)[tool], (tool, from_sub)
+        assert python_repo.SEEDS[tool][0] not in from_sub, (tool, from_sub)
+
+
+def test_a_subdirectory_with_no_python_passes_with_the_no_python_line(tmp_path: Path) -> None:
+    """Run from a subtree tracking no `.py`, a repository with a seeded root defect prints the no-Python line.
+
+    Args:
+        tmp_path: A fresh temporary directory.
+    """
+    repo = python_repo.make_repo(tmp_path / "repo", ("interrogate",), tracked_files={"docs/a.md": "text\n"})
+    status, output = _run(repo, repo / "docs")
     assert status == 0, output
     assert output.splitlines() == [NO_PYTHON_LINE], output
