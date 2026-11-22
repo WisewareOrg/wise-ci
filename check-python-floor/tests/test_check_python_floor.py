@@ -1,6 +1,6 @@
 """Specifies check-python-floor/check_python_floor/__init__.py, the org Python floor, and its output interface.
 
-The README (check-python-floor/README.md) and ADR 0002 state them: the exact
+The README (check-python-floor/README.md) and ADR 0002 rev 1 state them: the exact
 allowlist for `[tool.ruff]`, the three absent tables, the `requires-python` lower bound, the root
 pyproject.toml a repo tracking `.py` must have, no tracked side configuration (`ruff.toml`,
 `.ruff.toml`, `ty.toml`, a non-root `[tool.ruff]` or `[tool.ty]`), one stderr line per violation in
