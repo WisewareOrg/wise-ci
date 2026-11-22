@@ -1,0 +1,130 @@
+name: check-python
+
+# docs/TESTING.md § In CI: runs only when the wiring workflow (ci.yml) calls it.
+on:
+  workflow_call:
+
+permissions: {}
+
+concurrency:
+  group: check-python-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Every job's `name:` equals its id, for consistency across every workflow in this repository.
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # A verdict moves only when a workflow or a pinned tool does (docs/CI.md § Workflow
+      # supply-chain and privilege audit); Renovate bumps this version natively.
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.9"
+
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: "1.59.0"
+
+      # docs/TESTING.md § In CI.
+      - name: pytest (just test check-python)
+        run: just test check-python
+
+      # docs/TESTING.md § In CI.
+      - name: Upload coverage data
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-check-python
+          path: .coverage.*
+          include-hidden-files: true
+          if-no-files-found: error
+
+  # check-python run over a clean fixture repository generated at job time, not over wise-ci's
+  # own tree (docs/TESTING.md § In CI; docs/CI.md § check-python). wise-ci is checked out below
+  # the workspace root so the fixture can be the workspace root, which is where an action runs.
+  self-check:
+    name: self-check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: wise-ci
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.9"
+
+      - name: Build the clean fixture
+        run: |
+          git init -q
+          echo wise-ci/ >> .git/info/exclude
+          uv run --locked --project wise-ci --package check-python python -c "
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, 'wise-ci/check-python/tests')
+          import python_repo
+          python_repo.make_repo(Path('.'))
+          "
+
+      - uses: ./wise-ci/check-python
+
+  # docs/TESTING.md § The action: the fixture carries one defect per tool, so the action must
+  # fail and each tool's own seed must be in the output.
+  expected-failure:
+    name: expected-failure
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: wise-ci
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.9"
+
+      - name: Build the fixture with one seeded defect per tool
+        run: |
+          git init -q
+          echo wise-ci/ >> .git/info/exclude
+          uv run --locked --project wise-ci --package check-python python -c "
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, 'wise-ci/check-python/tests')
+          import python_repo
+          python_repo.make_repo(Path('.'), tuple(python_repo.SEEDS))
+          "
+
+      - name: check-python (five seeded defects; expected to fail)
+        id: check-python
+        continue-on-error: true
+        uses: ./wise-ci/check-python
+
+      - name: The previous step must have failed
+        if: steps.check-python.outcome != 'failure'
+        run: exit 1
+
+      # Each tool's own failure marker must be in the output, so a tool that stopped judging
+      # cannot hide behind the others' failures.
+      - name: Every tool reports its own seed
+        run: |
+          set -euo pipefail
+          out="$(uv run --locked --project wise-ci --package check-python check-python 2>&1 || true)"
+          echo "$out"
+          for marker in F401 "would be reformatted" FAILED DOC103 invalid-explicit-return; do
+            if ! grep -qF -- "$marker" <<< "$out"; then
+              echo "no tool reported: $marker" >&2
+              exit 1
+            fi
+          done

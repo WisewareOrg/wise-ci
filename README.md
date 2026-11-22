@@ -56,6 +56,12 @@ red before the new version reaches their `main`.
 A tool someone else maintains — zizmor, commitlint, and the like — is decided tool by tool. As much as
 possible is centralised here, though many such tools carry configuration specific to each project.
 
+The org Python standard is the one tool set run from here: `check-python` runs ruff, interrogate,
+pydoclint and ty, all `==`-pinned in that check, and `check-python-floor` holds a repository's own
+`[tool.ruff]` to the floor, since ruff's configuration is read by the editor from the repository.
+Everything else the tools need is shipped inside `check-python`. See
+[`docs/decisions/0002-org-python-standards-in-wise-ci.md`](docs/decisions/0002-org-python-standards-in-wise-ci.md).
+
 ## Documentation
 
 - [`docs/README.md`](docs/README.md) — the documentation index: which document guarantees which

@@ -1,0 +1,16 @@
+name: check-python
+description: >-
+  The repository at the working directory passes ruff check, ruff format --check, interrogate
+  (100%) and pydoclint over every tracked Python file, and ty over its `.venv`. The repository
+  must already be synced (`uv sync`).
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      with:
+        version: "0.13.9"
+        enable-cache: false
+
+    - name: check-python
+      shell: bash
+      run: uv run --locked --project "$GITHUB_ACTION_PATH/.." --package check-python check-python

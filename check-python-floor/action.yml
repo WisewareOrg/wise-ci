@@ -1,0 +1,16 @@
+name: check-python-floor
+description: >-
+  The repository's root pyproject.toml meets the org Python floor (the ruff allowlist, no
+  `[tool.ty]`, `[tool.interrogate]` or `[tool.pydoclint]`, `requires-python` of at least 3.12);
+  passes when the repository tracks no Python.
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      with:
+        version: "0.13.9"
+        enable-cache: false
+
+    - name: check-python-floor
+      shell: bash
+      run: uv run --locked --project "$GITHUB_ACTION_PATH/.." --package check-python-floor check-python-floor

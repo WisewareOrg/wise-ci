@@ -39,7 +39,12 @@ repo-floor's recorded condition below: a broken uv setup would read the same way
 `process-gates.yml`'s `check-branch` job passing, which a broken setup could not do, is what
 proves the setup instead. check-reqs's own `expected-failure` job seeds a defect onto the minimal
 tree its `self-check` job builds, and shares the same condition: a broken uv setup also fails it,
-so that same `self-check` job's own passing run is what proves the setup.
+so that same `self-check` job's own passing run is what proves the setup. check-python's own
+`expected-failure` job does the same over a fixture carrying one defect per tool, then asserts each
+tool's own failure marker is in the output, so a tool that stopped judging cannot hide behind the
+others' failures; its `self-check` job proves the setup in the same way. check-python-floor's
+`self-check` job asserts its own output lacks the "no Python" line, so the action is proven to have
+read a `pyproject.toml` rather than passed vacuously.
 
 repo-floor's own `expected-failure` job passes the action an invalid `github-token`, so the floor
 fetch itself breaks, and asserts the step's own outcome is `failure` — proving only that the
@@ -54,7 +59,7 @@ can arrange a live shortfall to seed.
 ## In CI
 
 Each check has its own workflow file under `.github/workflows/`, which runs the check's tests
-and, for check-eol, check-docs-index, check-adrs and check-reqs, also runs the check as a gate on
+and, for check-eol, check-docs-index, check-adrs, check-reqs, check-python and check-python-floor, also runs the check as a gate on
 wise-ci itself, in that same workflow file. That gate is the check's integration test. On a clean
 repository it only ever passes, so the failing direction is proven by the tests running the
 script. `check-branch`, `pr-title` and `repo-floor` are gated instead from `process-gates.yml`, a
