@@ -5,7 +5,7 @@ requires-python = ">=3.12"
 # repo-floor/repo-floor.py's runtime dependency, installed by its action.yml from the frozen
 # lock (SECURITY.md); Renovate-managed like every other pin in this repository.
 dependencies = [
-  "PyYAML==6.0.3",
+  "PyYAML==6.0.4",
 ]
 
 [tool.uv]
